@@ -11,7 +11,7 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 )
 
-func foo() {
+func main() {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		panic(err)
@@ -30,7 +30,7 @@ func foo() {
 	fmt.Println("signature verified:", valid)
 }
 
-func main() {
+func foo() {
 	curve := elliptic.P256()
 	pk, err := btcec.NewPrivateKey(curve)
 	if err != nil {
@@ -39,9 +39,7 @@ func main() {
 	fmt.Printf("private key %s\n", pk.D.Text(16))
 
 	plainText := "Hello, world!"
-	h := sha256.New()
-	h.Write([]byte(plainText))
-	hash := h.Sum(nil)
+	hash := sha256.Sum256([]byte(plainText))
 	sig, err := pk.Sign(hash[:])
 	if err != nil {
 		log.Fatalf(err.Error())

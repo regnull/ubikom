@@ -1,0 +1,17 @@
+syntax = "proto3";
+package Ubikom;
+option go_package=".;pb";
+
+message KeyRegistrationRequest {
+    bytes key = 1;
+    int32 pow = 2;
+}
+
+message KeyRegistrationResponse {
+    int32 result = 1;
+    string message = 2;
+}
+
+service IdentityService {
+    rpc RegisterKey(KeyRegistrationRequest) returns (KeyRegistrationResponse);
+}
