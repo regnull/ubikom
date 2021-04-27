@@ -7,6 +7,7 @@ require (
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/coreos/go-etcd v2.0.0+incompatible // indirect
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
+	github.com/dgraph-io/badger/v3 v3.2011.1 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/spf13/cobra v1.1.3 // indirect
