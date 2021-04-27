@@ -2,13 +2,21 @@ syntax = "proto3";
 package Ubikom;
 option go_package=".;pb";
 
+enum ResultCode {
+    OK = 0;
+    INVALID_KEY = 1;
+    KEY_EXISTS = 2;
+    INSUFFICIENT_POW = 3;
+    INTERNAL_ERROR = 100;
+}
+
 message KeyRegistrationRequest {
     bytes key = 1;
     int32 pow = 2;
 }
 
 message KeyRegistrationResponse {
-    int32 result = 1;
+    ResultCode result = 1;
     string message = 2;
 }
 

@@ -13,6 +13,8 @@ type PublicKey struct {
 	publicKey *ecdsa.PublicKey
 }
 
+// NewPublicFromSerializedCompressed creates new public key from serialized
+// compressed format.
 func NewPublicFromSerializedCompressed(serialized []byte) (*PublicKey, error) {
 	if len(serialized) != 33 {
 		return nil, fmt.Errorf("invalid serialized compressed public key")
