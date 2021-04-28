@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/binary"
 	"log"
 	"os"
 	"path"
@@ -13,11 +11,10 @@ import (
 	"teralyt.com/ubikom/ecc"
 	"teralyt.com/ubikom/pb"
 	"teralyt.com/ubikom/pow"
-	"teralyt.com/ubikom/util"
 )
 
 const (
-	leadingZeros = 24
+	leadingZeros = 10
 )
 
 func init() {
@@ -76,21 +73,4 @@ var registerKeyCmd = &cobra.Command{
 		}
 		log.Printf("key registered successfully")
 	},
-}
-
-func generatePOW(data []byte, leadingZeros int) int32 {
-	powBuf := make([]byte, 4)
-	buf := make([]byte, len(data)+4)
-	pow := int32(555)
-	for {
-		binary.BigEndian.PutUint32(powBuf, uint32(pow))
-		for i := 0; i < 4; i++ {
-			buf[len(data)+i] = powBuf[i]
-		}
-		h := sha256.Sum256(buf)
-		if util.VerifyPOW(h[:], leadingZeros) {
-			return pow
-		}
-		pow++
-	}
 }

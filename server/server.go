@@ -10,6 +10,7 @@ import (
 	"github.com/dgraph-io/badger/v3"
 
 	"teralyt.com/ubikom/pb"
+	"teralyt.com/ubikom/pow"
 	"teralyt.com/ubikom/util"
 )
 
@@ -27,8 +28,23 @@ func NewServer(db *badger.DB) *Server {
 
 func (s *Server) RegisterKey(ctx context.Context, req *pb.KeyRegistrationRequest) (*pb.KeyRegistrationResponse, error) {
 	if len(req.Key) != 33 {
+		log.Printf("invalid key length")
 		return &pb.KeyRegistrationResponse{
 			Result: pb.ResultCode_INVALID_KEY}, nil
+	}
+
+	if len(req.Pow) > 16 {
+		log.Printf("invalid POW")
+		// POW is too long.
+		return &pb.KeyRegistrationResponse{
+			Result: pb.ResultCode_INVALID_REQUEST}, nil
+	}
+
+	if !pow.Verify(req.Key, req.Pow, 10) {
+		log.Printf("POW verification failed")
+		// POW does not check out.
+		return &pb.KeyRegistrationResponse{
+			Result: pb.ResultCode_INVALID_REQUEST}, nil
 	}
 
 	publicKeyBase58 := base58.Encode(req.Key)

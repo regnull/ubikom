@@ -4,9 +4,10 @@ option go_package=".;pb";
 
 enum ResultCode {
     OK = 0;
-    INVALID_KEY = 1;
-    KEY_EXISTS = 2;
-    INSUFFICIENT_POW = 3;
+    INVALID_REQUEST = 1;
+    INVALID_KEY = 2;
+    KEY_EXISTS = 3;
+    INSUFFICIENT_POW = 4;
     INTERNAL_ERROR = 100;
 }
 
