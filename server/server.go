@@ -40,8 +40,6 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.KeyRegistrationRequest
 		if item != nil {
 			return ErrKeyExists
 		}
-		log.Printf("got err: %v", err)
-		log.Printf("got item: %v", item)
 
 		ts := util.NowMs()
 		err = txn.Set([]byte(dbKey), Int64ToBytes(ts))
