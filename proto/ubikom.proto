@@ -12,7 +12,7 @@ enum ResultCode {
 
 message KeyRegistrationRequest {
     bytes key = 1;
-    int32 pow = 2;
+    bytes pow = 2;
 }
 
 message KeyRegistrationResponse {

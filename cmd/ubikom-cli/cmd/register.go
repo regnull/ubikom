@@ -12,11 +12,12 @@ import (
 	"google.golang.org/grpc"
 	"teralyt.com/ubikom/ecc"
 	"teralyt.com/ubikom/pb"
+	"teralyt.com/ubikom/pow"
 	"teralyt.com/ubikom/util"
 )
 
 const (
-	leadingZeros = 26
+	leadingZeros = 24
 )
 
 func init() {
@@ -58,8 +59,8 @@ var registerKeyCmd = &cobra.Command{
 
 		compressedKey := privateKey.PublicKey().SerializeCompressed()
 		log.Printf("generating POW...")
-		pow := generatePOW(compressedKey, leadingZeros)
-		log.Printf("POW found: %d", pow)
+		pow := pow.Compute(compressedKey, leadingZeros)
+		log.Printf("POW found: %x", pow)
 
 		client := pb.NewIdentityServiceClient(conn)
 		res, err := client.RegisterKey(context.TODO(),
