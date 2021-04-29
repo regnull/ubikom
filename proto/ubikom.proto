@@ -11,16 +11,76 @@ enum ResultCode {
     INTERNAL_ERROR = 100;
 }
 
-message KeyRegistrationRequest {
-    bytes key = 1;
-    bytes pow = 2;
+message ContentWithPOW {
+    bytes content = 1;
+    bytes pow = 2; 
 }
 
-message KeyRegistrationResponse {
+message Signature {
+    bytes r = 1;
+    bytes s = 2;
+}
+
+message Signed {
+    bytes content = 1;
+    Signature signature = 2;
+}
+
+message SignedWithPow {
+    bytes content = 1;
+    Signature signature = 2;
+    bytes pow = 3;
+}
+
+message Result {
     ResultCode result = 1;
     string message = 2;
 }
 
+message NameRegistrationRequest {
+    bytes key = 1;
+    string name = 2;
+}
+
+message AddressRegistrationRequest {
+    string name = 1;
+    int32 protocol = 2;
+    string address = 3;
+}
+
 service IdentityService {
-    rpc RegisterKey(KeyRegistrationRequest) returns (KeyRegistrationResponse);
+    // The input contains serialized compressed public key.
+    rpc RegisterKey(SignedWithPow) returns (Result);
+
+    // The input contains NameRegistrationRequest.
+    rpc RegisterName(SignedWithPow) returns (Result);
+
+    // The input contains AddressRegistrationRequest.
+    rpc RegisterAddress(SignedWithPow) returns (Result);
+}
+
+message LookupNameRequest {
+    string name = 1;
+}
+
+message LookupNameResponse {
+    ResultCode result = 1;
+    string message = 2;
+    string key = 3;
+}
+
+message LookupAddressRequest {
+    string name = 1;
+    int32 protocol = 2;
+}
+
+message LookupAddressResponse {
+    ResultCode result = 1;
+    string message = 2;
+    string address = 3;
+}
+
+service LookupService {
+    rpc LookupName(LookupNameRequest) returns (LookupNameResponse);
+    rpc LookupAddress(LookupAddressRequest) returns (LookupAddressResponse);
 }

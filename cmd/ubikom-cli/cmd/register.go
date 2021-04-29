@@ -11,6 +11,7 @@ import (
 	"teralyt.com/ubikom/ecc"
 	"teralyt.com/ubikom/pb"
 	"teralyt.com/ubikom/pow"
+	"teralyt.com/ubikom/util"
 )
 
 const (
@@ -59,12 +60,24 @@ var registerKeyCmd = &cobra.Command{
 		pow := pow.Compute(compressedKey, leadingZeros)
 		log.Printf("POW found: %x", pow)
 
+		hash := util.Hash256(compressedKey)
+		sig, err := privateKey.Sign(hash)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		client := pb.NewIdentityServiceClient(conn)
-		res, err := client.RegisterKey(context.TODO(),
-			&pb.KeyRegistrationRequest{
-				Key: compressedKey,
-				Pow: pow,
-			})
+
+		req := &pb.SignedWithPow{
+			Content: compressedKey,
+			Pow:     pow,
+			Signature: &pb.Signature{
+				R: sig.R.Bytes(),
+				S: sig.S.Bytes(),
+			},
+		}
+
+		res, err := client.RegisterKey(context.TODO(), req)
 		if err != nil {
 			log.Fatal(err)
 		}

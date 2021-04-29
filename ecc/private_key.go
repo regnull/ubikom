@@ -66,3 +66,11 @@ func (pk *PrivateKey) Save(fileName string) error {
 func (pk *PrivateKey) PublicKey() *PublicKey {
 	return &PublicKey{publicKey: &pk.privateKey.PublicKey}
 }
+
+func (pk *PrivateKey) Sign(hash []byte) (*Signature, error) {
+	r, s, err := ecdsa.Sign(rand.Reader, pk.privateKey, hash)
+	if err != nil {
+		return nil, err
+	}
+	return &Signature{R: r, S: s}, nil
+}
