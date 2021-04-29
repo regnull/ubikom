@@ -24,6 +24,8 @@ func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
+	ctx := context.Background()
+
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 	}
@@ -49,7 +51,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create request")
 	}
 
-	res, err := client.RegisterKey(context.TODO(), req)
+	res, err := client.RegisterKey(ctx, req)
 	if err != nil {
 		log.Fatal().Err(err).Msg("key registration call failed")
 	}
@@ -76,7 +78,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create request")
 	}
 
-	res, err = client.RegisterName(context.TODO(), req)
+	res, err = client.RegisterName(ctx, req)
 	if err != nil {
 		log.Fatal().Err(err).Msg("name registration call failed")
 	}
@@ -91,13 +93,13 @@ func main() {
 	log.Info().Msg("checking name...")
 
 	lookupClient := pb.NewLookupServiceClient(conn)
-	lookupRes, err := lookupClient.LookupName(context.TODO(), &pb.LookupNameRequest{
+	lookupRes, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{
 		Name: name})
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("name lookup call failed")
 	}
-	if res.Result != pb.ResultCode_RC_OK {
+	if lookupRes.Result != pb.ResultCode_RC_OK {
 		log.Fatal().Str("result", res.GetResult().String()).Msg("name lookup call failed")
 	}
 
@@ -106,6 +108,55 @@ func main() {
 	} else {
 		log.Fatal().Msg("keys do not match")
 	}
+
+	// Register address.
+
+	log.Info().Msg("registering address...")
+
+	address := "111.222.333.444"
+	addressRegistrationReq := &pb.AddressRegistrationRequest{
+		Name:     name,
+		Protocol: pb.Protocol_PL_DMS,
+		Address:  address}
+
+	content, err = proto.Marshal(addressRegistrationReq)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to marshal proto")
+	}
+
+	req, err = CreateSignedWithPOW(privateKey, content)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create request")
+	}
+
+	res, err = client.RegisterAddress(ctx, req)
+	if err != nil {
+		log.Fatal().Err(err).Msg("address registration call failed")
+	}
+	if res.Result != pb.ResultCode_RC_OK {
+		log.Fatal().Str("result", res.GetResult().String()).Msg("address registraion call failed")
+	}
+
+	log.Info().Str("name", name).Str("address", address).Msg("address is registered successfully")
+
+	// Lookup address.
+
+	log.Info().Msg("looking up address...")
+	addressLookupRes, err := lookupClient.LookupAddress(ctx, &pb.LookupAddressRequest{
+		Name:     name,
+		Protocol: pb.Protocol_PL_DMS})
+	if err != nil {
+		log.Fatal().Err(err).Msg("address lookup call failed")
+	}
+	if addressLookupRes.Result != pb.ResultCode_RC_OK {
+		log.Fatal().Str("result", res.GetResult().String()).Msg("name lookup call failed")
+	}
+
+	if addressLookupRes.Address != address {
+		log.Fatal().Str("expected", address).Str("actual", addressLookupRes.Address).Msg("addresses do not match")
+	}
+
+	log.Info().Msg("addresses match!")
 }
 
 func CreateSignedWithPOW(privateKey *ecc.PrivateKey, content []byte) (*pb.SignedWithPow, error) {
