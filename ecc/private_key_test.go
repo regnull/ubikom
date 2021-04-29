@@ -2,6 +2,8 @@ package ecc
 
 import (
 	"io/ioutil"
+	"math/big"
+	"math/rand"
 	"os"
 	"path"
 	"testing"
@@ -58,4 +60,22 @@ func Test_PrivateKey_Load(t *testing.T) {
 	assert.EqualValues(pk.privateKey.PublicKey.Y, pkCopy.privateKey.PublicKey.Y)
 
 	assert.NoError(os.RemoveAll(dir))
+}
+
+func Test_PrivateKey_SerializeDeserialize(t *testing.T) {
+	assert := assert.New(t)
+
+	// Confirm that serialization/deserialization work as expected.
+	// Serialize/deserialize a bunch of keys.
+
+	r := rand.New(rand.NewSource(123))
+	for i := 0; i < 1000; i++ {
+		secret := r.Int63()
+		privateKey := NewPrivateKey(big.NewInt(secret))
+		serialized := privateKey.PublicKey().SerializeCompressed()
+		publicKey, err := NewPublicFromSerializedCompressed(serialized)
+		assert.NoError(err)
+		assert.Equal(privateKey.PublicKey().publicKey.X, publicKey.publicKey.X)
+		assert.Equal(privateKey.PublicKey().publicKey.Y, publicKey.publicKey.Y)
+	}
 }

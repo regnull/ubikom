@@ -1,6 +1,7 @@
 package ecc
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
@@ -37,7 +38,7 @@ func NewPublicFromSerializedCompressed(serialized []byte) (*PublicKey, error) {
 	beta := new(big.Int).Exp(alpha, sqrtExp, P)
 	var evenBeta *big.Int
 	var oddBeta *big.Int
-	if new(big.Int).Div(beta, big.NewInt(2)).Cmp(big.NewInt(0)) == 0 {
+	if new(big.Int).Mod(beta, big.NewInt(2)).Cmp(big.NewInt(0)) == 0 {
 		evenBeta = beta
 		oddBeta = new(big.Int).Sub(P, beta)
 	} else {
@@ -66,7 +67,14 @@ func (pbk *PublicKey) SerializeCompressed() []byte {
 		// Odd.
 		buf[0] = 0x03
 	}
+
 	yBytes := pbk.publicKey.X.Bytes()
+
+	// If lengths of yBytes happens to be less then 32, pad it with zero bytes on the left.
+	if len(yBytes) < 32 {
+		yBytes = bytes.Join([][]byte{make([]byte, 32-len(yBytes)), yBytes}, nil)
+	}
+
 	for i := 1; i < 33; i++ {
 		buf[i] = yBytes[i-1]
 	}
