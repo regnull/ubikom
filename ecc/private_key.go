@@ -74,3 +74,8 @@ func (pk *PrivateKey) Sign(hash []byte) (*Signature, error) {
 	}
 	return &Signature{R: r, S: s}, nil
 }
+
+// TODO: remove this.
+func (pk *PrivateKey) GetKey() *big.Int {
+	return pk.privateKey.D
+}
