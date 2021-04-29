@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/big"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -30,13 +29,10 @@ func main() {
 	defer conn.Close()
 	client := pb.NewIdentityServiceClient(conn)
 
-	secret, _ := new(big.Int).SetString("c5e05b56182c7cef2ecf7edd3f27764095c524ba74db470c2b1838a1a7234bde", 16)
-
-	//privateKey, err := ecc.NewRandomPrivateKey()
-	privateKey := ecc.NewPrivateKey(secret)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	privateKey, err := ecc.NewRandomPrivateKey()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Register public key.
 
@@ -52,10 +48,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	log.Printf("got hash: %x", hash)
-	log.Printf("got private key: %x", privateKey.GetKey())
-	log.Printf("got signature: %x, %x", sig.R, sig.S)
 
 	req := &pb.SignedWithPow{
 		Content: compressedKey,
