@@ -12,6 +12,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2011.1 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/rs/zerolog v1.21.0 // indirect
 	github.com/spf13/cobra v1.1.3 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8 // indirect

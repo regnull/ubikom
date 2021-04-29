@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
+	"os"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"teralyt.com/ubikom/ecc"
@@ -19,34 +21,37 @@ const (
 )
 
 func main() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 	}
 	conn, err := grpc.Dial("localhost:8825", opts...)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("failed to connect to the server")
 	}
 	defer conn.Close()
 	client := pb.NewIdentityServiceClient(conn)
 
 	privateKey, err := ecc.NewRandomPrivateKey()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("failed to generate private key")
 	}
 
 	// Register public key.
 
-	log.Printf("registering private key...")
+	log.Info().Msg("registering private key...")
 
 	compressedKey := privateKey.PublicKey().SerializeCompressed()
-	log.Printf("generating POW...")
+	log.Info().Msg("generating POW...")
 	reqPow := pow.Compute(compressedKey, leadingZeros)
-	log.Printf("POW found: %x", reqPow)
+	log.Info().Hex("pow", reqPow).Msg("POW found")
 
 	hash := util.Hash256(compressedKey)
 	sig, err := privateKey.Sign(hash)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("failed to sign request")
 	}
 
 	req := &pb.SignedWithPow{
@@ -61,33 +66,33 @@ func main() {
 
 	res, err := client.RegisterKey(context.TODO(), req)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("key registration call failed")
 	}
 	if res.Result != pb.ResultCode_RC_OK {
-		log.Fatalf("got response code: %d", res.Result)
+		log.Fatal().Str("result", res.GetResult().String()).Msg("key registraion call failed")
 	}
 
-	log.Printf("public key registered")
+	log.Info().Msg("public key registered")
 
 	// Register name.
 
-	log.Printf("registering name...")
+	log.Info().Msg("registering name...")
 
 	name := fmt.Sprintf("test_name_%d", util.NowMs())
 	nameRegistrationReq := &pb.NameRegistrationRequest{
 		Name: name}
 	content, err := proto.Marshal(nameRegistrationReq)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("failed to marshal proto")
 	}
-	log.Printf("generating POW...")
+	log.Info().Msg("generating POW...")
 	reqPow = pow.Compute(content, leadingZeros)
-	log.Printf("POW found: %x", reqPow)
+	log.Info().Hex("pow", reqPow).Msg("POW found")
 
 	hash = util.Hash256(content)
 	sig, err = privateKey.Sign(hash)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("failed to sign request")
 	}
 
 	req = &pb.SignedWithPow{
@@ -102,32 +107,32 @@ func main() {
 
 	res, err = client.RegisterName(context.TODO(), req)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("name registration call failed")
 	}
 	if res.Result != pb.ResultCode_RC_OK {
-		log.Fatalf("got response code: %d", res.Result)
+		log.Fatal().Str("result", res.GetResult().String()).Msg("name registraion call failed")
 	}
 
-	log.Printf("name %s registered", name)
+	log.Info().Str("name", name).Msg("name is registered successfully")
 
 	// Lookup name.
 
-	log.Printf("checking name...")
+	log.Info().Msg("checking name...")
 
 	lookupClient := pb.NewLookupServiceClient(conn)
 	lookupRes, err := lookupClient.LookupName(context.TODO(), &pb.LookupNameRequest{
 		Name: name})
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("name lookup call failed")
 	}
 	if res.Result != pb.ResultCode_RC_OK {
-		log.Fatalf("got response code: %d", lookupRes.Result)
+		log.Fatal().Str("result", res.GetResult().String()).Msg("name lookup call failed")
 	}
 
 	if bytes.Compare(compressedKey, lookupRes.Key) == 0 {
-		log.Printf("keys match!")
+		log.Info().Msg("keys match!")
 	} else {
-		log.Fatalf("keys do not match: expected %x, actual %x", compressedKey, lookupRes.Key)
+		log.Fatal().Msg("keys do not match")
 	}
 }
