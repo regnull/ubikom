@@ -46,7 +46,9 @@ func main() {
 	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
-	pb.RegisterIdentityServiceServer(grpcServer, server.NewServer(db))
+	srv := server.NewServer(db)
+	pb.RegisterIdentityServiceServer(grpcServer, srv)
+	pb.RegisterLookupServiceServer(grpcServer, srv)
 	log.Printf("listening on port %d...", args.Port)
 	grpcServer.Serve(lis)
 }

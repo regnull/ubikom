@@ -82,7 +82,7 @@ var registerKeyCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		if res.Result != pb.ResultCode_OK {
+		if res.Result != pb.ResultCode_RC_OK {
 			log.Fatalf("got response code: %d", res.Result)
 		}
 		log.Printf("key registered successfully")

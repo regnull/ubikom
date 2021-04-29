@@ -3,12 +3,18 @@ package Ubikom;
 option go_package=".;pb";
 
 enum ResultCode {
-    OK = 0;
-    INVALID_REQUEST = 1;
-    INVALID_KEY = 2;
-    KEY_EXISTS = 3;
-    INSUFFICIENT_POW = 4;
-    INTERNAL_ERROR = 100;
+    RC_OK = 0;
+    RC_INVALID_REQUEST = 1;
+    RC_INVALID_KEY = 2;
+    RC_RECORD_EXISTS = 3;
+    RC_RECORD_NOT_FOUND = 4;
+    RC_INSUFFICIENT_POW = 5;
+    RC_INTERNAL_ERROR = 100;
+}
+
+enum Protocol {
+    PL_UNKNOWN = 0;
+    PL_DMS = 1;
 }
 
 message ContentWithPOW {
@@ -44,7 +50,7 @@ message NameRegistrationRequest {
 
 message AddressRegistrationRequest {
     string name = 1;
-    int32 protocol = 2;
+    Protocol protocol = 2;
     string address = 3;
 }
 
@@ -66,12 +72,12 @@ message LookupNameRequest {
 message LookupNameResponse {
     ResultCode result = 1;
     string message = 2;
-    string key = 3;
+    bytes key = 3;
 }
 
 message LookupAddressRequest {
     string name = 1;
-    int32 protocol = 2;
+    Protocol protocol = 2;
 }
 
 message LookupAddressResponse {
