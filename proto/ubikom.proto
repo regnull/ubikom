@@ -29,7 +29,8 @@ message Signed {
 message SignedWithPow {
     bytes content = 1;
     Signature signature = 2;
-    bytes pow = 3;
+    bytes key = 3;  // Public key used to sign the request.
+    bytes pow = 4;
 }
 
 message Result {
@@ -38,8 +39,7 @@ message Result {
 }
 
 message NameRegistrationRequest {
-    bytes key = 1;
-    string name = 2;
+    string name = 1;
 }
 
 message AddressRegistrationRequest {
@@ -49,13 +49,13 @@ message AddressRegistrationRequest {
 }
 
 service IdentityService {
-    // The input contains serialized compressed public key.
+    // Content is public key.
     rpc RegisterKey(SignedWithPow) returns (Result);
 
-    // The input contains NameRegistrationRequest.
+    // Content is NameRegistrationRequest.
     rpc RegisterName(SignedWithPow) returns (Result);
 
-    // The input contains AddressRegistrationRequest.
+    // Content is AddressRegistrationRequest.
     rpc RegisterAddress(SignedWithPow) returns (Result);
 }
 

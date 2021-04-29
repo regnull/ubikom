@@ -75,6 +75,7 @@ var registerKeyCmd = &cobra.Command{
 				R: sig.R.Bytes(),
 				S: sig.S.Bytes(),
 			},
+			Key: compressedKey,
 		}
 
 		res, err := client.RegisterKey(context.TODO(), req)
