@@ -2,7 +2,10 @@ package util
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"hash"
+	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -10,7 +13,9 @@ import (
 )
 
 const (
-	allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+	allowedChars      = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+	defaultHomeSubDir = ".ubikom"
+	defaultKeyFile    = "key"
 )
 
 // NowMs returns current time as milliseconds from epoch.
@@ -48,4 +53,14 @@ func ValidateName(name string) bool {
 		}
 	}
 	return true
+}
+
+func GetDefaultKeyLocation() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get home directory, %w", err)
+	}
+	dir := path.Join(homeDir, defaultHomeSubDir)
+	keyFile := path.Join(dir, defaultKeyFile)
+	return keyFile, nil
 }

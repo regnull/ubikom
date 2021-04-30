@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"context"
-	"os"
-	"path"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -21,6 +19,7 @@ const (
 func init() {
 	registerKeyCmd.Flags().Int("pow-strength", defaultPowStrength, "POW strength")
 	registerKeyCmd.Flags().String("url", "localhost:8825", "server URL")
+	registerKeyCmd.Flags().String("key", "", "Location for the private key file")
 	registerCmd.AddCommand(registerKeyCmd)
 	rootCmd.AddCommand(registerCmd)
 }
@@ -38,12 +37,18 @@ var registerKeyCmd = &cobra.Command{
 	Short: "Register public key",
 	Long:  "Register public key",
 	Run: func(cmd *cobra.Command, args []string) {
-		homeDir, err := os.UserHomeDir()
+		keyFile, err := cmd.Flags().GetString("key")
 		if err != nil {
-			log.Fatal().Err(err).Msg("cannot get home directory")
+			log.Fatal().Err(err).Msg("failed to get key location")
 		}
-		dir := path.Join(homeDir, defaultHomeSubDir)
-		keyFile := path.Join(dir, defaultKeyFile)
+
+		if keyFile == "" {
+			keyFile, err = util.GetDefaultKeyLocation()
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to get private key")
+			}
+		}
+
 		privateKey, err := ecc.LoadPrivateKey(keyFile)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
