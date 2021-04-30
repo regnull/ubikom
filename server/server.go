@@ -81,7 +81,7 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.R
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	if !validateName(nameRegistrationReq.GetName()) {
+	if !util.ValidateName(nameRegistrationReq.GetName()) {
 		log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("invalid name")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
@@ -283,16 +283,6 @@ func verifyPowAndSignature(req *pb.SignedWithPow) bool {
 	if !verifySignature(req) {
 		return false
 	}
-
-	return true
-}
-
-func validateName(name string) bool {
-	if len(name) < 5 || len(name) > 64 {
-		return false
-	}
-
-	// TODO: More checks here.
 
 	return true
 }
