@@ -12,7 +12,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"teralyt.com/ubikom/ecc"
 	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/pow"
 	"teralyt.com/ubikom/util"
 )
 
@@ -46,7 +45,7 @@ func main() {
 	log.Info().Msg("registering private key...")
 
 	compressedKey := privateKey.PublicKey().SerializeCompressed()
-	req, err := CreateSignedWithPOW(privateKey, compressedKey)
+	req, err := util.CreateSignedWithPOW(privateKey, compressedKey, leadingZeros)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create request")
 	}
@@ -73,7 +72,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to marshal proto")
 	}
 
-	req, err = CreateSignedWithPOW(privateKey, content)
+	req, err = util.CreateSignedWithPOW(privateKey, content, leadingZeros)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create request")
 	}
@@ -124,7 +123,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to marshal proto")
 	}
 
-	req, err = CreateSignedWithPOW(privateKey, content)
+	req, err = util.CreateSignedWithPOW(privateKey, content, leadingZeros)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create request")
 	}
@@ -157,29 +156,4 @@ func main() {
 	}
 
 	log.Info().Msg("addresses match!")
-}
-
-func CreateSignedWithPOW(privateKey *ecc.PrivateKey, content []byte) (*pb.SignedWithPow, error) {
-	compressedKey := privateKey.PublicKey().SerializeCompressed()
-
-	log.Info().Msg("generating POW...")
-	reqPow := pow.Compute(content, leadingZeros)
-	log.Info().Hex("pow", reqPow).Msg("POW found")
-
-	hash := util.Hash256(content)
-	sig, err := privateKey.Sign(hash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sign request, %w", err)
-	}
-
-	req := &pb.SignedWithPow{
-		Content: content,
-		Pow:     reqPow,
-		Signature: &pb.Signature{
-			R: sig.R.Bytes(),
-			S: sig.S.Bytes(),
-		},
-		Key: compressedKey,
-	}
-	return req, nil
 }
