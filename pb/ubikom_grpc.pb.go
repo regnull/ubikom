@@ -17,8 +17,11 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type IdentityServiceClient interface {
+	// Register public key. Each public key can be registered only once.
+	// The key must be registered before it's associated with the name.
 	// Content is public key.
 	RegisterKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
+	// Links name and the public key.
 	// Content is NameRegistrationRequest.
 	RegisterName(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
 	// Content is AddressRegistrationRequest.
@@ -64,8 +67,11 @@ func (c *identityServiceClient) RegisterAddress(ctx context.Context, in *SignedW
 // All implementations must embed UnimplementedIdentityServiceServer
 // for forward compatibility
 type IdentityServiceServer interface {
+	// Register public key. Each public key can be registered only once.
+	// The key must be registered before it's associated with the name.
 	// Content is public key.
 	RegisterKey(context.Context, *SignedWithPow) (*Result, error)
+	// Links name and the public key.
 	// Content is NameRegistrationRequest.
 	RegisterName(context.Context, *SignedWithPow) (*Result, error)
 	// Content is AddressRegistrationRequest.

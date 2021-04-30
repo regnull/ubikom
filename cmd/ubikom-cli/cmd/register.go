@@ -3,12 +3,13 @@ package cmd
 import (
 	"context"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"teralyt.com/ubikom/ecc"
 	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/pow"
+	"teralyt.com/ubikom/protoutil"
 	"teralyt.com/ubikom/util"
 )
 
@@ -62,7 +63,6 @@ var registerKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get server URL")
 		}
 
-		// TODO: Define flag for server URL.
 		conn, err := grpc.Dial(url, opts...)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to connect to the server")
@@ -74,29 +74,19 @@ var registerKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get POW strength")
 		}
 
-		compressedKey := privateKey.PublicKey().SerializeCompressed()
-		log.Info().Msg("generating POW...")
-		pow := pow.Compute(compressedKey, powStrength)
-		log.Info().Hex("pow", pow).Msg("POW found")
-
-		hash := util.Hash256(compressedKey)
-		sig, err := privateKey.Sign(hash)
+		registerKeyReq := &pb.KeyRegistrationRequest{
+			Key: privateKey.PublicKey().SerializeCompressed()}
+		reqBytes, err := proto.Marshal(registerKeyReq)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to generate signature")
+			log.Fatal().Err(err).Msg("failed to marshal request")
+		}
+
+		req, err := protoutil.CreateSignedWithPOW(privateKey, reqBytes, powStrength)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create signed request")
 		}
 
 		client := pb.NewIdentityServiceClient(conn)
-
-		req := &pb.SignedWithPow{
-			Content: compressedKey,
-			Pow:     pow,
-			Signature: &pb.Signature{
-				R: sig.R.Bytes(),
-				S: sig.S.Bytes(),
-			},
-			Key: compressedKey,
-		}
-
 		ctx := context.Background()
 		res, err := client.RegisterKey(ctx, req)
 		if err != nil {

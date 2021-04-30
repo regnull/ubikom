@@ -44,6 +44,10 @@ message Result {
     string message = 2;
 }
 
+message KeyRegistrationRequest {
+    bytes key = 1;
+}
+
 message NameRegistrationRequest {
     string name = 1;
 }
