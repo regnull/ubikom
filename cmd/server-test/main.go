@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	leadingZeros = 10
+	leadingZeros = 23
 )
 
 func main() {

@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -25,8 +26,11 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		log.Error().Err(err).Msg("error executing command")
 		os.Exit(1)
 	}
 }

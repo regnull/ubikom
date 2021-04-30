@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"context"
-	"log"
 	"os"
 	"path"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"teralyt.com/ubikom/ecc"
@@ -15,10 +15,12 @@ import (
 )
 
 const (
-	leadingZeros = 10
+	defaultPowStrength = 23
 )
 
 func init() {
+	registerKeyCmd.Flags().Int("pow-strength", defaultPowStrength, "POW strength")
+	registerKeyCmd.Flags().String("url", "localhost:8825", "server URL")
 	registerCmd.AddCommand(registerKeyCmd)
 	rootCmd.AddCommand(registerCmd)
 }
@@ -38,32 +40,44 @@ var registerKeyCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("cannot get home directory")
 		}
 		dir := path.Join(homeDir, defaultHomeSubDir)
 		keyFile := path.Join(dir, defaultKeyFile)
 		privateKey, err := ecc.LoadPrivateKey(keyFile)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
 		opts := []grpc.DialOption{
 			grpc.WithInsecure(),
 		}
-		conn, err := grpc.Dial("localhost:8825", opts...)
+
+		url, err := cmd.Flags().GetString("url")
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("failed to get server URL")
+		}
+
+		// TODO: Define flag for server URL.
+		conn, err := grpc.Dial(url, opts...)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to connect to the server")
 		}
 		defer conn.Close()
 
+		powStrength, err := cmd.Flags().GetInt("pow-strength")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get POW strength")
+		}
+
 		compressedKey := privateKey.PublicKey().SerializeCompressed()
-		log.Printf("generating POW...")
-		pow := pow.Compute(compressedKey, leadingZeros)
-		log.Printf("POW found: %x", pow)
+		log.Info().Msg("generating POW...")
+		pow := pow.Compute(compressedKey, powStrength)
+		log.Info().Hex("pow", pow).Msg("POW found")
 
 		hash := util.Hash256(compressedKey)
 		sig, err := privateKey.Sign(hash)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("failed to generate signature")
 		}
 
 		client := pb.NewIdentityServiceClient(conn)
@@ -78,13 +92,14 @@ var registerKeyCmd = &cobra.Command{
 			Key: compressedKey,
 		}
 
-		res, err := client.RegisterKey(context.TODO(), req)
+		ctx := context.Background()
+		res, err := client.RegisterKey(ctx, req)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal().Err(err).Msg("failed to register key")
 		}
 		if res.Result != pb.ResultCode_RC_OK {
-			log.Fatalf("got response code: %d", res.Result)
+			log.Fatal().Str("code", res.GetResult().Enum().String()).Msg("server returned error")
 		}
-		log.Printf("key registered successfully")
+		log.Info().Msg("key registered successfully")
 	},
 }
