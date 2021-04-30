@@ -47,6 +47,9 @@ var createKeyCmd = &cobra.Command{
 			_ = os.Mkdir(dir, 0700)
 			out = path.Join(dir, defaultKeyFile)
 		}
+		if _, err := os.Stat(out); !os.IsNotExist(err) {
+			log.Fatal().Str("location", out).Msg("key file already exists, if you want to overwrite it, you must first delete it manually")
+		}
 		privateKey, err := ecc.NewRandomPrivateKey()
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to generate private key")
