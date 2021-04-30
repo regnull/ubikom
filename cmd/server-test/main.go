@@ -46,7 +46,16 @@ func main() {
 	log.Info().Msg("registering private key...")
 
 	compressedKey := privateKey.PublicKey().SerializeCompressed()
-	req, err := protoutil.CreateSignedWithPOW(privateKey, compressedKey, leadingZeros)
+
+	keyRegistrationReq := &pb.KeyRegistrationRequest{
+		Key: compressedKey}
+
+	content, err := proto.Marshal(keyRegistrationReq)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to serialize key registration request")
+	}
+
+	req, err := protoutil.CreateSignedWithPOW(privateKey, content, leadingZeros)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create request")
 	}
@@ -68,7 +77,7 @@ func main() {
 	name := fmt.Sprintf("test_name_%d", util.NowMs())
 	nameRegistrationReq := &pb.NameRegistrationRequest{
 		Name: name}
-	content, err := proto.Marshal(nameRegistrationReq)
+	content, err = proto.Marshal(nameRegistrationReq)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to marshal proto")
 	}

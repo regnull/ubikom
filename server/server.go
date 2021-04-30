@@ -34,11 +34,6 @@ func NewServer(db *badger.DB) *Server {
 }
 
 func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
-	if bytes.Compare(req.GetContent(), req.GetKey()) != 0 {
-		log.Warn().Hex("content", req.GetContent()).Hex("key", req.GetKey()).Msg("key and content do not match (key registration request)")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
-	}
-
 	if !verifyPowAndSignature(req) {
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
@@ -47,8 +42,20 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Re
 	err := proto.Unmarshal(req.GetContent(), keyRegistrationReq)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to unmarshal key registration request")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
+
+	if bytes.Compare(keyRegistrationReq.GetKey(), req.GetKey()) != 0 {
+		log.Warn().Hex("content", req.GetContent()).Hex("key", req.GetKey()).Msg("key and content do not match (key registration request)")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
 	key := keyRegistrationReq.GetKey()
+	publicKey, err := ecc.NewPublicFromSerializedCompressed(key)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to create public key from serialized compressed")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
 
 	publicKeyBase58 := base58.Encode(key)
 	log.Info().Str("key", publicKeyBase58).Msg("registering public key")
@@ -60,9 +67,24 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Re
 			return ErrKeyExists
 		}
 
+		// Register the key.
+
 		ts := util.NowMs()
 		err = txn.Set([]byte(dbKey), Int64ToBytes(ts))
-		return err
+		if err != nil {
+			return err
+		}
+
+		// Register key address as name.
+
+		nameKey := "name_" + publicKey.Address()
+		err = txn.Set([]byte(nameKey), req.GetKey())
+		if err != nil {
+			return err
+		}
+
+		log.Info().Str("name", publicKey.Address()).Msg("name registered")
+		return nil
 	})
 	if err != nil {
 		if err == ErrKeyExists {
