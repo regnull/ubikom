@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math/big"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dgraph-io/badger/v3"
 	"github.com/golang/protobuf/proto"
+	"github.com/rs/zerolog/log"
 
 	"teralyt.com/ubikom/ecc"
 	"teralyt.com/ubikom/pb"
@@ -35,17 +35,16 @@ func NewServer(db *badger.DB) *Server {
 
 func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
 	if bytes.Compare(req.GetContent(), req.GetKey()) != 0 {
-		return &pb.Result{
-			Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		log.Warn().Hex("content", req.GetContent()).Hex("key", req.GetKey()).Msg("key and content do not match (key registration request)")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
 	if !verifyPowAndSignature(req) {
-		return &pb.Result{
-			Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
 	publicKeyBase58 := base58.Encode(req.GetContent())
-	log.Printf("registering public key %s", publicKeyBase58)
+	log.Info().Str("key", publicKeyBase58).Msg("registering public key")
 	dbKey := "pkey_" + publicKeyBase58
 
 	err := s.db.Update(func(txn *badger.Txn) error {
@@ -60,36 +59,34 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Re
 	})
 	if err != nil {
 		if err == ErrKeyExists {
-			log.Printf("this key is already registered")
-			return &pb.Result{
-				Result: pb.ResultCode_RC_RECORD_EXISTS}, nil
+			log.Warn().Str("key", publicKeyBase58).Msg("this key is already registered")
+			return &pb.Result{Result: pb.ResultCode_RC_RECORD_EXISTS}, nil
 		}
-		log.Printf("error writing public key: %s", err)
-		return &pb.Result{
-			Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+		log.Error().Err(err).Str("key", publicKeyBase58).Msg("error writing public key")
+		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
-	log.Printf("key %s registered successfully", publicKeyBase58)
-	return &pb.Result{
-		Result: pb.ResultCode_RC_OK}, nil
+	log.Info().Str("key", publicKeyBase58).Msg("key is registered successfully")
+	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }
 
 func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
 	if !verifyPowAndSignature(req) {
-		return &pb.Result{
-			Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
 	nameRegistrationReq := &pb.NameRegistrationRequest{}
 	err := proto.Unmarshal(req.GetContent(), nameRegistrationReq)
 	if err != nil {
-		return &pb.Result{
-			Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		log.Warn().Msg("invalid name registration request")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
 	if !validateName(nameRegistrationReq.GetName()) {
-		return &pb.Result{
-			Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("invalid name")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
+
+	log.Info().Str("name", nameRegistrationReq.GetName()).Msg("registering name")
 
 	dbKey := "name_" + nameRegistrationReq.GetName()
 	err = s.db.Update(func(txn *badger.Txn) error {
@@ -103,30 +100,33 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.R
 	})
 	if err != nil {
 		if err == ErrKeyExists {
-			log.Printf("this key is already registered")
+			log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("this name is already registered")
 			return &pb.Result{
 				Result: pb.ResultCode_RC_RECORD_EXISTS}, nil
 		}
-		log.Printf("error writing public key: %s", err)
-		return &pb.Result{
-			Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+		log.Error().Str("name", nameRegistrationReq.GetName()).Err(err).Msg("error writing name")
+		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
-	log.Printf("name %s registered successfully", nameRegistrationReq.GetName())
+	log.Info().Str("name", nameRegistrationReq.GetName()).Msg("name registered successfully")
 	return &pb.Result{
 		Result: pb.ResultCode_RC_OK}, nil
 }
 
 func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
 	if !verifyPowAndSignature(req) {
-		return &pb.Result{
-			Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
 	addressRegistrationReq := &pb.AddressRegistrationRequest{}
 	err := proto.Unmarshal(req.GetContent(), addressRegistrationReq)
 	if err != nil {
+		log.Warn().Msg("invalid address registration request")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
+
+	log.Info().Str("name", addressRegistrationReq.GetName()).
+		Str("address", addressRegistrationReq.GetAddress()).Msg("registering address")
+
 	err = s.db.Update(func(txn *badger.Txn) error {
 		// Make sure the requested name is registered to this key.
 		nameKey := "name_" + addressRegistrationReq.GetName()
@@ -158,13 +158,18 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 		return err
 	})
 	if err != nil {
+		log.Error().Str("name", addressRegistrationReq.GetName()).
+			Str("address", addressRegistrationReq.GetAddress()).Msg("error registering address")
 		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
 
+	log.Info().Str("name", addressRegistrationReq.GetName()).
+		Str("address", addressRegistrationReq.GetAddress()).Msg("address registered successfully")
 	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }
 
 func (s *Server) LookupName(ctx context.Context, req *pb.LookupNameRequest) (*pb.LookupNameResponse, error) {
+	log.Info().Str("name", req.GetName()).Msg("name lookup request")
 	var key []byte
 	err := s.db.View(func(txn *badger.Txn) error {
 		nameKey := "name_" + req.GetName()
@@ -183,9 +188,11 @@ func (s *Server) LookupName(ctx context.Context, req *pb.LookupNameRequest) (*pb
 		return err
 	})
 	if err == ErrNotFound {
+		log.Info().Str("name", req.GetName()).Msg("name not found")
 		return &pb.LookupNameResponse{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}, nil
 	}
 	if err != nil {
+		log.Error().Str("name", req.GetName()).Err(err).Msg("error getting name")
 		return &pb.LookupNameResponse{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
 
@@ -196,6 +203,7 @@ func (s *Server) LookupName(ctx context.Context, req *pb.LookupNameRequest) (*pb
 }
 
 func (s *Server) LookupAddress(ctx context.Context, req *pb.LookupAddressRequest) (*pb.LookupAddressResponse, error) {
+	log.Info().Str("name", req.GetName()).Str("protocol", req.GetProtocol().String()).Msg("address lookup request")
 	var addressBytes []byte
 	err := s.db.View(func(txn *badger.Txn) error {
 		addressKey := "address_" + req.GetName() + "_" + req.GetProtocol().String()
@@ -214,9 +222,11 @@ func (s *Server) LookupAddress(ctx context.Context, req *pb.LookupAddressRequest
 		return err
 	})
 	if err == ErrNotFound {
+		log.Info().Str("name", req.GetName()).Str("protocol", req.GetProtocol().String()).Msg("address not found")
 		return &pb.LookupAddressResponse{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}, nil
 	}
 	if err != nil {
+		log.Error().Str("name", req.GetName()).Str("protocol", req.GetProtocol().String()).Msg("error getting address")
 		return &pb.LookupAddressResponse{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
 	return &pb.LookupAddressResponse{
