@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"teralyt.com/ubikom/ecc"
 	"teralyt.com/ubikom/pb"
+	"teralyt.com/ubikom/protoutil"
 	"teralyt.com/ubikom/util"
 )
 
@@ -45,7 +46,7 @@ func main() {
 	log.Info().Msg("registering private key...")
 
 	compressedKey := privateKey.PublicKey().SerializeCompressed()
-	req, err := util.CreateSignedWithPOW(privateKey, compressedKey, leadingZeros)
+	req, err := protoutil.CreateSignedWithPOW(privateKey, compressedKey, leadingZeros)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create request")
 	}
@@ -72,7 +73,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to marshal proto")
 	}
 
-	req, err = util.CreateSignedWithPOW(privateKey, content, leadingZeros)
+	req, err = protoutil.CreateSignedWithPOW(privateKey, content, leadingZeros)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create request")
 	}
@@ -123,7 +124,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to marshal proto")
 	}
 
-	req, err = util.CreateSignedWithPOW(privateKey, content, leadingZeros)
+	req, err = protoutil.CreateSignedWithPOW(privateKey, content, leadingZeros)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create request")
 	}

@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"math/big"
 
+	"teralyt.com/ubikom/util"
+
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcutil/base58"
 )
 
 // PublicKey represents elliptic curve cryptography private key.
@@ -79,4 +82,15 @@ func (pbk *PublicKey) SerializeCompressed() []byte {
 		buf[i] = yBytes[i-1]
 	}
 	return buf
+}
+
+// Address returns Bitcoin address associated with this private key.
+func (pbk *PublicKey) Address() string {
+	prefix := []byte{0x00}
+	s := pbk.SerializeCompressed()
+	hash := util.Hash160(s)
+	s1 := bytes.Join([][]byte{prefix, hash}, nil)
+	checkSum := util.Hash256(s1)[0:4]
+	addr := bytes.Join([][]byte{s1, checkSum}, nil)
+	return base58.Encode(addr)
 }

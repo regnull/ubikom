@@ -55,9 +55,12 @@ message AddressRegistrationRequest {
 }
 
 service IdentityService {
+    // Register public key. Each public key can be registered only once.
+    // The key must be registered before it's associated with the name.
     // Content is public key.
     rpc RegisterKey(SignedWithPow) returns (Result);
 
+    // Links name and the public key.
     // Content is NameRegistrationRequest.
     rpc RegisterName(SignedWithPow) returns (Result);
 

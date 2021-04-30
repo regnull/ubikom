@@ -2,14 +2,11 @@ package util
 
 import (
 	"crypto/sha256"
-	"fmt"
+	"hash"
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
-	"teralyt.com/ubikom/ecc"
-	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/pow"
+	"golang.org/x/crypto/ripemd160"
 )
 
 const (
@@ -28,6 +25,17 @@ func Hash256(data []byte) []byte {
 	return h1[:]
 }
 
+// Calculate the hash of hasher over buf.
+func calcHash(buf []byte, hasher hash.Hash) []byte {
+	hasher.Write(buf)
+	return hasher.Sum(nil)
+}
+
+// Hash160 calculates the hash ripemd160(sha256(b)).
+func Hash160(buf []byte) []byte {
+	return calcHash(calcHash(buf, sha256.New()), ripemd160.New())
+}
+
 // ValidateName returns true if the name is valid.
 func ValidateName(name string) bool {
 	if len(name) < 5 || len(name) > 64 {
@@ -40,30 +48,4 @@ func ValidateName(name string) bool {
 		}
 	}
 	return true
-}
-
-// CreateSignedWithPOW creates a request signed with the given private key and generates POW of the given strength.
-func CreateSignedWithPOW(privateKey *ecc.PrivateKey, content []byte, powStrength int) (*pb.SignedWithPow, error) {
-	compressedKey := privateKey.PublicKey().SerializeCompressed()
-
-	log.Info().Msg("generating POW...")
-	reqPow := pow.Compute(content, powStrength)
-	log.Info().Hex("pow", reqPow).Msg("POW found")
-
-	hash := Hash256(content)
-	sig, err := privateKey.Sign(hash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sign request, %w", err)
-	}
-
-	req := &pb.SignedWithPow{
-		Content: content,
-		Pow:     reqPow,
-		Signature: &pb.Signature{
-			R: sig.R.Bytes(),
-			S: sig.S.Bytes(),
-		},
-		Key: compressedKey,
-	}
-	return req, nil
 }
