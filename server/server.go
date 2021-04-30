@@ -43,11 +43,18 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Re
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	publicKeyBase58 := base58.Encode(req.GetContent())
+	keyRegistrationReq := &pb.KeyRegistrationRequest{}
+	err := proto.Unmarshal(req.GetContent(), keyRegistrationReq)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to unmarshal key registration request")
+	}
+	key := keyRegistrationReq.GetKey()
+
+	publicKeyBase58 := base58.Encode(key)
 	log.Info().Str("key", publicKeyBase58).Msg("registering public key")
 	dbKey := "pkey_" + publicKeyBase58
 
-	err := s.db.Update(func(txn *badger.Txn) error {
+	err = s.db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(dbKey))
 		if item != nil {
 			return ErrKeyExists
