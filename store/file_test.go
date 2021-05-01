@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -31,7 +30,6 @@ func Test_File_StoreGetRemove(t *testing.T) {
 	assert.NoError(err)
 	assert.Nil(msg)
 
-	fmt.Printf("%x, %x\n", key, key1)
 	msg = &pb.DMSMessage{
 		Sender:   key,
 		Receiver: key1,
