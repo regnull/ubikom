@@ -97,3 +97,19 @@ service LookupService {
     rpc LookupName(LookupNameRequest) returns (LookupNameResponse);
     rpc LookupAddress(LookupAddressRequest) returns (LookupAddressResponse);
 }
+
+message DMSMessage {
+    bytes sender = 1;
+    bytes receiver = 2;
+    bytes content = 3;
+}
+
+message ResultWithContent {
+    Result result = 1;
+    bytes content = 2;
+}
+
+service DMSDumpService {
+    rpc Send(DMSMessage) returns (Result);
+    rpc Receive(Signed) returns (ResultWithContent);
+}
