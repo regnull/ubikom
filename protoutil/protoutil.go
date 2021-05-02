@@ -2,6 +2,7 @@ package protoutil
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/rs/zerolog/log"
 	"teralyt.com/ubikom/ecc"
@@ -34,4 +35,23 @@ func CreateSignedWithPOW(privateKey *ecc.PrivateKey, content []byte, powStrength
 		Key: compressedKey,
 	}
 	return req, nil
+}
+
+// VerifySignature returns true if the provided signature is valid for the given key and content.
+func VerifySignature(sig *pb.Signature, serializedKey []byte, content []byte) bool {
+	key, err := ecc.NewPublicFromSerializedCompressed(serializedKey)
+	if err != nil {
+		log.Printf("invalid serialized compressed key")
+		return false
+	}
+
+	eccSig := &ecc.Signature{
+		R: new(big.Int).SetBytes(sig.R),
+		S: new(big.Int).SetBytes(sig.S)}
+
+	if !eccSig.Verify(key, util.Hash256(content)) {
+		log.Printf("signature verification failed")
+		return false
+	}
+	return true
 }

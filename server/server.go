@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"math/big"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dgraph-io/badger/v3"
@@ -15,6 +14,7 @@ import (
 	"teralyt.com/ubikom/ecc"
 	"teralyt.com/ubikom/pb"
 	"teralyt.com/ubikom/pow"
+	"teralyt.com/ubikom/protoutil"
 	"teralyt.com/ubikom/util"
 )
 
@@ -286,30 +286,12 @@ func verifyPow(req *pb.SignedWithPow) bool {
 	return true
 }
 
-func verifySignature(req *pb.SignedWithPow) bool {
-	key, err := ecc.NewPublicFromSerializedCompressed(req.Key)
-	if err != nil {
-		log.Printf("invalid serialized compressed key")
-		return false
-	}
-
-	sig := &ecc.Signature{
-		R: new(big.Int).SetBytes(req.Signature.R),
-		S: new(big.Int).SetBytes(req.Signature.S)}
-
-	if !sig.Verify(key, util.Hash256(req.Content)) {
-		log.Printf("signature verification failed")
-		return false
-	}
-	return true
-}
-
 func verifyPowAndSignature(req *pb.SignedWithPow) bool {
 	if !verifyPow(req) {
 		return false
 	}
 
-	if !verifySignature(req) {
+	if !protoutil.VerifySignature(req.Signature, req.Key, req.Content) {
 		return false
 	}
 
