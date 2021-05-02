@@ -19,13 +19,9 @@ func NewFile(baseDir string) *File {
 	return &File{baseDir: baseDir}
 }
 
-func (f *File) Save(msg *pb.DMSMessage) error {
-	if len(msg.GetReceiver()) < 10 || len(msg.GetSender()) < 10 {
-		return fmt.Errorf("invalid message")
-	}
-
-	receiverKey := fmt.Sprintf("%x", msg.GetReceiver())
-	fileDir := getReceiverDir(f.baseDir, receiverKey)
+func (f *File) Save(msg *pb.DMSMessage, receiverKey []byte) error {
+	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
+	fileDir := getReceiverDir(f.baseDir, receiverKeyStr)
 
 	b, err := proto.Marshal(msg)
 	if err != nil {
@@ -45,10 +41,10 @@ func (f *File) Save(msg *pb.DMSMessage) error {
 	return nil
 }
 
-func (f *File) GetNext(receiver []byte) (*pb.DMSMessage, error) {
-	receiverKey := fmt.Sprintf("%x", receiver)
+func (f *File) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
+	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
 
-	fileDir := getReceiverDir(f.baseDir, receiverKey)
+	fileDir := getReceiverDir(f.baseDir, receiverKeyStr)
 	files, err := ioutil.ReadDir(fileDir)
 
 	if err != nil || len(files) == 0 {
@@ -72,13 +68,10 @@ func (f *File) GetNext(receiver []byte) (*pb.DMSMessage, error) {
 	return msg, nil
 }
 
-func (f *File) Remove(msg *pb.DMSMessage) error {
-	if len(msg.GetReceiver()) < 10 || len(msg.GetSender()) < 10 {
-		return fmt.Errorf("invalid message")
-	}
+func (f *File) Remove(msg *pb.DMSMessage, receiverKey []byte) error {
+	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
 
-	receiverKey := fmt.Sprintf("%x", msg.GetReceiver())
-	fileDir := getReceiverDir(f.baseDir, receiverKey)
+	fileDir := getReceiverDir(f.baseDir, receiverKeyStr)
 	b, err := proto.Marshal(msg)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %w", err)

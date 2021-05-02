@@ -20,9 +20,6 @@ func Test_File_StoreGetRemove(t *testing.T) {
 
 	fileStore := NewFile(dir)
 
-	pk, _ := ecc.NewRandomPrivateKey()
-	key := pk.PublicKey().SerializeCompressed()
-
 	pk1, _ := ecc.NewRandomPrivateKey()
 	key1 := pk1.PublicKey().SerializeCompressed()
 
@@ -31,18 +28,18 @@ func Test_File_StoreGetRemove(t *testing.T) {
 	assert.Nil(msg)
 
 	msg = &pb.DMSMessage{
-		Sender:   key,
-		Receiver: key1,
+		Sender:   "foo",
+		Receiver: "bar",
 		Content:  []byte("hello there"),
 	}
-	err = fileStore.Save(msg)
+	err = fileStore.Save(msg, key1)
 	assert.NoError(err)
 
 	msg1, err := fileStore.GetNext(key1)
 	assert.NoError(err)
 	assert.True(proto.Equal(msg, msg1))
 
-	assert.NoError(fileStore.Remove(msg1))
+	assert.NoError(fileStore.Remove(msg1, key1))
 	msg, err = fileStore.GetNext(key1)
 	assert.NoError(err)
 	assert.Nil(msg)

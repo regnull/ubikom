@@ -99,9 +99,15 @@ service LookupService {
 }
 
 message DMSMessage {
-    bytes sender = 1;
-    bytes receiver = 2;
+    // Sender's address.
+    string sender = 1;
+
+    // Receiver's address.
+    string receiver = 2;
+
     bytes content = 3;
+    
+    Signature signature = 4;
 }
 
 message ResultWithContent {
