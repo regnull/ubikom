@@ -4,8 +4,7 @@ import (
 	"context"
 
 	"github.com/rs/zerolog/log"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"teralyt.com/ubikom/pb"
 	"teralyt.com/ubikom/protoutil"
 	"teralyt.com/ubikom/store"
@@ -52,7 +51,32 @@ func (s *DumpServer) Send(ctx context.Context, req *pb.DMSMessage) (*pb.Result, 
 }
 
 func (s *DumpServer) Receive(ctx context.Context, req *pb.Signed) (*pb.ResultWithContent, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Receive not implemented")
+	if !protoutil.VerifySignature(req.Signature, req.Key, req.Content) {
+		log.Warn().Msg("signature verification failed")
+		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}}, nil
+	}
+
+	msg, err := s.store.GetNext(req.Key)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get next message")
+		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}}, nil
+	}
+
+	b, err := proto.Marshal(msg)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to serialize the message")
+		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}}, nil
+	}
+
+	err = s.store.Remove(msg)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to remove message")
+	}
+
+	return &pb.ResultWithContent{
+		Result:  &pb.Result{Result: pb.ResultCode_RC_OK},
+		Content: b,
+	}, nil
 }
 
 func getKeyByName(ctx context.Context, lookupClient pb.LookupServiceClient, name string) ([]byte, *pb.Result) {

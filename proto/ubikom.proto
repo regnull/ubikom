@@ -30,6 +30,7 @@ message Signature {
 message Signed {
     bytes content = 1;
     Signature signature = 2;
+    bytes key = 3;
 }
 
 message SignedWithPow {
@@ -106,7 +107,7 @@ message DMSMessage {
     string receiver = 2;
 
     bytes content = 3;
-    
+
     Signature signature = 4;
 }
 
