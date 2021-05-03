@@ -18,8 +18,8 @@ type DumpServer struct {
 	store        store.Store
 }
 
-func NewDumpServer(baseDir string) *DumpServer {
-	return &DumpServer{baseDir: baseDir}
+func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient) *DumpServer {
+	return &DumpServer{baseDir: baseDir, lookupClient: lookupClient}
 }
 
 func (s *DumpServer) Send(ctx context.Context, req *pb.DMSMessage) (*pb.Result, error) {
