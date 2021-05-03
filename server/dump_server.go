@@ -19,7 +19,10 @@ type DumpServer struct {
 }
 
 func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient) *DumpServer {
-	return &DumpServer{baseDir: baseDir, lookupClient: lookupClient}
+	return &DumpServer{
+		baseDir:      baseDir,
+		lookupClient: lookupClient,
+		store:        store.NewFile(baseDir)}
 }
 
 func (s *DumpServer) Send(ctx context.Context, req *pb.DMSMessage) (*pb.Result, error) {
@@ -56,7 +59,7 @@ func (s *DumpServer) Receive(ctx context.Context, req *pb.Signed) (*pb.ResultWit
 		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}}, nil
 	}
 
-	msg, err := s.store.GetNext(req.Key)
+	msg, err := s.store.GetNext(req.GetKey())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get next message")
 		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}}, nil
@@ -68,7 +71,7 @@ func (s *DumpServer) Receive(ctx context.Context, req *pb.Signed) (*pb.ResultWit
 		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}}, nil
 	}
 
-	err = s.store.Remove(msg)
+	err = s.store.Remove(msg, req.GetKey())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to remove message")
 	}
