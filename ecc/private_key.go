@@ -1,9 +1,14 @@
 package ecc
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/big"
 
@@ -57,6 +62,11 @@ func LoadPrivateKey(fileName string) (*PrivateKey, error) {
 	return &PrivateKey{privateKey: pk}, nil
 }
 
+// Secret returns the private key's secret.
+func (pk *PrivateKey) Secret() *big.Int {
+	return pk.privateKey.D
+}
+
 // SavePrivateKey saves the private key to the specified file.
 func (pk *PrivateKey) Save(fileName string) error {
 	return ioutil.WriteFile(fileName, []byte(pk.privateKey.D.Bytes()), 0600)
@@ -67,12 +77,66 @@ func (pk *PrivateKey) PublicKey() *PublicKey {
 	return &PublicKey{publicKey: &pk.privateKey.PublicKey}
 }
 
+// Sign signs the hash using the private key and returns signature.
 func (pk *PrivateKey) Sign(hash []byte) (*Signature, error) {
 	r, s, err := ecdsa.Sign(rand.Reader, pk.privateKey, hash)
 	if err != nil {
 		return nil, err
 	}
 	return &Signature{R: r, S: s}, nil
+}
+
+func (pk *PrivateKey) GetSharedEncryptionKey(counterParty *PublicKey) []byte {
+	x, y := btcec.S256().ScalarMult(counterParty.X(), counterParty.Y(),
+		pk.privateKey.D.Bytes())
+	b := bytes.Join([][]byte{x.Bytes(), y.Bytes()}, nil)
+	hash := sha256.Sum256(b)
+	return hash[:]
+}
+
+func (pk *PrivateKey) Encrypt(content []byte, publicKey *PublicKey) ([]byte, error) {
+	encryptionKey := pk.GetSharedEncryptionKey(publicKey)
+	c, err := aes.NewCipher(encryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
+	}
+
+	gcm, err := cipher.NewGCM(c)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, fmt.Errorf("failed to populate nonce: %w", err)
+	}
+
+	return gcm.Seal(nonce, nonce, content, nil), nil
+}
+
+func (pk *PrivateKey) Decrypt(content []byte, publicKey *PublicKey) ([]byte, error) {
+	encryptionKey := pk.GetSharedEncryptionKey(publicKey)
+	c, err := aes.NewCipher(encryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
+	}
+
+	gcm, err := cipher.NewGCM(c)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	nonceSize := gcm.NonceSize()
+	if len(content) < nonceSize {
+		return nil, fmt.Errorf("invalid content")
+	}
+
+	nonce, ciphertext := content[:nonceSize], content[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt: %w", err)
+	}
+	return plaintext, nil
 }
 
 // TODO: remove this.

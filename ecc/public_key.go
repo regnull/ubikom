@@ -84,6 +84,14 @@ func (pbk *PublicKey) SerializeCompressed() []byte {
 	return buf
 }
 
+func (pbk *PublicKey) X() *big.Int {
+	return pbk.publicKey.X
+}
+
+func (pbk *PublicKey) Y() *big.Int {
+	return pbk.publicKey.Y
+}
+
 // Address returns Bitcoin address associated with this private key.
 func (pbk *PublicKey) Address() string {
 	prefix := []byte{0x00}
