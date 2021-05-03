@@ -51,10 +51,11 @@ func main() {
 	}
 	log.Info().Str("data-dir", args.DataDir).Msg("got data directory")
 
-	lookupService, err := connectToLookupService(args.LookupServerURL)
+	lookupService, conn, err := connectToLookupService(args.LookupServerURL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to lookup server")
 	}
+	defer conn.Close()
 
 	dumpServer := server.NewDumpServer(args.DataDir, lookupService)
 
@@ -69,7 +70,7 @@ func main() {
 	grpcServer.Serve(lis)
 }
 
-func connectToLookupService(url string) (pb.LookupServiceClient, error) {
+func connectToLookupService(url string) (pb.LookupServiceClient, *grpc.ClientConn, error) {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
@@ -78,9 +79,8 @@ func connectToLookupService(url string) (pb.LookupServiceClient, error) {
 
 	conn, err := grpc.Dial(url, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to lookup service: %w", err)
+		return nil, nil, fmt.Errorf("failed to connect to lookup service: %w", err)
 	}
-	defer conn.Close()
 
-	return pb.NewLookupServiceClient(conn), nil
+	return pb.NewLookupServiceClient(conn), conn, nil
 }
