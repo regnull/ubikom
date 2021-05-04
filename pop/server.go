@@ -54,6 +54,7 @@ func NewServer(opts *ServerOptions) *Server {
 }
 
 func (s *Server) ListenAndServe() error {
+	log.Info().Str("domain", s.opts.Domain).Int("port", s.opts.Port).Msg("POP server starting")
 	err := s.server.Start()
 	if err != nil {
 		return err

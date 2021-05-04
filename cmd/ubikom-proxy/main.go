@@ -2,72 +2,20 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
-	"io"
-	"io/ioutil"
 	"os"
+	"sync"
 	"time"
 
-	"github.com/emersion/go-smtp"
-	gosmpt "github.com/emersion/go-smtp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"teralyt.com/ubikom/ecc"
 	"teralyt.com/ubikom/pb"
 	"teralyt.com/ubikom/pop"
+	"teralyt.com/ubikom/smtp"
 	"teralyt.com/ubikom/util"
 )
-
-// The Backend implements SMTP server methods.
-type Backend struct{}
-
-// Login handles a login command with username and password.
-func (bkd *Backend) Login(state *gosmpt.ConnectionState, username, password string) (gosmpt.Session, error) {
-	log.Debug().Str("user", username).Str("password", password).Msg("login")
-	if username != "lgx" || password != "pumpkin123" {
-		return nil, errors.New("Invalid username or password")
-	}
-	return &Session{}, nil
-}
-
-// AnonymousLogin requires clients to authenticate using SMTP AUTH before sending emails
-func (bkd *Backend) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
-	log.Debug().Msg("anonymous login")
-	return nil, smtp.ErrAuthRequired
-}
-
-// A Session is returned after successful login.
-type Session struct{}
-
-func (s *Session) Mail(from string, opts smtp.MailOptions) error {
-	log.Debug().Str("from", from).Msg("mail")
-	return nil
-}
-
-func (s *Session) Rcpt(to string) error {
-	log.Debug().Str("to", to).Msg("rcpt")
-	return nil
-}
-
-func (s *Session) Data(r io.Reader) error {
-	if b, err := ioutil.ReadAll(r); err != nil {
-		return err
-	} else {
-		log.Debug().Str("data", string(b)).Msg("data")
-	}
-	return nil
-}
-
-func (s *Session) Reset() {
-	log.Debug().Msg("reset")
-}
-
-func (s *Session) Logout() error {
-	log.Debug().Msg("logout")
-	return nil
-}
 
 type CmdArgs struct {
 	DumpURL     string
@@ -132,21 +80,35 @@ func main() {
 		PollInterval: time.Minute,
 	}
 
-	backendServer := pop.NewServer(popOpts)
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	popServer := pop.NewServer(popOpts)
 	go func() {
-		backendServer.ListenAndServe()
+		err := popServer.ListenAndServe()
+		if err != nil {
+			log.Error().Err(err).Msg("POP server failed to initialize")
+		}
+		wg.Done()
 	}()
 
-	be := &Backend{}
-	s := gosmpt.NewServer(be)
-	s.Addr = ":1025"
-	s.Domain = "localhost"
-	s.ReadTimeout = 10 * time.Second
-	s.WriteTimeout = 10 * time.Second
-	s.MaxMessageBytes = 1024 * 1024
-	s.MaxRecipients = 50
-	s.AllowInsecureAuth = true
-	if err := s.ListenAndServe(); err != nil {
-		log.Fatal().Err(err)
+	smtpOpts := &smtp.ServerOptions{
+		Domain:       "localhost",
+		Port:         1025,
+		User:         "lgx",
+		Password:     "pumpkin123",
+		LookupClient: lookupClient,
+		DumpClient:   dumpClient,
+		PrivateKey:   key,
 	}
+	smtpServer := smtp.NewServer(smtpOpts)
+	go func() {
+		err := smtpServer.ListenAndServe()
+		if err != nil {
+			log.Error().Err(err).Msg("SMTP server failed to initialize")
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
 }
