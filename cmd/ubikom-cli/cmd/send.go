@@ -111,7 +111,7 @@ var sendMessageCmd = &cobra.Command{
 
 		var lines []string
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Enter message: ")
+		fmt.Print("Enter your message, dot on an empty line to finish: \n")
 		for {
 			text, err := reader.ReadString('\n')
 			if err != nil {
