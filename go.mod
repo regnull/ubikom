@@ -3,6 +3,7 @@ module teralyt.com/ubikom
 go 1.14
 
 require (
+	github.com/DevelHell/popgun v0.0.0-20170926125504-2c5552e4bf74 // indirect
 	github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6 // indirect
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/btcsuite/btcutil v1.0.2 // indirect
@@ -10,6 +11,7 @@ require (
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/dgraph-io/badger v1.6.2 // indirect
 	github.com/dgraph-io/badger/v3 v3.2011.1 // indirect
+	github.com/emersion/go-smtp v0.15.0 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/rs/zerolog v1.21.0 // indirect
