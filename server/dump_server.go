@@ -65,6 +65,10 @@ func (s *DumpServer) Receive(ctx context.Context, req *pb.Signed) (*pb.ResultWit
 		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}}, nil
 	}
 
+	if msg == nil {
+		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}}, nil
+	}
+
 	b, err := proto.Marshal(msg)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to serialize the message")
