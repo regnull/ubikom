@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"teralyt.com/ubikom/pb"
 	"teralyt.com/ubikom/server"
 )
@@ -20,6 +22,25 @@ const (
 	defaultHomeSubDir = ".ubikom"
 	defaultDBSubDir   = "db"
 )
+
+type HealthChecker struct{}
+
+func (h *HealthChecker) Check(ctx context.Context,
+	req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
+	log.Debug().Msg("health check")
+	return &grpc_health_v1.HealthCheckResponse{
+		Status: grpc_health_v1.HealthCheckResponse_SERVING,
+	}, nil
+}
+
+func (h *HealthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, srv grpc_health_v1.Health_WatchServer) error {
+	log.Debug().Msg("streaming health check")
+	srv.Send(&grpc_health_v1.HealthCheckResponse{
+		Status: grpc_health_v1.HealthCheckResponse_SERVING,
+	})
+	<-srv.Context().Done()
+	return nil
+}
 
 type CmdArgs struct {
 	BaseDir string
@@ -50,6 +71,11 @@ func main() {
 	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
+
+	// Initialize health checker.
+	healthService := &HealthChecker{}
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthService)
+
 	srv := server.NewServer(db)
 	pb.RegisterIdentityServiceServer(grpcServer, srv)
 	pb.RegisterLookupServiceServer(grpcServer, srv)

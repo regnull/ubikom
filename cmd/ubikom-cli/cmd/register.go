@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/rs/zerolog/log"
@@ -61,6 +62,8 @@ var registerKeyCmd = &cobra.Command{
 		}
 		opts := []grpc.DialOption{
 			grpc.WithInsecure(),
+			grpc.WithBlock(),
+			grpc.WithTimeout(time.Second * 5),
 		}
 
 		url, err := cmd.Flags().GetString("url")
