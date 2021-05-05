@@ -35,6 +35,8 @@ Before you start using your private key, you need to register the public key (ge
 
 This might take a few seconds, as the server requires you to generate proof-of-work and send it with the request, to prevent spam.
 
+This is your private key, so yeah, don't give it to anyone.
+
 ### Step 6: Reserve your name
 Name is what you use to send and receive messages. You must associate your name with your private key. The name must be unique - so if you get an error, try another name:
 
