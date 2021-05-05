@@ -12,13 +12,14 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"teralyt.com/ubikom/ecc"
+	"teralyt.com/ubikom/globals"
 	"teralyt.com/ubikom/pb"
 	"teralyt.com/ubikom/util"
 )
 
 func init() {
-	sendCmd.PersistentFlags().String("dump-service-url", "localhost:8826", "dump service URL")
-	sendCmd.PersistentFlags().String("lookup-service-url", "localhost:8825", "lookup service URL")
+	sendCmd.PersistentFlags().String("dump-service-url", globals.PublicDumpServiceURL, "dump service URL")
+	sendCmd.PersistentFlags().String("lookup-service-url", globals.PublicLookupServiceURL, "lookup service URL")
 	sendMessageCmd.Flags().String("receiver", "", "receiver's address")
 	sendMessageCmd.Flags().String("sender", "", "sender's address")
 	sendMessageCmd.Flags().String("key", "", "Location for the private key file")

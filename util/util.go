@@ -43,7 +43,7 @@ func Hash160(buf []byte) []byte {
 
 // ValidateName returns true if the name is valid.
 func ValidateName(name string) bool {
-	if len(name) < 5 || len(name) > 64 {
+	if len(name) < 3 || len(name) > 64 {
 		return false
 	}
 

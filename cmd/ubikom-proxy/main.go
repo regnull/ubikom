@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"teralyt.com/ubikom/ecc"
+	"teralyt.com/ubikom/globals"
 	"teralyt.com/ubikom/pb"
 	"teralyt.com/ubikom/pop"
 	"teralyt.com/ubikom/smtp"
@@ -21,13 +22,15 @@ type CmdArgs struct {
 	DumpURL     string
 	LookupURL   string
 	KeyLocation string
+	User        string
 }
 
 func main() {
 	var args CmdArgs
-	flag.StringVar(&args.DumpURL, "dump-url", "localhost:8826", "dump service URL")
-	flag.StringVar(&args.LookupURL, "lookup-url", "localhost:8825", "lookup service URL")
+	flag.StringVar(&args.DumpURL, "dump-url", globals.PublicDumpServiceURL, "dump service URL")
+	flag.StringVar(&args.LookupURL, "lookup-url", globals.PublicLookupServiceURL, "lookup service URL")
 	flag.StringVar(&args.KeyLocation, "key", "", "private key location")
+	flag.StringVar(&args.User, "user", "ubikom-user", "name to be used for POP & SMTP")
 	flag.Parse()
 
 	if args.KeyLocation == "" {
@@ -69,11 +72,12 @@ func main() {
 	}
 
 	popOpts := &pop.ServerOptions{
-		Ctx:          context.Background(),
-		Domain:       "localhost",
-		Port:         1100,
-		User:         "lgx",
-		Password:     "pumpkin123",
+		Ctx:    context.Background(),
+		Domain: "localhost",
+		Port:   1100,
+		User:   args.User,
+		// TODO: Re-enable password, maybe.
+		// Password:     "pumpkin123",
 		DumpClient:   dumpClient,
 		LookupClient: lookupClient,
 		Key:          key,
@@ -93,10 +97,11 @@ func main() {
 	}()
 
 	smtpOpts := &smtp.ServerOptions{
-		Domain:       "localhost",
-		Port:         1025,
-		User:         "lgx",
-		Password:     "pumpkin123",
+		Domain: "localhost",
+		Port:   1025,
+		User:   args.User,
+		// TODO: Re-enable password, maybe.
+		// Password:     "pumpkin123",
 		LookupClient: lookupClient,
 		DumpClient:   dumpClient,
 		PrivateKey:   key,

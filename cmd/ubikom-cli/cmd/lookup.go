@@ -8,11 +8,12 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
+	"teralyt.com/ubikom/globals"
 	"teralyt.com/ubikom/pb"
 )
 
 func init() {
-	lookupCmd.PersistentFlags().String("url", "localhost:8825", "server URL")
+	lookupCmd.PersistentFlags().String("url", globals.PublicLookupServiceURL, "server URL")
 
 	lookupAddressCmd.Flags().String("protocol", "PL_DMS", "protocol")
 

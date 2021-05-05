@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"teralyt.com/ubikom/ecc"
+	"teralyt.com/ubikom/globals"
 	"teralyt.com/ubikom/pb"
 	"teralyt.com/ubikom/protoutil"
 	"teralyt.com/ubikom/util"
@@ -20,7 +21,7 @@ const (
 
 func init() {
 	registerCmd.PersistentFlags().Int("pow-strength", defaultPowStrength, "POW strength")
-	registerCmd.PersistentFlags().String("url", "localhost:8825", "server URL")
+	registerCmd.PersistentFlags().String("url", globals.PublicIdentityServiceURL, "server URL")
 	registerCmd.PersistentFlags().String("key", "", "Location for the private key file")
 
 	registerAddressCmd.Flags().String("protocol", "PL_DMS", "protocol")

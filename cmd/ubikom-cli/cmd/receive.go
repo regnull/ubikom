@@ -10,14 +10,15 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"teralyt.com/ubikom/ecc"
+	"teralyt.com/ubikom/globals"
 	"teralyt.com/ubikom/pb"
 	"teralyt.com/ubikom/protoutil"
 	"teralyt.com/ubikom/util"
 )
 
 func init() {
-	receiveCmd.PersistentFlags().String("dump-service-url", "localhost:8826", "dump service URL")
-	receiveCmd.PersistentFlags().String("lookup-service-url", "localhost:8825", "lookup service URL")
+	receiveCmd.PersistentFlags().String("dump-service-url", globals.PublicDumpServiceURL, "dump service URL")
+	receiveCmd.PersistentFlags().String("lookup-service-url", globals.PublicLookupServiceURL, "lookup service URL")
 	receiveMessageCmd.Flags().String("key", "", "Location for the private key file")
 	receiveCmd.AddCommand(receiveMessageCmd)
 	rootCmd.AddCommand(receiveCmd)
