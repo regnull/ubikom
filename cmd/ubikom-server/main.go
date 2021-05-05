@@ -58,11 +58,11 @@ func main() {
 }
 
 func getDBDir(baseDir string) (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("error retrieving home directory: %w", err)
-	}
 	if baseDir == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("error retrieving home directory: %w", err)
+		}
 		dir := path.Join(homeDir, defaultHomeSubDir)
 		_ = os.Mkdir(dir, 0700)
 		dir = path.Join(dir, defaultDBSubDir)
