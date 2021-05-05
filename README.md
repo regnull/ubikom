@@ -2,7 +2,7 @@
 Free, secure and private messaging for everyone.
 
 ## Testing the early version
-Early version means it's not entirely stable, so use your common sense.
+Early version means it's not entirely stable, so use your common sense. Some advanced terminal skills (entering commands) are required.
 
 ### Step 1: Clone the Repo
 
@@ -65,3 +65,10 @@ Configure your email client as follows:
 ### Step 9: Use your mail client
 Send secure email to other users, addressing it to name@x. 
 Heck, send email to me, lgx@x! Definitely report bugs. 
+
+## Current status
+
+* Messages are encrypted and signed, which means only the intented recipient can read messages addressed to them.
+* Sender and recipient names are not encrypted, so theoretically someone may find out that Bob sent message to Alice, but this is about it.
+* Eventually the identity service will be distributed and decentralized, but for now it's just a single machine.
+* All messages are being sent via the big dump service, where they sit just as a bunch of bytes. Eventually users will be able to choose different locations for their messages (or send them directly with no intermidiaries).
