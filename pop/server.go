@@ -19,9 +19,7 @@ type authorizator struct {
 
 func (a *authorizator) Authorize(user, pass string) bool {
 	log.Debug().Str("user", user).Msg("[POP] <- LOGIN")
-	ok := true
-	// TODO: Maybe re-enable auth at some point.
-	// ok := user == a.user && pass == a.password
+	ok := user == a.user && pass == a.password
 	log.Debug().Bool("authorized", ok).Msg("[POP] -> LOGIN")
 	return ok
 }

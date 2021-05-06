@@ -6,6 +6,7 @@ import (
 	"hash"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -63,4 +64,53 @@ func GetDefaultKeyLocation() (string, error) {
 	dir := path.Join(homeDir, defaultHomeSubDir)
 	keyFile := path.Join(dir, defaultKeyFile)
 	return keyFile, nil
+}
+
+func GetConfigFileLocation(location string) (string, error) {
+	defaultFileName := "ubikom.conf"
+
+	// If the location was explicitly specified, just use that.
+	if location != "" {
+		s, err := os.Stat(location)
+		if err != nil {
+			return "", fmt.Errorf("config file doesn't exist: %w", err)
+		}
+		if s.IsDir() {
+			return "", fmt.Errorf("config file location points to a directory")
+		}
+		return location, nil
+	}
+
+	// Try current directory.
+	if stat, err := os.Stat(defaultFileName); err == nil && !stat.IsDir() {
+		return defaultFileName, nil
+	}
+
+	// Try the executable file location.
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err == nil {
+		configPath := path.Join(dir, defaultFileName)
+		if stat, err := os.Stat(configPath); err == nil && !stat.IsDir() {
+			return configPath, nil
+		}
+	}
+
+	if strings.HasSuffix(os.Args[0], "main") || strings.HasSuffix(os.Args[0], "__debug_bin") {
+		// This process was likely started with "go run".
+		// Check the config directory in the source directory tree.
+		configPath := path.Join(dir, "..", "..", "config", defaultFileName)
+		if stat, err := os.Stat(configPath); err == nil && !stat.IsDir() {
+			return configPath, nil
+		}
+
+		wd, err := os.Getwd()
+		if err == nil {
+			configPath = path.Join(wd, "..", "..", "config", defaultFileName)
+			if stat, err := os.Stat(configPath); err == nil && !stat.IsDir() {
+				return configPath, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("config file not found")
 }

@@ -17,6 +17,7 @@ import (
 // Backend is a fake backend interface implementation used for test
 type Backend struct {
 	messages     []string
+	deleted      []bool
 	dumpClient   pb.DMSDumpServiceClient
 	lookupClient pb.LookupServiceClient
 	privateKey   *ecc.PrivateKey
@@ -93,6 +94,7 @@ func (b *Backend) Poll(ctx context.Context) error {
 
 		b.lock.Lock()
 		b.messages = append(b.messages, string(content))
+		b.deleted = append(b.deleted, false)
 		b.lock.Unlock()
 		count++
 	}
@@ -141,7 +143,10 @@ func (b *Backend) List(user string) (octets []int, err error) {
 	log.Debug().Str("user", user).Msg("[POP] <- LIST")
 	var sizes []int
 	b.lock.Lock()
-	for _, msg := range b.messages {
+	for i, msg := range b.messages {
+		if b.deleted[i] {
+			continue
+		}
 		sizes = append(sizes, len(msg))
 	}
 	b.lock.Unlock()
@@ -159,6 +164,11 @@ func (b *Backend) ListMessage(user string, msgId int) (exists bool, octets int, 
 	if msgId > len(b.messages) {
 		b.lock.Unlock()
 		log.Debug().Msg("[POP] -> LIST-MESSAGE, no such message")
+		return false, 0, nil
+	}
+	if b.deleted[msgId] {
+		b.lock.Unlock()
+		log.Debug().Msg("[POP] -> LIST-MESSAGE, message is deleted")
 		return false, 0, nil
 	}
 	size = len(b.messages[msgId])
@@ -181,6 +191,11 @@ func (b *Backend) Retr(user string, msgId int) (message string, err error) {
 		log.Debug().Msg("[POP] -> RETR, no such message")
 		return "", fmt.Errorf("no such message")
 	}
+	if b.deleted[msgId] {
+		b.lock.Unlock()
+		log.Debug().Msg("[POP] -> RETR, message is deleted")
+		return "", fmt.Errorf("message is deleted")
+	}
 	msg = b.messages[msgId]
 	b.lock.Unlock()
 	log.Debug().Str("message", getFirst(msg, 16)).Msg("[POP] -> RETR")
@@ -198,24 +213,21 @@ func (b *Backend) Dele(user string, msgId int) error {
 		log.Debug().Msg("[POP] -> DELE, no such message")
 		return fmt.Errorf("no such message")
 	}
-	var newMessages []string
-	for i, msg := range b.messages {
-		if i == msgId {
-			continue
-		}
-		newMessages = append(newMessages, msg)
-	}
-	b.messages = newMessages
+	b.deleted[msgId] = true
 	b.lock.Unlock()
-	log.Debug().Msg("[POP] -> DELE, message deleted")
+	log.Debug().Msg("[POP] -> DELE, message marked as deleted")
 	return nil
 }
 
 // Undelete all messages marked as deleted in single connection
 func (b *Backend) Rset(user string) error {
-	// TODO: Implement this.
 	log.Debug().Str("user", user).Msg("[POP] <- RSET")
-	log.Debug().Msg("[POP] <- RSET, ignored (not implemented)")
+	b.lock.Lock()
+	for i := range b.deleted {
+		b.deleted[i] = false
+	}
+	b.lock.Unlock()
+	log.Debug().Msg("[POP] <- RSET")
 	return nil
 }
 
@@ -227,6 +239,9 @@ func (b *Backend) Uidl(user string) (uids []string, err error) {
 	var ids []string
 	b.lock.Lock()
 	for i := range b.messages {
+		if b.deleted[i] {
+			continue
+		}
 		ids = append(ids, fmt.Sprintf("%d", i+1))
 	}
 	b.lock.Unlock()
@@ -240,7 +255,13 @@ func (b *Backend) UidlMessage(user string, msgId int) (exists bool, uid string, 
 	var id string
 	b.lock.Lock()
 	if msgId > len(b.messages) {
+		b.lock.Unlock()
 		log.Error().Msg("[POP] -> UIDL-MESSAGE, no such message")
+		return false, "", nil
+	}
+	if b.deleted[msgId] {
+		b.lock.Unlock()
+		log.Error().Msg("[POP] -> UIDL-MESSAGE, message is deleted")
 		return false, "", nil
 	}
 	id = fmt.Sprintf("%d", msgId+1)
@@ -252,7 +273,20 @@ func (b *Backend) UidlMessage(user string, msgId int) (exists bool, uid string, 
 // Write all changes to persistent storage, i.e. delete all messages marked as deleted.
 func (b *Backend) Update(user string) error {
 	log.Debug().Str("user", user).Msg("[POP] <- UPDATE")
-	log.Debug().Msg("[POP] -> UPDATE, ignored (not implemented)")
+	b.lock.Lock()
+	var newMessages []string
+	count := 0
+	for i, msg := range b.messages {
+		if b.deleted[i] {
+			count++
+			continue
+		}
+		newMessages = append(newMessages, msg)
+	}
+	b.messages = newMessages
+	b.deleted = make([]bool, len(newMessages))
+	b.lock.Unlock()
+	log.Debug().Int("deleted", count).Msg("[POP] -> UPDATE")
 	return nil
 }
 
