@@ -36,8 +36,8 @@ func NewBackend(user, password string, lookupClient pb.LookupServiceClient,
 func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string) (gosmtp.Session, error) {
 	log.Debug().Str("user", username).Msg("[SMTP] <- LOGIN")
 	// TODO: Maybe re-enable auth at some point.
-	//ok := username != b.user || password != b.password
-	ok := true
+	ok := username == b.user && password == b.password
+	//ok := true
 	log.Debug().Bool("authorized", ok).Msg("[SMTP] -> LOGIN")
 	if !ok {
 		return nil, errors.New("Invalid username or password")
@@ -86,7 +86,7 @@ func (s *Session) Data(r io.Reader) error {
 		log.Error().Err(err).Msg("[SMTP] -> DATA")
 		return err
 	} else {
-		log.Debug().Str("data", string(body)).Msg("[SMTP] -> DATA")
+		log.Debug().Int("size", len(body)).Msg("[SMTP] -> DATA")
 	}
 
 	// Send the actual message.

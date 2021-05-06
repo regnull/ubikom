@@ -2,6 +2,7 @@ package pop
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"sync"
 	"time"
@@ -238,11 +239,12 @@ func (b *Backend) Uidl(user string) (uids []string, err error) {
 	log.Debug().Str("user", user).Msg("[POP] <- UIDL")
 	var ids []string
 	b.lock.Lock()
-	for i := range b.messages {
+	for i, msg := range b.messages {
 		if b.deleted[i] {
 			continue
 		}
-		ids = append(ids, fmt.Sprintf("%d", i+1))
+		id := fmt.Sprintf("%x", sha256.Sum256([]byte(msg)))
+		ids = append(ids, id)
 	}
 	b.lock.Unlock()
 	log.Debug().Strs("ids", ids).Msg("[POP] -> UIDL")
@@ -252,7 +254,6 @@ func (b *Backend) Uidl(user string) (uids []string, err error) {
 // Similar to ListMessage, but returns unique ID by message ID instead of size.
 func (b *Backend) UidlMessage(user string, msgId int) (exists bool, uid string, err error) {
 	log.Debug().Str("user", user).Int("msg-id", msgId).Msg("[POP] <- UIDL-MESSAGE")
-	var id string
 	b.lock.Lock()
 	if msgId > len(b.messages) {
 		b.lock.Unlock()
@@ -264,7 +265,7 @@ func (b *Backend) UidlMessage(user string, msgId int) (exists bool, uid string, 
 		log.Error().Msg("[POP] -> UIDL-MESSAGE, message is deleted")
 		return false, "", nil
 	}
-	id = fmt.Sprintf("%d", msgId+1)
+	id := fmt.Sprintf("%x", sha256.Sum256([]byte(b.messages[msgId])))
 	b.lock.Unlock()
 	log.Debug().Str("id", id).Msg("[POP] -> UIDL-MESSAGE")
 	return true, id, nil

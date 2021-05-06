@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"hash"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ripemd160"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -113,4 +115,22 @@ func GetConfigFileLocation(location string) (string, error) {
 	}
 
 	return "", fmt.Errorf("config file not found")
+}
+
+// FindAndParseConfigFile locates the config file and parses it, storing the result in out.
+func FindAndParseConfigFile(configFile string, out interface{}) error {
+	configFile, err := GetConfigFileLocation(configFile)
+	if err != nil {
+		return fmt.Errorf("config file not found: %w", err)
+	}
+	fmt.Printf("using config file: %s\n", configFile)
+	config, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("config file not found")
+	}
+	err = yaml.Unmarshal(config, out)
+	if err != nil {
+		return fmt.Errorf("failed to parse config file: %w", err)
+	}
+	return nil
 }
