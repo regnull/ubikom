@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	gosmtp "github.com/emersion/go-smtp"
+	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
-	"teralyt.com/ubikom/ecc"
-	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/util"
 )
 
 type Backend struct {

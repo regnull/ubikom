@@ -4,10 +4,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/ubikom/pb"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
-	"teralyt.com/ubikom/ecc"
-	"teralyt.com/ubikom/pb"
 )
 
 func Test_File_StoreGetRemove(t *testing.T) {

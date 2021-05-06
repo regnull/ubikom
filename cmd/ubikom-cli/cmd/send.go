@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/ubikom/globals"
+	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
-	"teralyt.com/ubikom/ecc"
-	"teralyt.com/ubikom/globals"
-	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/util"
 )
 
 func init() {

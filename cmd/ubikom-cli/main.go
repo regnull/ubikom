@@ -1,7 +1,7 @@
 package main
 
 import (
-	"teralyt.com/ubikom/cmd/ubikom-cli/cmd"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd"
 )
 
 func main() {

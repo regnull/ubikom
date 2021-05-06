@@ -7,8 +7,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/regnull/ubikom/pb"
 	"google.golang.org/protobuf/proto"
-	"teralyt.com/ubikom/pb"
 )
 
 type File struct {

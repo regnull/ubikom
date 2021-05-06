@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/pow"
+	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
-	"teralyt.com/ubikom/ecc"
-	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/pow"
-	"teralyt.com/ubikom/util"
 )
 
 // CreateSignedWithPOW creates a request signed with the given private key and generates POW of the given strength.

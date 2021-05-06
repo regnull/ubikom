@@ -9,12 +9,12 @@ import (
 	"path"
 
 	"github.com/dgraph-io/badger/v3"
+	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/server"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
-	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/server"
 )
 
 const (

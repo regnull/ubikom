@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/regnull/ubikom/globals"
+	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
-	"teralyt.com/ubikom/globals"
-	"teralyt.com/ubikom/pb"
 )
 
 func init() {

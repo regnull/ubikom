@@ -1,6 +1,6 @@
 package store
 
-import "teralyt.com/ubikom/pb"
+import "github.com/regnull/ubikom/pb"
 
 type Store interface {
 	Save(msg *pb.DMSMessage, receiverKey []byte) error

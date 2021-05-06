@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"teralyt.com/ubikom/util"
+	"github.com/regnull/ubikom/util"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcutil/base58"

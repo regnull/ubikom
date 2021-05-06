@@ -1,4 +1,4 @@
-module teralyt.com/ubikom
+module github.com/regnull/ubikom
 
 go 1.14
 

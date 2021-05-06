@@ -7,15 +7,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/ubikom/globals"
+	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/pop"
+	"github.com/regnull/ubikom/smtp"
+	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
-	"teralyt.com/ubikom/ecc"
-	"teralyt.com/ubikom/globals"
-	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/pop"
-	"teralyt.com/ubikom/smtp"
-	"teralyt.com/ubikom/util"
 )
 
 type CmdArgs struct {

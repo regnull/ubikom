@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/protoutil"
+	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
-	"teralyt.com/ubikom/ecc"
-	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/protoutil"
-	"teralyt.com/ubikom/util"
 )
 
 // Backend is a fake backend interface implementation used for test

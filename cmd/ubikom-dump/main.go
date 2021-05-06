@@ -8,11 +8,11 @@ import (
 	"path"
 	"time"
 
+	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/server"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
-	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/server"
 )
 
 const (

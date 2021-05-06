@@ -3,11 +3,11 @@ package server
 import (
 	"context"
 
+	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/protoutil"
+	"github.com/regnull/ubikom/store"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
-	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/protoutil"
-	"teralyt.com/ubikom/store"
 )
 
 type DumpServer struct {

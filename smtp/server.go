@@ -5,9 +5,9 @@ import (
 	"time"
 
 	gosmtp "github.com/emersion/go-smtp"
+	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
-	"teralyt.com/ubikom/ecc"
-	"teralyt.com/ubikom/pb"
 )
 
 type ServerOptions struct {

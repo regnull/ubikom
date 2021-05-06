@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"teralyt.com/ubikom/ecc"
+	"github.com/regnull/ubikom/ecc"
 )
 
 const (

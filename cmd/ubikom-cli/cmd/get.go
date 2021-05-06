@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"teralyt.com/ubikom/ecc"
-	"teralyt.com/ubikom/util"
 )
 
 func init() {

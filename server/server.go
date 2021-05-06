@@ -11,11 +11,11 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/rs/zerolog/log"
 
-	"teralyt.com/ubikom/ecc"
-	"teralyt.com/ubikom/pb"
-	"teralyt.com/ubikom/pow"
-	"teralyt.com/ubikom/protoutil"
-	"teralyt.com/ubikom/util"
+	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/pow"
+	"github.com/regnull/ubikom/protoutil"
+	"github.com/regnull/ubikom/util"
 )
 
 var ErrKeyExists = fmt.Errorf("key already exists")
