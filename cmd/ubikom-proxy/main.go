@@ -22,13 +22,14 @@ import (
 )
 
 type Args struct {
-	DumpURL               string
-	LookupURL             string
-	KeyLocation           string
-	PopUser               string
-	PopPassword           string
-	ConnectionTimeoutMsec int
-	LogLevel              string
+	DumpURL               string `yaml:"dump-url"`
+	LookupURL             string `yaml:"lookup-url"`
+	KeyLocation           string `yaml:"key-location"`
+	PopUser               string `yaml:"pop-user"`
+	PopPassword           string `yaml:"pop-password"`
+	PopDomain             string `yaml:"pop-domain"`
+	ConnectionTimeoutMsec int    `yaml:"connection-timeout-msec"`
+	LogLevel              string `yaml:"log-level"`
 }
 
 func main() {

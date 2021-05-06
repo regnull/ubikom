@@ -18,6 +18,7 @@ upload:
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/ubikom-server-linux ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-server
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/ubikom-dump-linux ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-dump
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/ubikom-cli-linux ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-cli
+	scp -i $(SSH_KEY) $(ROOT_DIR)config/ubikom-server.conf ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom.conf
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-server
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-dump
 
