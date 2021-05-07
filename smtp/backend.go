@@ -3,7 +3,6 @@ package smtp
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -11,7 +10,7 @@ import (
 	gosmtp "github.com/emersion/go-smtp"
 	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/pb"
-	"github.com/regnull/ubikom/util"
+	"github.com/regnull/ubikom/protoutil"
 	"github.com/rs/zerolog/log"
 )
 
@@ -35,9 +34,7 @@ func NewBackend(user, password string, lookupClient pb.LookupServiceClient,
 
 func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string) (gosmtp.Session, error) {
 	log.Debug().Str("user", username).Msg("[SMTP] <- LOGIN")
-	// TODO: Maybe re-enable auth at some point.
 	ok := username == b.user && password == b.password
-	//ok := true
 	log.Debug().Bool("authorized", ok).Msg("[SMTP] -> LOGIN")
 	if !ok {
 		return nil, errors.New("Invalid username or password")
@@ -102,55 +99,10 @@ func (s *Session) Data(r io.Reader) error {
 
 	log.Debug().Str("sender", sender).Str("receiver", receiver).Msg("about to send message")
 
-	lookupRes, err := s.lookupClient.LookupName(context.TODO(), &pb.LookupNameRequest{Name: receiver})
-	if err != nil {
-		log.Error().Err(err).Str("name", s.to).Msg("failed to get receiver public key")
-		return fmt.Errorf("failed to send message")
-	}
-	if lookupRes.Result != pb.ResultCode_RC_OK {
-		log.Error().Str("result", lookupRes.Result.String()).Msg("failed to get receiver public key")
-		return fmt.Errorf("failed to send message")
-	}
-
-	receiverKey, err := ecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
-	if err != nil {
-		log.Error().Err(err).Msg("invalid receiver public key")
-		return fmt.Errorf("failed to send messsage")
-	}
-
-	encryptedBody, err := s.privateKey.Encrypt(body, receiverKey)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to encrypt message")
-		return fmt.Errorf("failed to send messsage")
-	}
-
-	hash := util.Hash256(encryptedBody)
-	sig, err := s.privateKey.Sign(hash)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to sign message")
-		return fmt.Errorf("failed to send messsage")
-	}
-
-	msg := &pb.DMSMessage{
-		Sender:   sender,
-		Receiver: receiver,
-		Content:  encryptedBody,
-		Signature: &pb.Signature{
-			R: sig.R.Bytes(),
-			S: sig.S.Bytes(),
-		},
-	}
-	res, err := s.dumpClient.Send(context.TODO(), msg)
+	err = protoutil.SendMessage(context.Background(), s.privateKey, body, sender, receiver, s.lookupClient)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to send message")
-		return fmt.Errorf("failed to send messsage")
 	}
-	if res.Result != pb.ResultCode_RC_OK {
-		log.Error().Str("code", res.GetResult().Enum().String()).Msg("server returned error")
-		return fmt.Errorf("failed to send messsage")
-	}
-	log.Debug().Msg("message sent")
-
 	return nil
 }
 
