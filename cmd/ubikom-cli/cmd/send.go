@@ -11,6 +11,7 @@ import (
 	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -18,7 +19,6 @@ import (
 )
 
 func init() {
-	sendCmd.PersistentFlags().String("dump-service-url", globals.PublicDumpServiceURL, "dump service URL")
 	sendCmd.PersistentFlags().String("lookup-service-url", globals.PublicLookupServiceURL, "lookup service URL")
 	sendMessageCmd.Flags().String("receiver", "", "receiver's address")
 	sendMessageCmd.Flags().String("sender", "", "sender's address")
@@ -40,11 +40,6 @@ var sendMessageCmd = &cobra.Command{
 	Short: "Send message",
 	Long:  "Send message",
 	Run: func(cmd *cobra.Command, args []string) {
-		dumpURL, err := cmd.Flags().GetString("dump-service-url")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get dump server URL")
-		}
-
 		lookupServiceURL, err := cmd.Flags().GetString("lookup-service-url")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get lookup server URL")
@@ -92,23 +87,6 @@ var sendMessageCmd = &cobra.Command{
 		ctx := context.Background()
 
 		lookupService := pb.NewLookupServiceClient(lookupConn)
-		lookupRes, err := lookupService.LookupName(ctx, &pb.LookupNameRequest{Name: receiver})
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get receiver public key")
-		}
-		if lookupRes.Result != pb.ResultCode_RC_OK {
-			log.Fatal().Str("result", lookupRes.Result.String()).Msg("failed to get receiver public key")
-		}
-		receiverKey, err := ecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
-		if err != nil {
-			log.Fatal().Err(err).Msg("invalid receiver public key")
-		}
-
-		dumpConn, err := grpc.Dial(dumpURL, opts...)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to connect to the dump server")
-		}
-		defer dumpConn.Close()
 
 		var lines []string
 		reader := bufio.NewReader(os.Stdin)
@@ -125,35 +103,9 @@ var sendMessageCmd = &cobra.Command{
 		}
 		body := strings.Join(lines, "\n")
 
-		encryptedBody, err := privateKey.Encrypt([]byte(body), receiverKey)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to encrypt message")
-		}
-
-		hash := util.Hash256(encryptedBody)
-		sig, err := privateKey.Sign(hash)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to sign message")
-		}
-
-		msg := &pb.DMSMessage{
-			Sender:   sender,
-			Receiver: receiver,
-			Content:  encryptedBody,
-			Signature: &pb.Signature{
-				R: sig.R.Bytes(),
-				S: sig.S.Bytes(),
-			},
-		}
-
-		client := pb.NewDMSDumpServiceClient(dumpConn)
-		res, err := client.Send(ctx, msg)
+		err = protoutil.SendMessage(ctx, privateKey, []byte(body), sender, receiver, lookupService)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to send message")
 		}
-		if res.Result != pb.ResultCode_RC_OK {
-			log.Fatal().Str("code", res.GetResult().Enum().String()).Msg("server returned error")
-		}
-		log.Info().Msg("sent message successfully")
 	},
 }
