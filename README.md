@@ -37,17 +37,17 @@ Instead, we could use encryption and the identity registry to send emails betwee
 
 For this prototype, we use the following architecture:
 
-* Identity service, which is tasked with registering private keys, unique names and addresses
-* Dump service, which accepts any valid messages address to any users, and stores them until the recipient comes to retrieve them. 
-* Email client proxy which allows any email client to retrieve and send messages. The proxy handles the identity verification and encryption. 
+* *Identity service*, which is tasked with registering private keys, unique names and addresses
+* *Dump service*, which accepts any valid messages address to any users, and stores them until the recipient comes to retrieve them. 
+* *Email client proxy* which allows any email client to retrieve and send messages. The proxy handles the identity verification and encryption. 
 
 ### Aside - the "at" addresses
 
-Every email address comes in bob@server format. Now that we talk about global identity, the "@server" part becomes obsolete - and it's no surprise that many services just use the username, or @bob handle. We have to comply with the email address format, but we want to de-emphasize the "at" part, so we will use the simple possible format, bob@x. Yes, this is the user name followed by the "at" symbol and the letter x. We use x because it's cool, and because it looks like we just cancelled the whole service part - we put a cross in its place. 
+Every email address comes in bob@server format. Now that we talk about global identity, the "@server" part becomes obsolete - and it's no surprise that many services just use the username, or @bob handle. We have to comply with the email address format, but we want to de-emphasize the "at" part, so we will use the simplest possible format, bob@x. Yes, this is the user name followed by the "at" symbol and the letter x. We use x because it's cool, and because it looks like we just cancelled the whole service part - we put a cross in its place. 
 
 ## Testing the prototype
 
-But enough theory, let's see how the prototype works. Before we do this, here's a necessary disclaimer:
+But enough talk, let's see how the prototype works. Before we do this, here's a necessary disclaimer:
 
 **This is a prototype. It's not production-ready yet. Use it at your own risk. Things are likely to change in future, which includes changes breaking current functionality. The database can also be reset, wiping out whatever names you have registered.**
 
@@ -56,6 +56,8 @@ And another thing - in this example, we will use the public identity and dump se
 ### Step 1: Get the binaries
 
 You can get binaries by compiling the source, or by pulling the pre-built binaries. The former is recommended, since you can examine the code to make sure no funny business is taking place. 
+
+To compile the source, you must have Go and make installed.
 
 To clone the repo, do:
 
@@ -140,4 +142,4 @@ Heck, send email to me, lgx@x! Definitely report bugs.
 * Messages are encrypted and signed, which means only the intended recipient can read messages addressed to them.
 * Sender and recipient names are not encrypted, so theoretically someone may find out that Bob sent message to Alice, but that's about it. You can't really do anything with names, since we must know who sent the message (to verify the signature), and who the recipient is.
 * Eventually the identity service will be distributed and decentralized, but for now it's just a single machine.
-* All messages are being sent via the big dump service, where they sit just as a bunch of bytes. Eventually users will be able to choose different locations for their messages (or send them directly with no intermediaries). You can run your own dump server (and identity server) instead.
+* All messages are being sent via the big dump service, where they sit just as a bunch of bytes. You can run your own dump server (and identity server) instead.
