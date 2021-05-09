@@ -109,9 +109,16 @@ Name is what you use to send and receive messages. You must associate your name 
 ./ubikom-cli register name bob
 ```
 
+### Step 6: Specify your address
+This is where your messages are being sent. You can either run your own dump server, or use the public one, here:
+
+```
+./ubikom-cli register address bob alpha.ubikom.cc:8826
+```
+
 Seriously, don't use bob with the public server. Bob is already registered. 
 
-### Step 6: Start Ubikom Proxy
+### Step 7: Start Ubikom Proxy
 Proxy sits between your email client and the rest of Ubikom ecosystem, encrypting and signing your messages on the fly. 
 
 ```
@@ -132,12 +139,12 @@ You can edit ubikom.conf file to configure the proxy, namely the ports and user 
 
 Keep in mind that the data between email client and proxy is clear text. It's fine if you run it on your laptop, since the data never leaves your machine, but don't do it in multi-user environment. 
 
-### Step 7: Configure your email client
+### Step 8: Configure your email client
 I use [Mozilla Thunderbird](https://www.thunderbird.net/en-US/) for testing. It's great, and it's available for multiple platforms. Other might also work, so go ahead and try. 
 
 Configure your email client as follows:
 
-* Your email is "name@x", where name is the name you've registered in Step 6, and the rest is, yes, symbol @ and the letter x.
+* Your email is "name@x", where name is the name you've registered in Step 5, and the rest is, yes, symbol @ and the letter x.
 * Set your incoming mail server to POP3, localhost, port 1100
 * Set your outgoing mail server to SMTP, localhost, port 1025
 * For both POP and SMTP servers, the default name is "ubikom-user" and the password is "pumpkin123". Change it in ubikom.conf file, if you feel like it.
