@@ -117,6 +117,15 @@ Proxy sits between your email client and the rest of Ubikom ecosystem, encryptin
 ```
 ./ubikom-proxy
 ```
+
+***Known issue*** On Windows, you might get a "key not found" error, if you do, please specify the key location explicitly, like so:
+
+```
+ubikom-proxy --key=c:\users\bob\.ubikom\key
+```
+
+This issue will be fixed in the next release.
+
 It will start and keep running, printing out a bunch of fun messages. For your mail client to work, the proxy must be running.
 
 You can edit ubikom.conf file to configure the proxy, namely the ports and user names and passwords used by the SMTP and POP servers. 
