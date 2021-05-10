@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -182,6 +183,12 @@ func verifyArgs(args *Args) error {
 
 	if args.PopPassword == "" {
 		return fmt.Errorf("password must be specified")
+	}
+
+	// Expand home directory even if $HOME is not defined (which is the case on Windows).
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		args.KeyLocation = strings.Replace(args.KeyLocation, "${HOME}", homeDir, -1)
 	}
 
 	args.KeyLocation = os.ExpandEnv(args.KeyLocation)
