@@ -10,6 +10,8 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/golang/protobuf/proto"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/pb"
@@ -181,6 +183,10 @@ func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWith
 	})
 	log.Info().Str("key", publicKeyBase58).Msg("parent key registered successfully")
 	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
+}
+
+func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DisableKey not implemented")
 }
 
 func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {

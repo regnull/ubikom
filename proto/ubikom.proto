@@ -49,6 +49,10 @@ message KeyRegistrationRequest {
     bytes key = 1;
 }
 
+message KeyDisableRequest {
+    bytes key = 1;
+}
+
 message NameRegistrationRequest {
     string name = 1;
 }
