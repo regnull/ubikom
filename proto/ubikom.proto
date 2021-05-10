@@ -9,6 +9,7 @@ enum ResultCode {
     RC_RECORD_EXISTS = 3;
     RC_RECORD_NOT_FOUND = 4;
     RC_INSUFFICIENT_POW = 5;
+    RC_UNAUTHORIZED = 6;
     RC_INTERNAL_ERROR = 100;
 }
 

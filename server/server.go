@@ -198,9 +198,12 @@ func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Res
 		log.Warn().Err(err).Msg("failed to unmarshal key disable request")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
+
+	log.Debug().Str("orig-key", base58.Encode(req.GetKey())).Str("target-key",
+		base58.Encode(keyDisReq.GetKey())).Msg("disable key request")
+
 	key := keyDisReq.GetKey()
 	publicKeyBase58 := base58.Encode(key)
-	log.Info().Str("key", publicKeyBase58).Msg("registering public key")
 	dbKey := "pkey_" + publicKeyBase58
 	err = s.db.Update(func(txn *badger.Txn) error {
 
@@ -223,7 +226,22 @@ func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Res
 			return nil
 		})
 
-		// TODO: Verify that the signing key has rights to disable this key.
+		// Key if the originator key is authorized to make changes.
+
+		authorized := false
+		if bytes.Compare(req.GetKey(), key) == 0 {
+			authorized = true
+		} else {
+			for _, key1 := range keyRec.GetParentKey() {
+				if bytes.Compare(req.GetKey(), key1) == 0 {
+					authorized = true
+					break
+				}
+			}
+		}
+		if !authorized {
+			return fmt.Errorf("not authorized")
+		}
 
 		keyRec.Disabled = true
 		keyRec.DisabledTimestamp = util.NowMs()
@@ -248,7 +266,7 @@ func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Res
 		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
 
-	log.Info().Str("key", fmt.Sprintf("%x", key)).Msg("key disabled")
+	log.Info().Str("key", base58.Encode(key)).Msg("key disabled")
 
 	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }
