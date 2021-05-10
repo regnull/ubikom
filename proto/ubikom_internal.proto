@@ -1,0 +1,17 @@
+syntax = "proto3";
+package Ubikom;
+option go_package=".;pb";
+
+message KeyRecord {
+    // Timestamp when the key was registered.
+    int64 registration_timestamp = 1;
+
+    // Controls if the key is disabled. Once a key is disabled, it is dead forever.
+    bool disabled = 2;
+
+    int64 disabled_timestamp = 3;
+    bytes disabled_by = 4;
+
+    // Parent key (it can do everything this key can do).
+    repeated bytes parent_key = 5;
+}
