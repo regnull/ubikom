@@ -59,16 +59,29 @@ message AddressRegistrationRequest {
     string address = 3;
 }
 
+enum KeyRelationship {
+    KR_NONE = 0;
+    KR_PARENT = 1;
+}
+
+message KeyRelationshipRegistrationRequest {
+    bytes target_key = 1;
+    KeyRelationship relationship = 2;
+}
+
 service IdentityService {
     // Register public key. Each public key can be registered only once.
     // The key must be registered before it's associated with the name.
     // Content is public key.
     rpc RegisterKey(SignedWithPow) returns (Result);
 
+    rpc RegisterKeyRelationship(SignedWithPow) returns (Result);
+
     // Links name and the public key.
     // Content is NameRegistrationRequest.
     rpc RegisterName(SignedWithPow) returns (Result);
 
+    // Associate name and protocol with an address.
     // Content is AddressRegistrationRequest.
     rpc RegisterAddress(SignedWithPow) returns (Result);
 }

@@ -21,9 +21,11 @@ type IdentityServiceClient interface {
 	// The key must be registered before it's associated with the name.
 	// Content is public key.
 	RegisterKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
+	RegisterKeyRelationship(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
 	// Links name and the public key.
 	// Content is NameRegistrationRequest.
 	RegisterName(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
+	// Associate name and protocol with an address.
 	// Content is AddressRegistrationRequest.
 	RegisterAddress(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
 }
@@ -39,6 +41,15 @@ func NewIdentityServiceClient(cc grpc.ClientConnInterface) IdentityServiceClient
 func (c *identityServiceClient) RegisterKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error) {
 	out := new(Result)
 	err := c.cc.Invoke(ctx, "/Ubikom.IdentityService/RegisterKey", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityServiceClient) RegisterKeyRelationship(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error) {
+	out := new(Result)
+	err := c.cc.Invoke(ctx, "/Ubikom.IdentityService/RegisterKeyRelationship", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -71,9 +82,11 @@ type IdentityServiceServer interface {
 	// The key must be registered before it's associated with the name.
 	// Content is public key.
 	RegisterKey(context.Context, *SignedWithPow) (*Result, error)
+	RegisterKeyRelationship(context.Context, *SignedWithPow) (*Result, error)
 	// Links name and the public key.
 	// Content is NameRegistrationRequest.
 	RegisterName(context.Context, *SignedWithPow) (*Result, error)
+	// Associate name and protocol with an address.
 	// Content is AddressRegistrationRequest.
 	RegisterAddress(context.Context, *SignedWithPow) (*Result, error)
 	mustEmbedUnimplementedIdentityServiceServer()
@@ -85,6 +98,9 @@ type UnimplementedIdentityServiceServer struct {
 
 func (*UnimplementedIdentityServiceServer) RegisterKey(context.Context, *SignedWithPow) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterKey not implemented")
+}
+func (*UnimplementedIdentityServiceServer) RegisterKeyRelationship(context.Context, *SignedWithPow) (*Result, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterKeyRelationship not implemented")
 }
 func (*UnimplementedIdentityServiceServer) RegisterName(context.Context, *SignedWithPow) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterName not implemented")
@@ -112,6 +128,24 @@ func _IdentityService_RegisterKey_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(IdentityServiceServer).RegisterKey(ctx, req.(*SignedWithPow))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IdentityService_RegisterKeyRelationship_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignedWithPow)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServiceServer).RegisterKeyRelationship(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ubikom.IdentityService/RegisterKeyRelationship",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServiceServer).RegisterKeyRelationship(ctx, req.(*SignedWithPow))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -159,6 +193,10 @@ var _IdentityService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterKey",
 			Handler:    _IdentityService_RegisterKey_Handler,
+		},
+		{
+			MethodName: "RegisterKeyRelationship",
+			Handler:    _IdentityService_RegisterKeyRelationship_Handler,
 		},
 		{
 			MethodName: "RegisterName",
