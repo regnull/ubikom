@@ -26,6 +26,10 @@ func NowMs() int64 {
 	return time.Now().UnixNano() / 1000000
 }
 
+func TimeFromMs(ts int64) time.Time {
+	return time.Unix(ts/1000, (ts%1000)*1000000)
+}
+
 // Hash256 does two rounds of SHA256 hashing.
 func Hash256(data []byte) []byte {
 	h := sha256.Sum256(data)

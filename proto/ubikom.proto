@@ -91,6 +91,20 @@ service IdentityService {
     rpc RegisterAddress(SignedWithPow) returns (Result);
 }
 
+message LookupKeyRequest {
+    bytes key = 1;
+}
+
+message LookupKeyResponse {
+    ResultCode result = 1;
+
+    int64 registration_timestamp = 2;
+    bool disabled = 3;
+    int64 disabled_timestamp = 4;
+    bytes disabled_by = 5;
+    repeated bytes parent_key = 6;
+}
+
 message LookupNameRequest {
     string name = 1;
 }
@@ -113,6 +127,7 @@ message LookupAddressResponse {
 }
 
 service LookupService {
+    rpc LookupKey(LookupKeyRequest) returns (LookupKeyResponse);
     rpc LookupName(LookupNameRequest) returns (LookupNameResponse);
     rpc LookupAddress(LookupAddressRequest) returns (LookupAddressResponse);
 }

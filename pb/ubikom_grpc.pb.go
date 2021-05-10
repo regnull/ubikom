@@ -22,6 +22,10 @@ type IdentityServiceClient interface {
 	// Content is public key.
 	RegisterKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
 	RegisterKeyRelationship(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
+	// Once a key is disabled, it is dead forever. This happens
+	// if a key is compromised, or the owner has decided to kill
+	// it for another reason. Use with caution.
+	DisableKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
 	// Links name and the public key.
 	// Content is NameRegistrationRequest.
 	RegisterName(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
@@ -56,6 +60,15 @@ func (c *identityServiceClient) RegisterKeyRelationship(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *identityServiceClient) DisableKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error) {
+	out := new(Result)
+	err := c.cc.Invoke(ctx, "/Ubikom.IdentityService/DisableKey", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *identityServiceClient) RegisterName(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error) {
 	out := new(Result)
 	err := c.cc.Invoke(ctx, "/Ubikom.IdentityService/RegisterName", in, out, opts...)
@@ -83,6 +96,10 @@ type IdentityServiceServer interface {
 	// Content is public key.
 	RegisterKey(context.Context, *SignedWithPow) (*Result, error)
 	RegisterKeyRelationship(context.Context, *SignedWithPow) (*Result, error)
+	// Once a key is disabled, it is dead forever. This happens
+	// if a key is compromised, or the owner has decided to kill
+	// it for another reason. Use with caution.
+	DisableKey(context.Context, *SignedWithPow) (*Result, error)
 	// Links name and the public key.
 	// Content is NameRegistrationRequest.
 	RegisterName(context.Context, *SignedWithPow) (*Result, error)
@@ -101,6 +118,9 @@ func (*UnimplementedIdentityServiceServer) RegisterKey(context.Context, *SignedW
 }
 func (*UnimplementedIdentityServiceServer) RegisterKeyRelationship(context.Context, *SignedWithPow) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterKeyRelationship not implemented")
+}
+func (*UnimplementedIdentityServiceServer) DisableKey(context.Context, *SignedWithPow) (*Result, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DisableKey not implemented")
 }
 func (*UnimplementedIdentityServiceServer) RegisterName(context.Context, *SignedWithPow) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterName not implemented")
@@ -146,6 +166,24 @@ func _IdentityService_RegisterKeyRelationship_Handler(srv interface{}, ctx conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(IdentityServiceServer).RegisterKeyRelationship(ctx, req.(*SignedWithPow))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IdentityService_DisableKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignedWithPow)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServiceServer).DisableKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ubikom.IdentityService/DisableKey",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServiceServer).DisableKey(ctx, req.(*SignedWithPow))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -199,6 +237,10 @@ var _IdentityService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _IdentityService_RegisterKeyRelationship_Handler,
 		},
 		{
+			MethodName: "DisableKey",
+			Handler:    _IdentityService_DisableKey_Handler,
+		},
+		{
 			MethodName: "RegisterName",
 			Handler:    _IdentityService_RegisterName_Handler,
 		},
@@ -215,6 +257,7 @@ var _IdentityService_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LookupServiceClient interface {
+	LookupKey(ctx context.Context, in *LookupKeyRequest, opts ...grpc.CallOption) (*LookupKeyResponse, error)
 	LookupName(ctx context.Context, in *LookupNameRequest, opts ...grpc.CallOption) (*LookupNameResponse, error)
 	LookupAddress(ctx context.Context, in *LookupAddressRequest, opts ...grpc.CallOption) (*LookupAddressResponse, error)
 }
@@ -225,6 +268,15 @@ type lookupServiceClient struct {
 
 func NewLookupServiceClient(cc grpc.ClientConnInterface) LookupServiceClient {
 	return &lookupServiceClient{cc}
+}
+
+func (c *lookupServiceClient) LookupKey(ctx context.Context, in *LookupKeyRequest, opts ...grpc.CallOption) (*LookupKeyResponse, error) {
+	out := new(LookupKeyResponse)
+	err := c.cc.Invoke(ctx, "/Ubikom.LookupService/LookupKey", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *lookupServiceClient) LookupName(ctx context.Context, in *LookupNameRequest, opts ...grpc.CallOption) (*LookupNameResponse, error) {
@@ -249,6 +301,7 @@ func (c *lookupServiceClient) LookupAddress(ctx context.Context, in *LookupAddre
 // All implementations must embed UnimplementedLookupServiceServer
 // for forward compatibility
 type LookupServiceServer interface {
+	LookupKey(context.Context, *LookupKeyRequest) (*LookupKeyResponse, error)
 	LookupName(context.Context, *LookupNameRequest) (*LookupNameResponse, error)
 	LookupAddress(context.Context, *LookupAddressRequest) (*LookupAddressResponse, error)
 	mustEmbedUnimplementedLookupServiceServer()
@@ -258,6 +311,9 @@ type LookupServiceServer interface {
 type UnimplementedLookupServiceServer struct {
 }
 
+func (*UnimplementedLookupServiceServer) LookupKey(context.Context, *LookupKeyRequest) (*LookupKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LookupKey not implemented")
+}
 func (*UnimplementedLookupServiceServer) LookupName(context.Context, *LookupNameRequest) (*LookupNameResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupName not implemented")
 }
@@ -268,6 +324,24 @@ func (*UnimplementedLookupServiceServer) mustEmbedUnimplementedLookupServiceServ
 
 func RegisterLookupServiceServer(s *grpc.Server, srv LookupServiceServer) {
 	s.RegisterService(&_LookupService_serviceDesc, srv)
+}
+
+func _LookupService_LookupKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LookupServiceServer).LookupKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ubikom.LookupService/LookupKey",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LookupServiceServer).LookupKey(ctx, req.(*LookupKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _LookupService_LookupName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -310,6 +384,10 @@ var _LookupService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "Ubikom.LookupService",
 	HandlerType: (*LookupServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "LookupKey",
+			Handler:    _LookupService_LookupKey_Handler,
+		},
 		{
 			MethodName: "LookupName",
 			Handler:    _LookupService_LookupName_Handler,
