@@ -1,6 +1,7 @@
 .PHONY: genproto
 .PHONY: build
 .PHONY: upload
+.PHONY: test
 
 UBIKOM_ONE_ADR = alpha.ubikom.cc
 SSH_KEY = $(HOME)/aws/ubikom-one.pem
@@ -24,3 +25,6 @@ upload:
 
 build:
 	$(ROOT_DIR)scripts/build.sh
+
+test:
+	cd $(ROOT_DIR)go; go test -timeout=30s ./...

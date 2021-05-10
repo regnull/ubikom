@@ -69,8 +69,14 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Re
 
 		// Register the key.
 
-		ts := util.NowMs()
-		err = txn.Set([]byte(dbKey), Int64ToBytes(ts))
+		rec := &pb.KeyRecord{
+			RegistrationTimestamp: util.NowMs()}
+		recBytes, err := proto.Marshal(rec)
+		if err != nil {
+			return fmt.Errorf("error marshaling key record: %w", err)
+		}
+
+		err = txn.Set([]byte(dbKey), recBytes)
 		if err != nil {
 			return err
 		}
@@ -95,6 +101,85 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Re
 		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
 	log.Info().Str("key", publicKeyBase58).Msg("key is registered successfully")
+	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
+}
+
+func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
+	if !verifyPowAndSignature(req) {
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
+	keyRelReq := &pb.KeyRelationshipRegistrationRequest{}
+	err := proto.Unmarshal(req.GetContent(), keyRelReq)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to unmarshal key relationship registration request")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
+	if len(keyRelReq.GetTargetKey()) != 33 {
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
+	if keyRelReq.GetRelationship() != pb.KeyRelationship_KR_PARENT {
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
+	key := req.GetKey()
+	publicKeyBase58 := base58.Encode(key)
+	log.Info().Str("key", publicKeyBase58).Msg("registering public key")
+	dbKey := "pkey_" + publicKeyBase58
+	err = s.db.Update(func(txn *badger.Txn) error {
+
+		// Retrieve the key.
+
+		item, err := txn.Get([]byte(dbKey))
+		if err != nil {
+			return fmt.Errorf("error getting key record: %w", err)
+		}
+		if item == nil {
+			return ErrNotFound
+		}
+
+		keyRec := &pb.KeyRecord{}
+		err = item.Value(func(val []byte) error {
+			err := proto.Unmarshal(val, keyRec)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal key record: %w", err)
+			}
+			return nil
+		})
+
+		// Add parent to the key record.
+
+		parentKey := keyRelReq.GetTargetKey()
+
+		for _, parent := range keyRec.GetParentKey() {
+			if bytes.Compare(parentKey, parent) == 0 {
+				// This key is already registered as a parent.
+				return ErrKeyExists
+			}
+		}
+
+		keyRec.ParentKey = append(keyRec.ParentKey, keyRelReq.GetTargetKey())
+		if len(keyRec.GetParentKey()) > 16 {
+			return fmt.Errorf("too many parent keys")
+		}
+
+		// Update key registration.
+
+		recBytes, err := proto.Marshal(keyRec)
+		if err != nil {
+			return fmt.Errorf("error marshaling key record: %w", err)
+		}
+
+		err = txn.Set([]byte(dbKey), recBytes)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	log.Info().Str("key", publicKeyBase58).Msg("parent key registered successfully")
 	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }
 

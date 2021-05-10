@@ -77,6 +77,11 @@ service IdentityService {
 
     rpc RegisterKeyRelationship(SignedWithPow) returns (Result);
 
+    // Once a key is disabled, it is dead forever. This happens
+    // if a key is compromised, or the owner has decided to kill
+    // it for another reason. Use with caution.
+    rpc DisableKey(SignedWithPow) returns (Result);
+
     // Links name and the public key.
     // Content is NameRegistrationRequest.
     rpc RegisterName(SignedWithPow) returns (Result);
