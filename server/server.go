@@ -10,8 +10,6 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/golang/protobuf/proto"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/pb"
@@ -181,12 +179,78 @@ func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWith
 
 		return nil
 	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to register parent key")
+		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+	}
 	log.Info().Str("key", publicKeyBase58).Msg("parent key registered successfully")
 	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }
 
 func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DisableKey not implemented")
+	if !verifyPowAndSignature(req) {
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
+	keyDisReq := &pb.KeyDisableRequest{}
+	err := proto.Unmarshal(req.GetContent(), keyDisReq)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to unmarshal key disable request")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+	key := keyDisReq.GetKey()
+	publicKeyBase58 := base58.Encode(key)
+	log.Info().Str("key", publicKeyBase58).Msg("registering public key")
+	dbKey := "pkey_" + publicKeyBase58
+	err = s.db.Update(func(txn *badger.Txn) error {
+
+		// Retrieve the key.
+
+		item, err := txn.Get([]byte(dbKey))
+		if err != nil {
+			return fmt.Errorf("error getting key record: %w", err)
+		}
+		if item == nil {
+			return ErrNotFound
+		}
+
+		keyRec := &pb.KeyRecord{}
+		err = item.Value(func(val []byte) error {
+			err := proto.Unmarshal(val, keyRec)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal key record: %w", err)
+			}
+			return nil
+		})
+
+		// TODO: Verify that the signing key has rights to disable this key.
+
+		keyRec.Disabled = true
+		keyRec.DisabledTimestamp = util.NowMs()
+		keyRec.DisabledBy = req.GetKey()
+
+		// Update key registration.
+
+		recBytes, err := proto.Marshal(keyRec)
+		if err != nil {
+			return fmt.Errorf("error marshaling key record: %w", err)
+		}
+
+		err = txn.Set([]byte(dbKey), recBytes)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to disable key")
+		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+	}
+
+	log.Info().Str("key", fmt.Sprintf("%x", key)).Msg("key disabled")
+
+	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }
 
 func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
