@@ -11,6 +11,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/rs/zerolog/log"
 
+	"github.com/regnull/ubikom/db"
 	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/pow"
@@ -26,11 +27,12 @@ type Server struct {
 	pb.UnimplementedIdentityServiceServer
 	pb.UnimplementedLookupServiceServer
 
-	db *badger.DB
+	db  *badger.DB
+	dbi *db.BadgerDB
 }
 
-func NewServer(db *badger.DB) *Server {
-	return &Server{db: db}
+func NewServer(d *badger.DB) *Server {
+	return &Server{db: d, dbi: db.NewBadgerDB(d)}
 }
 
 func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
@@ -56,44 +58,11 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Re
 		log.Warn().Err(err).Msg("failed to create public key from serialized compressed")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
+	publicKeyBase58 := base58.Encode(publicKey.SerializeCompressed())
 
-	publicKeyBase58 := base58.Encode(key)
-	log.Info().Str("key", publicKeyBase58).Msg("registering public key")
-	dbKey := "pkey_" + publicKeyBase58
-
-	err = s.db.Update(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(dbKey))
-		if item != nil {
-			return ErrKeyExists
-		}
-
-		// Register the key.
-
-		rec := &pb.KeyRecord{
-			RegistrationTimestamp: util.NowMs()}
-		recBytes, err := proto.Marshal(rec)
-		if err != nil {
-			return fmt.Errorf("error marshaling key record: %w", err)
-		}
-
-		err = txn.Set([]byte(dbKey), recBytes)
-		if err != nil {
-			return err
-		}
-
-		// Register key address as name.
-
-		nameKey := "name_" + publicKey.Address()
-		err = txn.Set([]byte(nameKey), req.GetKey())
-		if err != nil {
-			return err
-		}
-
-		log.Info().Str("name", publicKey.Address()).Msg("name registered")
-		return nil
-	})
+	err = s.dbi.RegisterKey(publicKey)
 	if err != nil {
-		if err == ErrKeyExists {
+		if err == db.ErrRecordExists {
 			log.Warn().Str("key", publicKeyBase58).Msg("this key is already registered")
 			return &pb.Result{Result: pb.ResultCode_RC_RECORD_EXISTS}, nil
 		}
@@ -124,66 +93,12 @@ func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWith
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	key := req.GetKey()
-	publicKeyBase58 := base58.Encode(key)
-	log.Info().Str("key", publicKeyBase58).Msg("registering public key")
-	dbKey := "pkey_" + publicKeyBase58
-	err = s.db.Update(func(txn *badger.Txn) error {
-
-		// Retrieve the key.
-
-		item, err := txn.Get([]byte(dbKey))
-		if err != nil {
-			return fmt.Errorf("error getting key record: %w", err)
-		}
-		if item == nil {
-			return ErrNotFound
-		}
-
-		keyRec := &pb.KeyRecord{}
-		err = item.Value(func(val []byte) error {
-			err := proto.Unmarshal(val, keyRec)
-			if err != nil {
-				return fmt.Errorf("failed to unmarshal key record: %w", err)
-			}
-			return nil
-		})
-
-		// Add parent to the key record.
-
-		parentKey := keyRelReq.GetTargetKey()
-
-		for _, parent := range keyRec.GetParentKey() {
-			if bytes.Compare(parentKey, parent) == 0 {
-				// This key is already registered as a parent.
-				return ErrKeyExists
-			}
-		}
-
-		keyRec.ParentKey = append(keyRec.ParentKey, keyRelReq.GetTargetKey())
-		if len(keyRec.GetParentKey()) > 16 {
-			return fmt.Errorf("too many parent keys")
-		}
-
-		// Update key registration.
-
-		recBytes, err := proto.Marshal(keyRec)
-		if err != nil {
-			return fmt.Errorf("error marshaling key record: %w", err)
-		}
-
-		err = txn.Set([]byte(dbKey), recBytes)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
+	err = s.dbi.RegisterKeyParent(req.GetKey(), keyRelReq.GetTargetKey())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register parent key")
 		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
-	log.Info().Str("key", publicKeyBase58).Msg("parent key registered successfully")
+	log.Info().Str("key", base58.Encode(req.GetKey())).Msg("parent key registered successfully")
 	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }
 
