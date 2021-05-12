@@ -115,7 +115,7 @@ message LookupNameRequest {
 }
 
 message LookupNameResponse {
-    ResultCode result = 1;
+    Result result = 1;
     string message = 2;
     bytes key = 3;
 }

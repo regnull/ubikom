@@ -74,7 +74,7 @@ func SendMessage(ctx context.Context, privateKey *ecc.PrivateKey, body []byte,
 	if err != nil {
 		return fmt.Errorf("failed to get receiver public key: %w", err)
 	}
-	if lookupRes.GetResult() != pb.ResultCode_RC_OK {
+	if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
 		return fmt.Errorf("failed to get receiver public key, result: %s", lookupRes.GetResult().String())
 	}
 	receiverKey, err := ecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())

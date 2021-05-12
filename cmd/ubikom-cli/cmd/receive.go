@@ -116,7 +116,7 @@ var receiveMessageCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get receiver public key")
 		}
-		if lookupRes.Result != pb.ResultCode_RC_OK {
+		if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
 			log.Fatal().Str("result", lookupRes.Result.String()).Msg("failed to get receiver public key")
 		}
 		senderKey, err := ecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())

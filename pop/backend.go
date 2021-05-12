@@ -76,7 +76,7 @@ func (b *Backend) Poll(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to get receiver public key: %w", err)
 		}
-		if lookupRes.Result != pb.ResultCode_RC_OK {
+		if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
 			return fmt.Errorf("failed to get receiver public key: %s", lookupRes.GetResult().String())
 		}
 		senderKey, err := ecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())

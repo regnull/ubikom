@@ -311,15 +311,15 @@ func (s *Server) LookupName(ctx context.Context, req *pb.LookupNameRequest) (*pb
 	})
 	if err == ErrNotFound {
 		log.Info().Str("name", req.GetName()).Msg("name not found")
-		return &pb.LookupNameResponse{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}, nil
+		return &pb.LookupNameResponse{Result: &pb.Result{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}}, nil
 	}
 	if err != nil {
 		log.Error().Str("name", req.GetName()).Err(err).Msg("error getting name")
-		return &pb.LookupNameResponse{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+		return &pb.LookupNameResponse{Result: &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}}, nil
 	}
 
 	return &pb.LookupNameResponse{
-		Result: pb.ResultCode_RC_OK,
+		Result: &pb.Result{Result: pb.ResultCode_RC_OK},
 		Key:    key,
 	}, nil
 }
