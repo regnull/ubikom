@@ -85,10 +85,6 @@ func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWith
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	if len(keyRelReq.GetTargetKey()) != 33 {
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
-	}
-
 	if keyRelReq.GetRelationship() != pb.KeyRelationship_KR_PARENT {
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
@@ -129,71 +125,26 @@ func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Res
 	log.Debug().Str("orig-key", base58.Encode(req.GetKey())).Str("target-key",
 		base58.Encode(keyDisReq.GetKey())).Msg("disable key request")
 
-	key := keyDisReq.GetKey()
-	publicKeyBase58 := base58.Encode(key)
-	dbKey := "pkey_" + publicKeyBase58
-	err = s.db.Update(func(txn *badger.Txn) error {
+	originator, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	if err != nil {
+		log.Warn().Err(err).Msg("invalid key")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
 
-		// Retrieve the key.
+	key, err := ecc.NewPublicFromSerializedCompressed(keyDisReq.GetKey())
+	if err != nil {
+		log.Warn().Err(err).Msg("invalid key")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
 
-		item, err := txn.Get([]byte(dbKey))
-		if err != nil {
-			return fmt.Errorf("error getting key record: %w", err)
-		}
-		if item == nil {
-			return ErrNotFound
-		}
+	err = s.dbi.DisableKey(key, originator)
 
-		keyRec := &pb.KeyRecord{}
-		err = item.Value(func(val []byte) error {
-			err := proto.Unmarshal(val, keyRec)
-			if err != nil {
-				return fmt.Errorf("failed to unmarshal key record: %w", err)
-			}
-			return nil
-		})
-
-		// Key if the originator key is authorized to make changes.
-
-		authorized := false
-		if bytes.Compare(req.GetKey(), key) == 0 {
-			authorized = true
-		} else {
-			for _, key1 := range keyRec.GetParentKey() {
-				if bytes.Compare(req.GetKey(), key1) == 0 {
-					authorized = true
-					break
-				}
-			}
-		}
-		if !authorized {
-			return fmt.Errorf("not authorized")
-		}
-
-		keyRec.Disabled = true
-		keyRec.DisabledTimestamp = util.NowMs()
-		keyRec.DisabledBy = req.GetKey()
-
-		// Update key registration.
-
-		recBytes, err := proto.Marshal(keyRec)
-		if err != nil {
-			return fmt.Errorf("error marshaling key record: %w", err)
-		}
-
-		err = txn.Set([]byte(dbKey), recBytes)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to disable key")
 		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
 
-	log.Info().Str("key", base58.Encode(key)).Msg("key disabled")
+	log.Info().Str("key", base58.Encode(key.SerializeCompressed())).Msg("key disabled")
 
 	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }
