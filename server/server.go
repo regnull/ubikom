@@ -93,7 +93,19 @@ func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWith
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	err = s.dbi.RegisterKeyParent(req.GetKey(), keyRelReq.GetTargetKey())
+	childKey, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	if err != nil {
+		log.Warn().Err(err).Msg("invalid key")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
+	parentKey, err := ecc.NewPublicFromSerializedCompressed(keyRelReq.GetTargetKey())
+	if err != nil {
+		log.Warn().Err(err).Msg("invalid key")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
+	err = s.dbi.RegisterKeyParent(childKey, parentKey)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register parent key")
 		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil

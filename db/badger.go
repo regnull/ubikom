@@ -63,14 +63,11 @@ func (b *BadgerDB) RegisterKey(publicKey *ecc.PublicKey) error {
 		log.Info().Str("name", publicKey.Address()).Msg("name registered")
 		return nil
 	})
-	if err != nil {
-		return fmt.Errorf("failed to save key: %w", err)
-	}
-	return nil
+	return err
 }
 
-func (b *BadgerDB) RegisterKeyParent(child []byte, parent []byte) error {
-	childBase58 := base58.Encode(child)
+func (b *BadgerDB) RegisterKeyParent(childKey *ecc.PublicKey, parentKey *ecc.PublicKey) error {
+	childBase58 := base58.Encode(childKey.SerializeCompressed())
 	childDbKey := keyPrefix + childBase58
 	err := b.db.Update(func(txn *badger.Txn) error {
 
@@ -96,13 +93,13 @@ func (b *BadgerDB) RegisterKeyParent(child []byte, parent []byte) error {
 		// Add parent to the key record.
 
 		for _, p := range keyRec.GetParentKey() {
-			if bytes.Compare(parent, p) == 0 {
+			if bytes.Compare(parentKey.SerializeCompressed(), p) == 0 {
 				// This key is already registered as a parent.
 				return ErrRecordExists
 			}
 		}
 
-		keyRec.ParentKey = append(keyRec.ParentKey, parent)
+		keyRec.ParentKey = append(keyRec.ParentKey, parentKey.SerializeCompressed())
 		if len(keyRec.GetParentKey()) > maxParentKeys {
 			return fmt.Errorf("too many parent keys")
 		}
@@ -121,12 +118,71 @@ func (b *BadgerDB) RegisterKeyParent(child []byte, parent []byte) error {
 
 		return nil
 	})
+	return err
+}
 
-	if err != nil {
-		return fmt.Errorf("error registering key parent: %w", err)
-	}
+func (b *BadgerDB) DisableKey(key *ecc.PublicKey, originator *ecc.PublicKey) error {
+	publicKeyBase58 := base58.Encode(key.SerializeCompressed())
+	dbKey := keyPrefix + publicKeyBase58
+	err := b.db.Update(func(txn *badger.Txn) error {
 
-	return nil
+		// Retrieve the key.
+
+		item, err := txn.Get([]byte(dbKey))
+		if err != nil {
+			return fmt.Errorf("error getting key record: %w", err)
+		}
+		if item == nil {
+			return ErrNotFound
+		}
+
+		keyRec := &pb.KeyRecord{}
+		err = item.Value(func(val []byte) error {
+			err := proto.Unmarshal(val, keyRec)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal key record: %w", err)
+			}
+			return nil
+		})
+
+		// Key if the originator key is authorized to make changes.
+		// For this operation to be authorized, the originator must be the key itself,
+		// or its parent.
+
+		authorized := false
+		if originator.Equal(key) {
+			authorized = true
+		} else {
+			for _, parentKey := range keyRec.GetParentKey() {
+				if originator.EqualSerializedCompressed(parentKey) {
+					authorized = true
+					break
+				}
+			}
+		}
+		if !authorized {
+			return ErrNotAuthorized
+		}
+
+		keyRec.Disabled = true
+		keyRec.DisabledTimestamp = util.NowMs()
+		keyRec.DisabledBy = originator.SerializeCompressed()
+
+		// Update key registration.
+
+		recBytes, err := proto.Marshal(keyRec)
+		if err != nil {
+			return fmt.Errorf("error marshaling key record: %w", err)
+		}
+
+		err = txn.Set([]byte(dbKey), recBytes)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	return err
 }
 
 func CheckSelfOrParent(txn *badger.Txn, originator, target []byte) (bool, error) {

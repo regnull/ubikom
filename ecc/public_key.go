@@ -102,3 +102,15 @@ func (pbk *PublicKey) Address() string {
 	addr := bytes.Join([][]byte{s1, checkSum}, nil)
 	return base58.Encode(addr)
 }
+
+// Equal returns true if this key is equal to the other.
+func (pbk *PublicKey) Equal(other *PublicKey) bool {
+	return pbk.publicKey.X.Cmp(other.publicKey.X) == 0 &&
+		pbk.publicKey.Y.Cmp(other.publicKey.Y) == 0
+}
+
+// EqualSerializedCompressed returns true if this key is equal to the other,
+// given as serialized compressed representation.
+func (pbk *PublicKey) EqualSerializedCompressed(other []byte) bool {
+	return bytes.Compare(pbk.SerializeCompressed(), other) == 0
+}

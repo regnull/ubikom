@@ -37,3 +37,23 @@ func Test_PublicKey_Address(t *testing.T) {
 	address := privateKey.PublicKey().Address()
 	assert.Equal("1F1Pn2y6pDb68E5nYJJeba4TLg2U7B6KF1", address)
 }
+
+func Test_PublicKey_Equal(t *testing.T) {
+	assert := assert.New(t)
+
+	privateKey1, err := NewRandomPrivateKey()
+	assert.NoError(err)
+	publicKey1 := privateKey1.PublicKey()
+	publicKey2, err := NewPublicFromSerializedCompressed(publicKey1.SerializeCompressed())
+	assert.NoError(err)
+
+	assert.True(publicKey1.Equal(publicKey2))
+	assert.True(publicKey1.EqualSerializedCompressed(publicKey2.SerializeCompressed()))
+
+	privateKey3, err := NewRandomPrivateKey()
+	assert.NoError(err)
+	publicKey3 := privateKey3.PublicKey()
+
+	assert.False(publicKey1.Equal(publicKey3))
+	assert.False(publicKey1.EqualSerializedCompressed(publicKey3.SerializeCompressed()))
+}
