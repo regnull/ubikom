@@ -79,3 +79,18 @@ func Test_PrivateKey_SerializeDeserialize(t *testing.T) {
 		assert.Equal(privateKey.PublicKey().publicKey.Y, publicKey.publicKey.Y)
 	}
 }
+
+func Test_PrivateKey_BIP38EncryptDecrypt(t *testing.T) {
+	assert := assert.New(t)
+
+	key, err := NewRandomPrivateKey()
+	assert.NoError(err)
+
+	encrypted, err := key.EncryptKeyWithPassphrase("super secret spies")
+	assert.NoError(err)
+	assert.NotNil(encrypted)
+
+	key1, err := NewPrivateKeyFromEncryptedWithPassphrase(encrypted, "super secret spies")
+	assert.NoError(err)
+	assert.True(key1.privateKey.Equal(key.privateKey))
+}

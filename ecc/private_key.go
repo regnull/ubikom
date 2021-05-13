@@ -13,6 +13,7 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
+	"golang.org/x/crypto/scrypt"
 )
 
 // PrivateKey represents elliptic cryptography private key.
@@ -36,6 +37,29 @@ func NewPrivateKey(secret *big.Int) *PrivateKey {
 	privateKey.PublicKey.Curve = btcec.S256()
 	privateKey.PublicKey.X, privateKey.PublicKey.Y = privateKey.PublicKey.Curve.ScalarBaseMult(secret.Bytes())
 	return &PrivateKey{privateKey: privateKey}
+}
+
+func NewPrivateKeyFromEncryptedWithPassphrase(data []byte, passphrase string) (*PrivateKey, error) {
+	salt, data := data[len(data)-32:], data[:len(data)-32]
+	key, _, err := deriveKey([]byte(passphrase), salt)
+	if err != nil {
+		return nil, err
+	}
+	blockCipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(blockCipher)
+	if err != nil {
+		return nil, err
+	}
+	nonce, ciphertext := data[:gcm.NonceSize()], data[gcm.NonceSize():]
+	keyBytes, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+	secret := new(big.Int).SetBytes(keyBytes)
+	return NewPrivateKey(secret), nil
 }
 
 // LoadPrivateKey loads private key from file.
@@ -139,7 +163,47 @@ func (pk *PrivateKey) Decrypt(content []byte, publicKey *PublicKey) ([]byte, err
 	return plaintext, nil
 }
 
+func (pk *PrivateKey) EncryptKeyWithPassphrase(passphrase string) ([]byte, error) {
+	key, salt, err := deriveKey([]byte(passphrase), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	blockCipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(blockCipher)
+	if err != nil {
+		return nil, err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = rand.Read(nonce); err != nil {
+		return nil, err
+	}
+
+	ciphertext := gcm.Seal(nonce, nonce, pk.privateKey.D.Bytes(), nil)
+	ciphertext = append(ciphertext, salt...)
+	return ciphertext, nil
+}
+
 // TODO: remove this.
 func (pk *PrivateKey) GetKey() *big.Int {
 	return pk.privateKey.D
+}
+
+func deriveKey(password, salt []byte) ([]byte, []byte, error) {
+	if salt == nil {
+		salt = make([]byte, 32)
+		if _, err := rand.Read(salt); err != nil {
+			return nil, nil, err
+		}
+	}
+	key, err := scrypt.Key(password, salt, 16384, 8, 1, 32)
+	if err != nil {
+		return nil, nil, err
+	}
+	return key, salt, nil
 }
