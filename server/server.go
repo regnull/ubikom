@@ -249,43 +249,25 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 }
 
 func (s *Server) LookupKey(ctx context.Context, req *pb.LookupKeyRequest) (*pb.LookupKeyResponse, error) {
-	key := req.GetKey()
-	publicKeyBase58 := base58.Encode(key)
+	key, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	publicKeyBase58 := base58.Encode(req.GetKey())
 	log.Info().Str("key", publicKeyBase58).Msg("key lookup request")
-	dbKey := "pkey_" + publicKeyBase58
-	keyRec := &pb.KeyRecord{}
-	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(dbKey))
-		if err != nil {
-			return fmt.Errorf("error getting key record: %w", err)
-		}
-		if item == nil {
-			return ErrNotFound
-		}
 
-		err = item.Value(func(val []byte) error {
-			err := proto.Unmarshal(val, keyRec)
-			if err != nil {
-				return fmt.Errorf("failed to unmarshal key record: %w", err)
-			}
-			return nil
-		})
-		return nil
-	})
+	rec, err := s.dbi.GetKey(key)
 
-	if err == ErrNotFound {
+	if err == db.ErrNotFound {
 		return &pb.LookupKeyResponse{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}, nil
 	}
 
 	res := &pb.LookupKeyResponse{
 		Result:                pb.ResultCode_RC_OK,
-		RegistrationTimestamp: keyRec.GetRegistrationTimestamp(),
-		Disabled:              keyRec.GetDisabled(),
-		ParentKey:             keyRec.GetParentKey(),
+		RegistrationTimestamp: rec.GetRegistrationTimestamp(),
+		Disabled:              rec.GetDisabled(),
+		ParentKey:             rec.GetParentKey(),
 	}
-	if keyRec.GetDisabled() {
-		res.DisabledTimestamp = keyRec.GetDisabledTimestamp()
-		res.DisabledBy = keyRec.GetDisabledBy()
+	if rec.GetDisabled() {
+		res.DisabledTimestamp = rec.GetDisabledTimestamp()
+		res.DisabledBy = rec.GetDisabledBy()
 	}
 	return res, nil
 }

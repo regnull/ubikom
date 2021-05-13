@@ -185,6 +185,33 @@ func (b *BadgerDB) DisableKey(key *ecc.PublicKey, originator *ecc.PublicKey) err
 	return err
 }
 
+func (b *BadgerDB) GetKey(key *ecc.PublicKey) (*pb.KeyRecord, error) {
+	dbKey := keyPrefix + base58.Encode(key.SerializeCompressed())
+	keyRec := &pb.KeyRecord{}
+	err := b.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(dbKey))
+		if err != nil {
+			return fmt.Errorf("error getting key record: %w", err)
+		}
+		if item == nil {
+			return ErrNotFound
+		}
+
+		err = item.Value(func(val []byte) error {
+			err := proto.Unmarshal(val, keyRec)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal key record: %w", err)
+			}
+			return nil
+		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return keyRec, nil
+}
+
 func CheckSelfOrParent(txn *badger.Txn, originator, target []byte) (bool, error) {
 	if bytes.Compare(originator, target) == 0 {
 		return true, nil
