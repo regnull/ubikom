@@ -157,7 +157,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("address lookup call failed")
 	}
-	if addressLookupRes.Result != pb.ResultCode_RC_OK {
+	if addressLookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
 		log.Fatal().Str("result", res.GetResult().String()).Msg("name lookup call failed")
 	}
 

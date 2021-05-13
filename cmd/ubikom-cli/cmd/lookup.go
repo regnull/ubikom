@@ -80,7 +80,7 @@ var lookupKeyCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("key lookup request failed")
 		}
-		if res.GetResult() != pb.ResultCode_RC_OK {
+		if res.GetResult().GetResult() != pb.ResultCode_RC_OK {
 			log.Fatal().Str("result", res.GetResult().String()).Msg("key lookup request failed")
 		}
 

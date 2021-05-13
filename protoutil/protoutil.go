@@ -88,7 +88,7 @@ func SendMessage(ctx context.Context, privateKey *ecc.PrivateKey, body []byte,
 	if err != nil {
 		return fmt.Errorf("failed to get receiver's address: %w", err)
 	}
-	if addressLookupRes.GetResult() != pb.ResultCode_RC_OK {
+	if addressLookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
 		return fmt.Errorf("failed to get receiver's address: %s", addressLookupRes.GetResult().String())
 	}
 
