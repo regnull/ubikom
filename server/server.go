@@ -27,12 +27,11 @@ type Server struct {
 	pb.UnimplementedIdentityServiceServer
 	pb.UnimplementedLookupServiceServer
 
-	db  *badger.DB
 	dbi *db.BadgerDB
 }
 
 func NewServer(d *badger.DB) *Server {
-	return &Server{db: d, dbi: db.NewBadgerDB(d)}
+	return &Server{dbi: db.NewBadgerDB(d)}
 }
 
 func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
@@ -194,8 +193,14 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
+	key, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	if err != nil {
+		log.Warn().Err(err).Msg("invalid key")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
 	addressRegistrationReq := &pb.AddressRegistrationRequest{}
-	err := proto.Unmarshal(req.GetContent(), addressRegistrationReq)
+	err = proto.Unmarshal(req.GetContent(), addressRegistrationReq)
 	if err != nil {
 		log.Warn().Msg("invalid address registration request")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -204,36 +209,9 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 	log.Info().Str("name", addressRegistrationReq.GetName()).
 		Str("address", addressRegistrationReq.GetAddress()).Msg("registering address")
 
-	err = s.db.Update(func(txn *badger.Txn) error {
-		// Make sure the requested name is registered to this key.
-		nameKey := "name_" + addressRegistrationReq.GetName()
-		item, err := txn.Get([]byte(nameKey))
-		if err != nil {
-			return fmt.Errorf("error getting name, %w", err)
-		}
-		if item == nil {
-			return fmt.Errorf("name %s is not registered", addressRegistrationReq.GetName())
-		}
+	err = s.dbi.RegisterAddress(key, addressRegistrationReq.GetName(),
+		addressRegistrationReq.GetProtocol(), addressRegistrationReq.GetAddress())
 
-		// This is the key associated with the name. It must match the key that signed
-		// this request.
-		var registeredKey []byte
-		err = item.Value(func(val []byte) error {
-			registeredKey = append([]byte{}, val...)
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("error getting name, %w", err)
-		}
-
-		if bytes.Compare(registeredKey, req.GetKey()) != 0 {
-			return ErrNotAuthorized
-		}
-
-		addressKey := "address_" + addressRegistrationReq.GetName() + "_" + addressRegistrationReq.GetProtocol().String()
-		err = txn.Set([]byte(addressKey), []byte(addressRegistrationReq.GetAddress()))
-		return err
-	})
 	if err != nil {
 		log.Error().Str("name", addressRegistrationReq.GetName()).
 			Str("address", addressRegistrationReq.GetAddress()).Msg("error registering address")
@@ -289,23 +267,7 @@ func (s *Server) LookupName(ctx context.Context, req *pb.LookupNameRequest) (*pb
 
 func (s *Server) LookupAddress(ctx context.Context, req *pb.LookupAddressRequest) (*pb.LookupAddressResponse, error) {
 	log.Info().Str("name", req.GetName()).Str("protocol", req.GetProtocol().String()).Msg("address lookup request")
-	var addressBytes []byte
-	err := s.db.View(func(txn *badger.Txn) error {
-		addressKey := "address_" + req.GetName() + "_" + req.GetProtocol().String()
-		item, err := txn.Get([]byte(addressKey))
-		if err != nil {
-			return fmt.Errorf("error getting name, %w", err)
-		}
-		if item == nil {
-			return ErrNotFound
-		}
-
-		err = item.Value(func(val []byte) error {
-			addressBytes = append([]byte{}, val...)
-			return nil
-		})
-		return err
-	})
+	address, err := s.dbi.GetAddress(req.GetName(), req.GetProtocol())
 	if err == ErrNotFound {
 		log.Info().Str("name", req.GetName()).Str("protocol", req.GetProtocol().String()).Msg("address not found")
 		return &pb.LookupAddressResponse{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}, nil
@@ -316,7 +278,7 @@ func (s *Server) LookupAddress(ctx context.Context, req *pb.LookupAddressRequest
 	}
 	return &pb.LookupAddressResponse{
 		Result:  pb.ResultCode_RC_OK,
-		Address: string(addressBytes),
+		Address: address,
 	}, nil
 }
 

@@ -17,6 +17,7 @@ const (
 	keyPrefix     = "pkey_"
 	namePrefix    = "name_"
 	maxParentKeys = 16
+	addressPrefix = "address_"
 )
 
 type BadgerDB struct {
@@ -160,6 +161,51 @@ func (b *BadgerDB) RegisterName(key *ecc.PublicKey, name string) error {
 	return err
 }
 
+func (b *BadgerDB) RegisterAddress(key *ecc.PublicKey, name string, protocol pb.Protocol, address string) error {
+	err := b.db.Update(func(txn *badger.Txn) error {
+		// Make sure the requested name is registered to this key.
+		nameKey := namePrefix + name
+		item, err := txn.Get([]byte(nameKey))
+		if err != nil {
+			return fmt.Errorf("error getting name, %w", err)
+		}
+		if item == nil {
+			return fmt.Errorf("name %s is not registered", name)
+		}
+
+		// This is the key associated with the name. It must match the key that signed
+		// this request.
+		var registeredKeyBytes []byte
+		err = item.Value(func(val []byte) error {
+			registeredKeyBytes = append([]byte{}, val...)
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("error getting name, %w", err)
+		}
+
+		registeredKey, err := ecc.NewPublicFromSerializedCompressed(registeredKeyBytes)
+		if err != nil {
+			return err
+		}
+
+		// Only the original owner, or its parent, can update the registration.
+		ok, err := CheckSelfOrParent(txn, key, registeredKey)
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			return ErrNotAuthorized
+		}
+
+		addressKey := addressPrefix + name + "_" + protocol.String()
+		err = txn.Set([]byte(addressKey), []byte(address))
+		return err
+	})
+	return err
+}
+
 func (b *BadgerDB) DisableKey(key *ecc.PublicKey, originator *ecc.PublicKey) error {
 	publicKeyBase58 := base58.Encode(key.SerializeCompressed())
 	dbKey := keyPrefix + publicKeyBase58
@@ -275,6 +321,30 @@ func (b *BadgerDB) GetName(name string) (*ecc.PublicKey, error) {
 		return nil, err
 	}
 	return key, nil
+}
+
+func (b *BadgerDB) GetAddress(name string, protocol pb.Protocol) (string, error) {
+	var addressBytes []byte
+	err := b.db.View(func(txn *badger.Txn) error {
+		addressKey := addressPrefix + name + "_" + protocol.String()
+		item, err := txn.Get([]byte(addressKey))
+		if err != nil {
+			return fmt.Errorf("error getting name, %w", err)
+		}
+		if item == nil {
+			return ErrNotFound
+		}
+
+		err = item.Value(func(val []byte) error {
+			addressBytes = append([]byte{}, val...)
+			return nil
+		})
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+	return string(addressBytes), nil
 }
 
 func CheckSelfOrParent(txn *badger.Txn, originator, target *ecc.PublicKey) (bool, error) {

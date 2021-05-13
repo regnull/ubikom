@@ -7,6 +7,7 @@ import (
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/ubikom/pb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -124,6 +125,55 @@ func Test_Badger(t *testing.T) {
 		// Make sure the name registration is updated.
 		k, err = b.GetName("bob")
 		assert.True(parentPublicKey.Equal(k))
+	})
+
+	t.Run("Test_Address", func(t *testing.T) {
+		childKey, err := ecc.NewRandomPrivateKey()
+		assert.NoError(err)
+		childPublicKey := childKey.PublicKey()
+
+		err = b.RegisterKey(childPublicKey)
+		assert.NoError(err)
+
+		parentKey, err := ecc.NewRandomPrivateKey()
+		assert.NoError(err)
+		parentPublicKey := parentKey.PublicKey()
+		err = b.RegisterKeyParent(childPublicKey, parentPublicKey)
+		assert.NoError(err)
+
+		err = b.RegisterName(childPublicKey, "patrick")
+		assert.NoError(err)
+
+		// Test address registration.
+		err = b.RegisterAddress(childPublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:1122")
+		assert.NoError(err)
+
+		address, err := b.GetAddress("patrick", pb.Protocol_PL_DMS)
+		assert.NoError(err)
+		assert.EqualValues("localhost:1122", address)
+
+		// Make sure some random guy can't change the registration.
+		someKey, err := ecc.NewRandomPrivateKey()
+		assert.NoError(err)
+		somePublicKey := someKey.PublicKey()
+		err = b.RegisterAddress(somePublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:3344")
+		assert.Equal(ErrNotAuthorized, err)
+
+		// Make sure the original key can update the registration.
+		err = b.RegisterAddress(childPublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:5566")
+		assert.NoError(err)
+
+		address, err = b.GetAddress("patrick", pb.Protocol_PL_DMS)
+		assert.NoError(err)
+		assert.EqualValues("localhost:5566", address)
+
+		// Make sure the parent can also change the registration.
+		err = b.RegisterAddress(parentPublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:7788")
+		assert.NoError(err)
+
+		address, err = b.GetAddress("patrick", pb.Protocol_PL_DMS)
+		assert.NoError(err)
+		assert.EqualValues("localhost:7788", address)
 	})
 
 	// Tear down.
