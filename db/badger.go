@@ -121,6 +121,45 @@ func (b *BadgerDB) RegisterKeyParent(childKey *ecc.PublicKey, parentKey *ecc.Pub
 	return err
 }
 
+func (b *BadgerDB) RegisterName(key *ecc.PublicKey, name string) error {
+	dbKey := namePrefix + name
+	err := b.db.Update(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(dbKey))
+		if item != nil {
+			// If the name is already registered, we can change the registration,
+			// as long as we are authorized to do so.
+			// Notice that if a parent sends a request, this name will be re-registered
+			// to the parent.
+			var previousKeyBytes [33]byte
+			err = item.Value(func(val []byte) error {
+				if copy(previousKeyBytes[:], val) != 33 {
+					return fmt.Errorf("invalid name registration record")
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			previousKey, err := ecc.NewPublicFromSerializedCompressed(previousKeyBytes[:])
+			if err != nil {
+				return err
+			}
+
+			ok, err := CheckSelfOrParent(txn, key, previousKey)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return ErrNotAuthorized
+			}
+		}
+
+		err = txn.Set([]byte(dbKey), key.SerializeCompressed())
+		return err
+	})
+	return err
+}
+
 func (b *BadgerDB) DisableKey(key *ecc.PublicKey, originator *ecc.PublicKey) error {
 	publicKeyBase58 := base58.Encode(key.SerializeCompressed())
 	dbKey := keyPrefix + publicKeyBase58
@@ -212,12 +251,38 @@ func (b *BadgerDB) GetKey(key *ecc.PublicKey) (*pb.KeyRecord, error) {
 	return keyRec, nil
 }
 
-func CheckSelfOrParent(txn *badger.Txn, originator, target []byte) (bool, error) {
-	if bytes.Compare(originator, target) == 0 {
+func (b *BadgerDB) GetName(name string) (*ecc.PublicKey, error) {
+	var keyBytes []byte
+	err := b.db.View(func(txn *badger.Txn) error {
+		nameKey := namePrefix + name
+		item, err := txn.Get([]byte(nameKey))
+		if err != nil {
+			return fmt.Errorf("error getting name, %w", err)
+		}
+		if item == nil {
+			return ErrNotFound
+		}
+
+		err = item.Value(func(val []byte) error {
+			keyBytes = append([]byte{}, val...)
+			return nil
+		})
+		return err
+	})
+	key, err := ecc.NewPublicFromSerializedCompressed(keyBytes)
+	if err != nil {
+		// Invalid key.
+		return nil, err
+	}
+	return key, nil
+}
+
+func CheckSelfOrParent(txn *badger.Txn, originator, target *ecc.PublicKey) (bool, error) {
+	if originator.Equal(target) {
 		return true, nil
 	}
 
-	targetBase58 := base58.Encode(target)
+	targetBase58 := base58.Encode(target.SerializeCompressed())
 	key := keyPrefix + targetBase58
 	item, err := txn.Get([]byte(key))
 	if err != nil {
@@ -240,7 +305,7 @@ func CheckSelfOrParent(txn *badger.Txn, originator, target []byte) (bool, error)
 	}
 
 	for _, p := range keyRec.GetParentKey() {
-		if bytes.Compare(p, originator) == 0 {
+		if originator.EqualSerializedCompressed(p) {
 			return true, nil
 		}
 	}

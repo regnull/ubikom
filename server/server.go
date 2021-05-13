@@ -154,8 +154,14 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.R
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
+	key, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	if err != nil {
+		log.Warn().Err(err).Msg("invalid key")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
 	nameRegistrationReq := &pb.NameRegistrationRequest{}
-	err := proto.Unmarshal(req.GetContent(), nameRegistrationReq)
+	err = proto.Unmarshal(req.GetContent(), nameRegistrationReq)
 	if err != nil {
 		log.Warn().Msg("invalid name registration request")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -165,19 +171,10 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.R
 		log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("invalid name")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
-
 	log.Info().Str("name", nameRegistrationReq.GetName()).Msg("registering name")
 
-	dbKey := "name_" + nameRegistrationReq.GetName()
-	err = s.db.Update(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(dbKey))
-		if item != nil {
-			return ErrKeyExists
-		}
+	err = s.dbi.RegisterName(key, nameRegistrationReq.GetName())
 
-		err = txn.Set([]byte(dbKey), req.GetKey())
-		return err
-	})
 	if err != nil {
 		if err == ErrKeyExists {
 			log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("this name is already registered")
@@ -274,23 +271,7 @@ func (s *Server) LookupKey(ctx context.Context, req *pb.LookupKeyRequest) (*pb.L
 
 func (s *Server) LookupName(ctx context.Context, req *pb.LookupNameRequest) (*pb.LookupNameResponse, error) {
 	log.Info().Str("name", req.GetName()).Msg("name lookup request")
-	var key []byte
-	err := s.db.View(func(txn *badger.Txn) error {
-		nameKey := "name_" + req.GetName()
-		item, err := txn.Get([]byte(nameKey))
-		if err != nil {
-			return fmt.Errorf("error getting name, %w", err)
-		}
-		if item == nil {
-			return ErrNotFound
-		}
-
-		err = item.Value(func(val []byte) error {
-			key = append([]byte{}, val...)
-			return nil
-		})
-		return err
-	})
+	key, err := s.dbi.GetName(req.GetName())
 	if err == ErrNotFound {
 		log.Info().Str("name", req.GetName()).Msg("name not found")
 		return &pb.LookupNameResponse{Result: &pb.Result{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}}, nil
@@ -302,7 +283,7 @@ func (s *Server) LookupName(ctx context.Context, req *pb.LookupNameRequest) (*pb
 
 	return &pb.LookupNameResponse{
 		Result: &pb.Result{Result: pb.ResultCode_RC_OK},
-		Key:    key,
+		Key:    key.SerializeCompressed(),
 	}, nil
 }
 

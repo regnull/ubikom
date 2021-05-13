@@ -82,6 +82,50 @@ func Test_Badger(t *testing.T) {
 		assert.True(parentPublicKey.EqualSerializedCompressed(rec.GetDisabledBy()))
 	})
 
+	t.Run("Test_RegisterName", func(t *testing.T) {
+		childKey, err := ecc.NewRandomPrivateKey()
+		assert.NoError(err)
+		childPublicKey := childKey.PublicKey()
+
+		err = b.RegisterKey(childPublicKey)
+		assert.NoError(err)
+
+		parentKey, err := ecc.NewRandomPrivateKey()
+		assert.NoError(err)
+		parentPublicKey := parentKey.PublicKey()
+		err = b.RegisterKeyParent(childPublicKey, parentPublicKey)
+		assert.NoError(err)
+
+		err = b.RegisterName(childPublicKey, "bob")
+		assert.NoError(err)
+
+		// Confirm the registration.
+		k, err := b.GetName("bob")
+		assert.True(k.Equal(childPublicKey))
+
+		// Make sure some random guy can't change the name.
+		someKey, err := ecc.NewRandomPrivateKey()
+		assert.NoError(err)
+		somePublicKey := someKey.PublicKey()
+
+		err = b.RegisterName(somePublicKey, "bob")
+		assert.Error(err)
+
+		// The original key can change the registration, although
+		// right now it won't do anything.
+		err = b.RegisterName(childPublicKey, "bob")
+		assert.NoError(err)
+
+		// Parent can also change the registration, in this case,
+		// the name is re-registered to the parent.
+		err = b.RegisterName(parentPublicKey, "bob")
+		assert.NoError(err)
+
+		// Make sure the name registration is updated.
+		k, err = b.GetName("bob")
+		assert.True(parentPublicKey.Equal(k))
+	})
+
 	// Tear down.
 	os.RemoveAll(dir)
 }
