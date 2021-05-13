@@ -13,6 +13,7 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
+	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -37,6 +38,11 @@ func NewPrivateKey(secret *big.Int) *PrivateKey {
 	privateKey.PublicKey.Curve = btcec.S256()
 	privateKey.PublicKey.X, privateKey.PublicKey.Y = privateKey.PublicKey.Curve.ScalarBaseMult(secret.Bytes())
 	return &PrivateKey{privateKey: privateKey}
+}
+
+func NewPrivateKeyFromPassword(password, salt []byte) *PrivateKey {
+	secret := pbkdf2.Key(password, salt, 16384, 32, sha256.New)
+	return NewPrivateKey(new(big.Int).SetBytes(secret))
 }
 
 func NewPrivateKeyFromEncryptedWithPassphrase(data []byte, passphrase string) (*PrivateKey, error) {

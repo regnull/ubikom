@@ -512,3 +512,79 @@ var _DMSDumpService_serviceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "ubikom.proto",
 }
+
+// ProxyServiceClient is the client API for ProxyService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ProxyServiceClient interface {
+	StoreEncryptedKey(ctx context.Context, in *Signed, opts ...grpc.CallOption) (*Result, error)
+}
+
+type proxyServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewProxyServiceClient(cc grpc.ClientConnInterface) ProxyServiceClient {
+	return &proxyServiceClient{cc}
+}
+
+func (c *proxyServiceClient) StoreEncryptedKey(ctx context.Context, in *Signed, opts ...grpc.CallOption) (*Result, error) {
+	out := new(Result)
+	err := c.cc.Invoke(ctx, "/Ubikom.ProxyService/StoreEncryptedKey", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ProxyServiceServer is the server API for ProxyService service.
+// All implementations must embed UnimplementedProxyServiceServer
+// for forward compatibility
+type ProxyServiceServer interface {
+	StoreEncryptedKey(context.Context, *Signed) (*Result, error)
+	mustEmbedUnimplementedProxyServiceServer()
+}
+
+// UnimplementedProxyServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedProxyServiceServer struct {
+}
+
+func (*UnimplementedProxyServiceServer) StoreEncryptedKey(context.Context, *Signed) (*Result, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StoreEncryptedKey not implemented")
+}
+func (*UnimplementedProxyServiceServer) mustEmbedUnimplementedProxyServiceServer() {}
+
+func RegisterProxyServiceServer(s *grpc.Server, srv ProxyServiceServer) {
+	s.RegisterService(&_ProxyService_serviceDesc, srv)
+}
+
+func _ProxyService_StoreEncryptedKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Signed)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProxyServiceServer).StoreEncryptedKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ubikom.ProxyService/StoreEncryptedKey",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProxyServiceServer).StoreEncryptedKey(ctx, req.(*Signed))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _ProxyService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "Ubikom.ProxyService",
+	HandlerType: (*ProxyServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "StoreEncryptedKey",
+			Handler:    _ProxyService_StoreEncryptedKey_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "ubikom.proto",
+}

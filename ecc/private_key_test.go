@@ -80,7 +80,7 @@ func Test_PrivateKey_SerializeDeserialize(t *testing.T) {
 	}
 }
 
-func Test_PrivateKey_BIP38EncryptDecrypt(t *testing.T) {
+func Test_PrivateKey_EncryptDecrypt(t *testing.T) {
 	assert := assert.New(t)
 
 	key, err := NewRandomPrivateKey()
@@ -93,4 +93,11 @@ func Test_PrivateKey_BIP38EncryptDecrypt(t *testing.T) {
 	key1, err := NewPrivateKeyFromEncryptedWithPassphrase(encrypted, "super secret spies")
 	assert.NoError(err)
 	assert.True(key1.privateKey.Equal(key.privateKey))
+}
+
+func Test_PrivateKey_FromPassword(t *testing.T) {
+	assert := assert.New(t)
+
+	key := NewPrivateKeyFromPassword([]byte("super secret spies"), []byte{0x11, 0x22, 0x33, 0x44})
+	assert.NotNil(key)
 }

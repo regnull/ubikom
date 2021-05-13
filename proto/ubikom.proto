@@ -158,3 +158,12 @@ service DMSDumpService {
     rpc Send(DMSMessage) returns (Result);
     rpc Receive(Signed) returns (ResultWithContent);
 }
+
+message StoreEncryptedKeyRequest {
+    string name = 1;
+    bytes encryptedPrivateKey = 2;
+}
+
+service ProxyService {
+    rpc StoreEncryptedKey(Signed) returns (Result);
+}
