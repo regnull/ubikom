@@ -1,11 +1,13 @@
 package cmd
 
 import (
-	"encoding/binary"
 	"fmt"
 	"os"
 	"path"
 
+	"crypto/rand"
+
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -15,13 +17,11 @@ import (
 const (
 	defaultHomeSubDir = ".ubikom"
 	defaultKeyFile    = "key"
-	defaultSalt       = uint32(0x920058f8)
 )
 
 func init() {
 	createKeyCmd.Flags().String("out", "", "Location for the private key file")
 	createKeyCmd.Flags().String("from-password", "", "Create private key from the given password")
-	createKeyCmd.Flags().Uint32("salt", defaultSalt, "salt")
 	createCmd.AddCommand(createKeyCmd)
 	rootCmd.AddCommand(createCmd)
 }
@@ -66,14 +66,13 @@ var createKeyCmd = &cobra.Command{
 			if len(fromPassword) < 8 {
 				log.Fatal().Err(err).Msg("password must be at least 8 characters long")
 			}
-			salt, err := cmd.Flags().GetUint32("salt")
+			var salt [4]byte
+			_, err := rand.Read(salt[:])
 			if err != nil {
-				log.Fatal().Err(err).Msg("failed to get salt")
+				log.Fatal().Err(err).Msg("failed to generate salt")
 			}
-			var saltBuf [4]byte
-			binary.BigEndian.PutUint32(saltBuf[:], salt)
-			fmt.Printf("salt: %x\n", saltBuf)
-			privateKey = ecc.NewPrivateKeyFromPassword([]byte(fromPassword), saltBuf[:])
+			fmt.Printf("salt: %s\n", base58.Encode(salt[:]))
+			privateKey = ecc.NewPrivateKeyFromPassword([]byte(fromPassword), salt[:])
 		} else {
 			privateKey, err = ecc.NewRandomPrivateKey()
 			if err != nil {
