@@ -42,7 +42,6 @@ func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string
 		privateKey = b.privateKey
 	} else {
 		// TODO: Validate username/password (make sure this key is registered).
-		log.Debug().Str("user", username).Str("pass", password).Msg("got credentials")
 		salt := base58.Decode(username)
 		ok = len(salt) >= 4 && len(password) >= 8
 		privateKey = ecc.NewPrivateKeyFromPassword([]byte(password), salt)
@@ -103,10 +102,16 @@ func (s *Session) Data(r io.Reader) error {
 	if strings.HasSuffix(sender, "@x") {
 		sender = strings.Replace(sender, "@x", "", -1)
 	}
+	if strings.HasSuffix(sender, "@ubikom.cc") {
+		sender = strings.Replace(sender, "@ubikom.cc", "", -1)
+	}
 
 	receiver := s.to
 	if strings.HasSuffix(receiver, "@x") {
 		receiver = strings.Replace(receiver, "@x", "", -1)
+	}
+	if strings.HasSuffix(receiver, "@ubikom.cc") {
+		receiver = strings.Replace(receiver, "@ubikom.cc", "", -1)
 	}
 
 	log.Debug().Str("sender", sender).Str("receiver", receiver).Msg("about to send message")

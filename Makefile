@@ -16,9 +16,10 @@ genproto:
 upload:
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-server
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-dump
-	scp -i $(SSH_KEY) $(ROOT_DIR)build/ubikom-server-linux ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-server
-	scp -i $(SSH_KEY) $(ROOT_DIR)build/ubikom-dump-linux ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-dump
-	scp -i $(SSH_KEY) $(ROOT_DIR)build/ubikom-cli-linux ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-cli
+	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-server ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-server
+	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-dump ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-dump
+	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-cli ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-cli
+	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-proxy ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-proxy
 	scp -i $(SSH_KEY) $(ROOT_DIR)config/ubikom-server.conf ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom.conf
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-server
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-dump

@@ -186,21 +186,31 @@ func verifyArgs(args *Args) error {
 		return fmt.Errorf("lookup url must be specified")
 	}
 
-	if args.PopUser == "" {
-		return fmt.Errorf("user must be specified")
-	}
+	if !args.GetKeyFromUser {
+		if args.PopUser == "" {
+			return fmt.Errorf("pop user must be specified")
+		}
 
-	if args.PopPassword == "" {
-		return fmt.Errorf("password must be specified")
-	}
+		if args.PopPassword == "" {
+			return fmt.Errorf("pop password must be specified")
+		}
 
-	// Expand home directory even if $HOME is not defined (which is the case on Windows).
-	homeDir, err := os.UserHomeDir()
-	if err == nil {
-		args.KeyLocation = strings.Replace(args.KeyLocation, "${HOME}", homeDir, -1)
-	}
+		if args.SmtpUser == "" {
+			return fmt.Errorf("smtp user must be specified")
+		}
 
-	args.KeyLocation = os.ExpandEnv(args.KeyLocation)
+		if args.SmtpPassword == "" {
+			return fmt.Errorf("smtp password must be specified")
+		}
+
+		// Expand home directory even if $HOME is not defined (which is the case on Windows).
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			args.KeyLocation = strings.Replace(args.KeyLocation, "${HOME}", homeDir, -1)
+		}
+
+		args.KeyLocation = os.ExpandEnv(args.KeyLocation)
+	}
 
 	return nil
 }

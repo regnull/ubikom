@@ -16,7 +16,8 @@ import (
 )
 
 /*
-The session
+Example session
+
 13:17:41 DBG [POP] <- LOGIN user=ubikom-user
 13:17:41 DBG [POP] -> LOGIN authorized=true
 13:17:41 DBG [POP] <- LOCK user=ubikom-user
@@ -68,9 +69,30 @@ func (b *Backend) Authorize(user, pass string) bool {
 		b.sessions[user] = &Session{PrivateKey: b.privateKey}
 		b.lock.Unlock()
 	} else {
-		log.Debug().Str("user", user).Str("pass", pass).Msg("creating private key from user/password")
 		salt := base58.Decode(user)
 		privateKey := ecc.NewPrivateKeyFromPassword([]byte(pass), salt)
+
+		// Confirm that this key is registered.
+		res, err := b.lookupClient.LookupKey(context.TODO(), &pb.LookupKeyRequest{
+			Key: privateKey.PublicKey().SerializeCompressed()})
+		if err != nil {
+			log.Error().Err(err).Msg("failed to look up key")
+			log.Debug().Bool("authorized", false).Msg("[POP] -> LOGIN")
+			return false
+		}
+		if res.GetResult().GetResult() != pb.ResultCode_RC_OK {
+			log.Error().Interface("result", res.GetResult()).Msg("failed to look up key")
+			log.Debug().Bool("authorized", false).Msg("[POP] -> LOGIN")
+			return false
+		}
+		if res.GetDisabled() {
+			log.Error().Msg("this key is disabled")
+			log.Debug().Bool("authorized", false).Msg("[POP] -> LOGIN")
+			return false
+		}
+
+		log.Debug().Msg("confirmed key with lookup service")
+
 		b.lock.Lock()
 		b.sessions[user] = &Session{
 			PrivateKey: privateKey}
@@ -162,26 +184,6 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 	}
 	return nil
 }
-
-// func (b *Backend) StartPolling(ctx context.Context, interval time.Duration) {
-// 	log.Debug().Msg("starting polling for new messages...")
-// 	go func() {
-// 		ticker := time.NewTicker(interval)
-// 		for {
-// 			select {
-// 			case <-ctx.Done():
-// 				ticker.Stop()
-// 				return
-// 			case <-ticker.C:
-// 				log.Debug().Msg("polling for new messages")
-// 				err := b.Poll(ctx)
-// 				if err != nil {
-// 					log.Error().Err(err).Msg("error polling for new messages")
-// 				}
-// 			}
-// 		}
-// 	}()
-// }
 
 // Returns total message count and total mailbox size in bytes (octets).
 // Deleted messages are ignored.
