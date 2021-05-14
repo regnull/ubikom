@@ -82,6 +82,8 @@ func SendMessage(ctx context.Context, privateKey *ecc.PrivateKey, body []byte,
 		log.Fatal().Err(err).Msg("invalid receiver public key")
 	}
 
+	log.Debug().Msg("got receiver's public key")
+
 	// Get receiver's address.
 	addressLookupRes, err := lookupService.LookupAddress(ctx,
 		&pb.LookupAddressRequest{Name: receiver, Protocol: pb.Protocol_PL_DMS})
@@ -91,6 +93,8 @@ func SendMessage(ctx context.Context, privateKey *ecc.PrivateKey, body []byte,
 	if addressLookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
 		return fmt.Errorf("failed to get receiver's address: %s", addressLookupRes.GetResult().String())
 	}
+
+	log.Debug().Str("address", addressLookupRes.GetAddress()).Msg("got receiver's address")
 
 	dumpConn, err := grpc.Dial(addressLookupRes.GetAddress(), opts...)
 	if err != nil {
@@ -122,7 +126,7 @@ func SendMessage(ctx context.Context, privateKey *ecc.PrivateKey, body []byte,
 	client := pb.NewDMSDumpServiceClient(dumpConn)
 	res, err := client.Send(ctx, msg)
 	if err != nil {
-		return fmt.Errorf("faield to send message: %w", err)
+		return fmt.Errorf("failed to send message: %w", err)
 	}
 	if res.Result != pb.ResultCode_RC_OK {
 		return fmt.Errorf("failed to send message: %s", res.GetResult().String())

@@ -23,6 +23,7 @@ import (
 type Args struct {
 	DumpURL               string `yaml:"dump-url"`
 	LookupURL             string `yaml:"lookup-url"`
+	GetKeyFromUser        bool   `yaml:"get-key-from-user"`
 	KeyLocation           string `yaml:"key-location"`
 	PopUser               string `yaml:"pop-user"`
 	PopPassword           string `yaml:"pop-password"`
@@ -42,9 +43,9 @@ func main() {
 
 	// Parse the config file, if it exists.
 	var configFile string
-	flagSet := flag.NewFlagSet("", flag.ContinueOnError)
+	flagSet := flag.NewFlagSet("", flag.ExitOnError)
 	flagSet.StringVar(&configFile, "config", "", "location of the config file")
-	err := flagSet.Parse(os.Args)
+	err := flagSet.Parse(os.Args[1:])
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to parse command line arguments")
 	}
@@ -57,8 +58,11 @@ func main() {
 
 	// Parse the command line arguments, use config file as defaults.
 	var args Args
+	var ignoreConfig string
+	flag.StringVar(&ignoreConfig, "config", "", "location of the config file")
 	flag.StringVar(&args.DumpURL, "dump-url", configArgs.DumpURL, "dump service URL")
 	flag.StringVar(&args.LookupURL, "lookup-url", configArgs.LookupURL, "lookup service URL")
+	flag.BoolVar(&args.GetKeyFromUser, "get-key-from-user", configArgs.GetKeyFromUser, "get key from POP/SMTP user")
 	flag.StringVar(&args.KeyLocation, "key", configArgs.KeyLocation, "private key location")
 	flag.StringVar(&args.PopUser, "pop-user", configArgs.PopUser, "name to be used by POP server")
 	flag.StringVar(&args.PopPassword, "pop-password", configArgs.PopPassword, "password to be used by POP server")
@@ -94,6 +98,7 @@ func main() {
 		grpc.WithTimeout(time.Millisecond * time.Duration(args.ConnectionTimeoutMsec)),
 	}
 
+	log.Debug().Str("url", args.DumpURL).Msg("connecting to dump service")
 	dumpConn, err := grpc.Dial(args.DumpURL, opts...)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to the dump server")
@@ -102,6 +107,7 @@ func main() {
 
 	dumpClient := pb.NewDMSDumpServiceClient(dumpConn)
 
+	log.Debug().Str("url", args.LookupURL).Msg("connecting to lookup service")
 	lookupConn, err := grpc.Dial(args.LookupURL, opts...)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to the lookup server")
@@ -110,9 +116,12 @@ func main() {
 
 	lookupClient := pb.NewLookupServiceClient(lookupConn)
 
-	key, err := ecc.LoadPrivateKey(args.KeyLocation)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to load private key")
+	var key *ecc.PrivateKey
+	if !args.GetKeyFromUser {
+		key, err = ecc.LoadPrivateKey(args.KeyLocation)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load private key")
+		}
 	}
 
 	popOpts := &pop.ServerOptions{

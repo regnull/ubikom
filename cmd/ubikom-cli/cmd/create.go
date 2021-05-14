@@ -22,6 +22,7 @@ const (
 func init() {
 	createKeyCmd.Flags().String("out", "", "Location for the private key file")
 	createKeyCmd.Flags().String("from-password", "", "Create private key from the given password")
+	createKeyCmd.Flags().String("salt", "", "Salt used for private key creation")
 	createCmd.AddCommand(createKeyCmd)
 	rootCmd.AddCommand(createCmd)
 }
@@ -66,10 +67,20 @@ var createKeyCmd = &cobra.Command{
 			if len(fromPassword) < 8 {
 				log.Fatal().Err(err).Msg("password must be at least 8 characters long")
 			}
-			var salt [4]byte
-			_, err := rand.Read(salt[:])
+			saltStr, err := cmd.Flags().GetString("salt")
 			if err != nil {
-				log.Fatal().Err(err).Msg("failed to generate salt")
+				log.Fatal().Err(err).Msg("failed to get salt")
+			}
+			var salt []byte
+			if saltStr != "" {
+				salt = base58.Decode(saltStr)
+			} else {
+				var saltArr [8]byte
+				_, err := rand.Read(saltArr[:])
+				if err != nil {
+					log.Fatal().Err(err).Msg("failed to generate salt")
+				}
+				salt = saltArr[:]
 			}
 			fmt.Printf("salt: %s\n", base58.Encode(salt[:]))
 			privateKey = ecc.NewPrivateKeyFromPassword([]byte(fromPassword), salt[:])

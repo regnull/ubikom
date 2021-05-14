@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/btcsuite/btcutil/base58"
 	gosmtp "github.com/emersion/go-smtp"
 	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/pb"
@@ -34,7 +35,18 @@ func NewBackend(user, password string, lookupClient pb.LookupServiceClient,
 
 func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string) (gosmtp.Session, error) {
 	log.Debug().Str("user", username).Msg("[SMTP] <- LOGIN")
-	ok := username == b.user && password == b.password
+	var privateKey *ecc.PrivateKey
+	ok := false
+	if b.privateKey != nil {
+		ok = username == b.user && password == b.password
+		privateKey = b.privateKey
+	} else {
+		// TODO: Validate username/password (make sure this key is registered).
+		log.Debug().Str("user", username).Str("pass", password).Msg("got credentials")
+		salt := base58.Decode(username)
+		ok = len(salt) >= 4 && len(password) >= 8
+		privateKey = ecc.NewPrivateKeyFromPassword([]byte(password), salt)
+	}
 	log.Debug().Bool("authorized", ok).Msg("[SMTP] -> LOGIN")
 	if !ok {
 		return nil, errors.New("Invalid username or password")
@@ -42,7 +54,7 @@ func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string
 	return &Session{
 		lookupClient: b.lookupClient,
 		dumpClient:   b.dumpClient,
-		privateKey:   b.privateKey,
+		privateKey:   privateKey,
 	}, nil
 }
 

@@ -26,6 +26,7 @@ func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient) *DumpSer
 }
 
 func (s *DumpServer) Send(ctx context.Context, req *pb.DMSMessage) (*pb.Result, error) {
+	log.Debug().Msg("got send request")
 	// Get the public key associated with the sender's and receiver's name.
 	senderKey, resErr := getKeyByName(ctx, s.lookupClient, req.Sender)
 	if resErr != nil {
@@ -54,6 +55,7 @@ func (s *DumpServer) Send(ctx context.Context, req *pb.DMSMessage) (*pb.Result, 
 }
 
 func (s *DumpServer) Receive(ctx context.Context, req *pb.Signed) (*pb.ResultWithContent, error) {
+	log.Debug().Msg("got receive request")
 	if !protoutil.VerifySignature(req.Signature, req.Key, req.Content) {
 		log.Warn().Msg("signature verification failed")
 		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}}, nil
