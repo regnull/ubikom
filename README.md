@@ -161,3 +161,8 @@ Heck, send email to me, lgx@x! Definitely report bugs.
 * Sender and recipient names are not encrypted, so theoretically someone may find out that Bob sent message to Alice, but that's about it. You can't really do anything with names, since we must know who sent the message (to verify the signature), and who the recipient is.
 * Eventually the identity service will be distributed and decentralized, but for now it's just a single machine.
 * All messages are being sent via the big dump service, where they sit just as a bunch of bytes. You can run your own dump server (and identity server) instead.
+
+## Work in progress
+
+* Ability to use mail client without running proxy locally
+* Key hierarchy - parent keys can cancel child keys and do anything else the child keys can do
