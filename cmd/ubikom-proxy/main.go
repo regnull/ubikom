@@ -126,6 +126,10 @@ func main() {
 		}
 	}
 
+	if args.TLSCertFile != "" && args.TLSKeyFile != "" {
+		log.Info().Str("cert-file", args.TLSCertFile).Str("key-file", args.TLSKeyFile).Msg("using TLS")
+	}
+
 	popOpts := &pop.ServerOptions{
 		Ctx:          context.Background(),
 		Domain:       args.PopDomain,
