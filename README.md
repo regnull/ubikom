@@ -53,6 +53,8 @@ But enough talk, let's see how the prototype works. Before we do this, here's a 
 
 And another thing - in this example, we will use the public identity and dump server, but nothing prevents you from running your own (it's just another binary), so you will have your own private email system, where you and your buddies can exchange completely private messages. Not bad, huh? Just provide the new URL to the commands you run, and off you go. 
 
+Instructions below are for the latest release, 0.2 (either use git tag, or download the binaries for 0.2), the master branch has moved on to future 0.3 release, so things might be a bit different.
+
 ### Step 1: Get the binaries
 
 You can get binaries by compiling the source, or by pulling the pre-built binaries. The former is recommended, since you can examine the code to make sure no funny business is taking place. 
@@ -159,3 +161,8 @@ Heck, send email to me, lgx@x! Definitely report bugs.
 * Sender and recipient names are not encrypted, so theoretically someone may find out that Bob sent message to Alice, but that's about it. You can't really do anything with names, since we must know who sent the message (to verify the signature), and who the recipient is.
 * Eventually the identity service will be distributed and decentralized, but for now it's just a single machine.
 * All messages are being sent via the big dump service, where they sit just as a bunch of bytes. You can run your own dump server (and identity server) instead.
+
+## Work in progress
+
+* Ability to use mail client without running proxy locally
+* Key hierarchy - parent keys can cancel child keys and do anything else the child keys can do
