@@ -11,6 +11,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/protobuf v1.4.2
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/regnull/popgun v0.0.0-20210517023943-d5dd6fea97a2 // indirect
 	github.com/rs/zerolog v1.21.0
 	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.7.0

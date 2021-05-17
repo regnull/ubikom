@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/DevelHell/popgun"
+	"github.com/regnull/popgun"
 	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
