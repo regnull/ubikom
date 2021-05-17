@@ -33,7 +33,6 @@ type Args struct {
 	SmtpPort              int    `yaml:"smtp-port"`
 	SmtpUser              string `yaml:"smtp-user"`
 	SmtpPassword          string `yaml:"smtp-password"`
-	PollDumpServerSecs    int    `yaml:"poll-dump-server-secs"`
 	ConnectionTimeoutMsec int    `yaml:"connection-timeout-msec"`
 	LogLevel              string `yaml:"log-level"`
 }
@@ -68,7 +67,6 @@ func main() {
 	flag.StringVar(&args.PopPassword, "pop-password", configArgs.PopPassword, "password to be used by POP server")
 	flag.StringVar(&args.PopDomain, "pop-domain", configArgs.PopDomain, "domain to be used by POP server")
 	flag.IntVar(&args.PopPort, "pop-port", configArgs.PopPort, "port to be used by POP server")
-	flag.IntVar(&args.PollDumpServerSecs, "poll-dump-server-secs", configArgs.PollDumpServerSecs, "dump server polling interval")
 	flag.StringVar(&args.SmtpDomain, "smtp-domain", configArgs.SmtpDomain, "domain for SMTP server")
 	flag.IntVar(&args.SmtpPort, "smtp-port", configArgs.SmtpPort, "port used by SMTP server")
 	flag.StringVar(&args.SmtpUser, "smtp-user", configArgs.SmtpUser, "user to be used by SMTP server")
@@ -133,7 +131,6 @@ func main() {
 		DumpClient:   dumpClient,
 		LookupClient: lookupClient,
 		Key:          key,
-		PollInterval: time.Second * time.Duration(args.PollDumpServerSecs),
 	}
 
 	var wg sync.WaitGroup

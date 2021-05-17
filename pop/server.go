@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/regnull/popgun"
 	"github.com/regnull/ubikom/ecc"
@@ -21,7 +20,8 @@ type ServerOptions struct {
 	DumpClient   pb.DMSDumpServiceClient
 	LookupClient pb.LookupServiceClient
 	Key          *ecc.PrivateKey
-	PollInterval time.Duration
+	CertFile     string
+	KeyFile      string
 }
 
 type Server struct {
@@ -39,7 +39,12 @@ func NewServer(opts *ServerOptions) *Server {
 
 func (s *Server) ListenAndServe() error {
 	log.Info().Str("domain", s.opts.Domain).Int("port", s.opts.Port).Msg("POP server starting")
-	err := s.server.Start()
+	var err error
+	if s.opts.CertFile != "" && s.opts.KeyFile != "" {
+		err = s.server.StartTLS(s.opts.CertFile, s.opts.KeyFile)
+	} else {
+		err = s.server.Start()
+	}
 	if err != nil {
 		return err
 	}
