@@ -1,6 +1,7 @@
 package smtp
 
 import (
+	"crypto/tls"
 	"fmt"
 	"time"
 
@@ -18,6 +19,8 @@ type ServerOptions struct {
 	LookupClient pb.LookupServiceClient
 	DumpClient   pb.DMSDumpServiceClient
 	PrivateKey   *ecc.PrivateKey
+	CertFile     string
+	KeyFile      string
 }
 
 type Server struct {
@@ -26,7 +29,7 @@ type Server struct {
 	backend *Backend
 }
 
-func NewServer(opts *ServerOptions) *Server {
+func NewServer(opts *ServerOptions) (*Server, error) {
 	backend := NewBackend(opts.User, opts.Password, opts.LookupClient, opts.DumpClient, opts.PrivateKey)
 	server := gosmtp.NewServer(backend)
 	server.Addr = fmt.Sprintf(":%d", opts.Port)
@@ -36,13 +39,26 @@ func NewServer(opts *ServerOptions) *Server {
 	server.MaxMessageBytes = 1024 * 1024
 	server.MaxRecipients = 50
 	server.AllowInsecureAuth = true
+
+	if opts.CertFile != "" && opts.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(opts.CertFile, opts.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}}
+	}
+
 	return &Server{
 		opts:    opts,
 		backend: backend,
-		server:  server}
+		server:  server}, nil
 }
 
 func (s *Server) ListenAndServe() error {
 	log.Info().Str("domain", s.opts.Domain).Int("port", s.opts.Port).Msg("SMTP server starting")
-	return s.server.ListenAndServe()
+	if s.server.TLSConfig != nil {
+		return s.server.ListenAndServeTLS()
+	} else {
+		return s.server.ListenAndServe()
+	}
 }

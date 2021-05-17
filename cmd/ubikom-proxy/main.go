@@ -154,7 +154,10 @@ func main() {
 		DumpClient:   dumpClient,
 		PrivateKey:   key,
 	}
-	smtpServer := smtp.NewServer(smtpOpts)
+	smtpServer, err := smtp.NewServer(smtpOpts)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize SMTP server")
+	}
 	go func() {
 		err := smtpServer.ListenAndServe()
 		if err != nil {
