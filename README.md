@@ -1,5 +1,15 @@
-# Ubikom
+# Ubikom Project
 *Encrypted email service based on decentralized private identity.*
+
+## Motivation
+
+Today, most users access email via big service providers, such as Google, Yahoo and others. In 2017, 83.5% of 14 to 18 year olds reported Gmail as their primary email provider ([source](https://www.statista.com/statistics/547531/e-mail-provider-ranking-consumer-usa-age/)). In our view, there are several things that are wrong with this picture:
+
+* Big tech companies make money by selling their customer's information to advertisers. You are not their customer, [you are their product](https://slate.com/technology/2018/04/are-you-really-facebooks-product-the-history-of-a-dangerous-idea.html).
+* Your online identity does not belong to you, and it can be suspended or terminated at any time. [It](https://support.google.com/accounts/thread/19305762/account-disabled-for-no-reason?hl=en) [does](https://www.paullimitless.com/google-account-suspended-no-reason-given/) [happen](https://www.reddit.com/r/google/comments/3dtilt/google_disabled_my_account_without_showing_any/).
+* On a more idealistic note, the Internet was supposed to be a set of open standards to connect individuals and organizations. When did email become so complicated that we need trillion dollar companies to help us to send messages to each other? Ability to send each other messages is just too fundamental to hand it over to a third party.
+
+This project is about making email simple, secure, decentralized and free from government or corporate censorship.
 
 ## Identity
 
