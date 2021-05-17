@@ -35,6 +35,8 @@ type Args struct {
 	SmtpPassword          string `yaml:"smtp-password"`
 	ConnectionTimeoutMsec int    `yaml:"connection-timeout-msec"`
 	LogLevel              string `yaml:"log-level"`
+	TLSCertFile           string `yaml:"tls-cert-file"`
+	TLSKeyFile            string `yaml:"tls-key-file"`
 }
 
 func main() {
@@ -73,6 +75,8 @@ func main() {
 	flag.StringVar(&args.SmtpPassword, "smtp-password", configArgs.SmtpPassword, "password to be used by SMTP server")
 	flag.IntVar(&args.ConnectionTimeoutMsec, "connection-timeout-msec", configArgs.ConnectionTimeoutMsec, "connection timeout, milliseconds")
 	flag.StringVar(&args.LogLevel, "log-level", configArgs.LogLevel, "log level")
+	flag.StringVar(&args.TLSCertFile, "tls-cert-file", configArgs.TLSCertFile, "TLS certificate file")
+	flag.StringVar(&args.TLSKeyFile, "tls-key-file", configArgs.TLSKeyFile, "TLS key file")
 	flag.Parse()
 
 	err = verifyArgs(&args)
@@ -131,6 +135,8 @@ func main() {
 		DumpClient:   dumpClient,
 		LookupClient: lookupClient,
 		Key:          key,
+		CertFile:     args.TLSCertFile,
+		KeyFile:      args.TLSKeyFile,
 	}
 
 	var wg sync.WaitGroup
@@ -153,6 +159,8 @@ func main() {
 		LookupClient: lookupClient,
 		DumpClient:   dumpClient,
 		PrivateKey:   key,
+		CertFile:     args.TLSCertFile,
+		KeyFile:      args.TLSKeyFile,
 	}
 	smtpServer, err := smtp.NewServer(smtpOpts)
 	if err != nil {
