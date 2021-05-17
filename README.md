@@ -31,7 +31,7 @@ This would give you something like a global user name - instead of having a sing
 
 Which brings us to email, the biggest messaging system out there. It was supposed to be an easy way to send messages between users, and initially it was. However, the simplicity had its downside - because anyone could send messages to anyone else, without authentication or encryption, the abuse became common, and to confront this abuse, a patchwork of technologies was applied, making email increasingly more complex and unwieldy.
 
-It's not that you can't run your own email service. You sure can. You will be joining an elite community of about five people who do that. In case you are interested, here is how: [Part 1](https://arstechnica.com/information-technology/2014/02/how-to-run-your-own-e-mail-server-with-your-own-domain-part-1/) [Part 2](https://arstechnica.com/information-technology/2014/03/taking-e-mail-back-part-2-arming-your-server-with-postfix-dovecot/) [Part 3](https://arstechnica.com/information-technology/2014/03/taking-e-mail-back-part-3-fortifying-your-box-against-spammers/) [Part 4](https://arstechnica.com/information-technology/2014/04/taking-e-mail-back-part-4-the-finale-with-webmail-everything-after/). Good luck.
+It's not that you can't run your own email service. You sure can. You will be joining the elite community of about five people who do that. In case you are interested, here is how: [Part 1](https://arstechnica.com/information-technology/2014/02/how-to-run-your-own-e-mail-server-with-your-own-domain-part-1/), [Part 2](https://arstechnica.com/information-technology/2014/03/taking-e-mail-back-part-2-arming-your-server-with-postfix-dovecot/), [Part 3](https://arstechnica.com/information-technology/2014/03/taking-e-mail-back-part-3-fortifying-your-box-against-spammers/), [Part 4](https://arstechnica.com/information-technology/2014/04/taking-e-mail-back-part-4-the-finale-with-webmail-everything-after/). Good luck.
 
 Instead, we could use encryption and the identity registry to send emails between users in our system in a way that ensures privacy and prevents spam and abuse. Here, we have a working system that demonstrates this concept. 
 
@@ -43,9 +43,18 @@ For this prototype, we use the following architecture:
 * *Dump service*, which accepts any valid messages address to any users, and stores them until the recipient comes to retrieve them. 
 * *Email client proxy* which allows any email client to retrieve and send messages. The proxy handles the identity verification and encryption. 
 
+If you want convenience, you are free to use public servers that we run. Notice that all of them, with the exception of proxy server, handle encrypted messages, so for them they are just meaningless bytes. The proxy server is different - since it talks to the end-user email client, it must be able to decrypt messages. If it does sound scary, you are right. But here are a few things to make it a little less scary:
+
+* The proxy server does not store decrypted messages anywhere (except in memory, temporary, before it sends them to the client).
+* You must send user information to the proxy so it can construct your private key used to retrieve and decrypt messages. Again, the private key is not stored anywhere, except in memory, for the duration of the user session.
+* If you are still uncomfortable with your private key being sent over to the service, you were paying attention, congrats. To make you feel a little better, the key you sent over can be made limited in scope to just encrypt and decrypt messages. Another key (parent key) will be responsible for address and name assignment, and it can disable the child key at any time. The parent key never leaves your hands. If you suspect that your child key became compromised, just use the parent key to disable it, generate another child key and reassign the name to it.
+* In case you are absolutely against sending any private keys over, you don't have to - just run the proxy server locally on your machine, or on your cloud provider VM, or whatever.
+
 ### Aside - the "at" addresses
 
 Every email address comes in bob@server format. Now that we talk about global identity, the "@server" part becomes obsolete - and it's no surprise that many services just use the username, or @bob handle. We have to comply with the email address format, but we want to de-emphasize the "at" part, so we will use the simplest possible format, bob@x. Yes, this is the user name followed by the "at" symbol and the letter x. We use x because it's cool, and because it looks like we just cancelled the whole service part - we put a cross in its place. 
+
+Unfortunately some email clients might not be happy with "@x", in this case you can use "@ubikom.cc".
 
 ## Testing the prototype
 
@@ -53,9 +62,7 @@ But enough talk, let's see how the prototype works. Before we do this, here's a 
 
 **This is a prototype. It's not production-ready yet. Use it at your own risk. Things are likely to change in future, which includes changes breaking current functionality. The database can also be reset, wiping out whatever names you have registered.**
 
-And another thing - in this example, we will use the public identity and dump server, but nothing prevents you from running your own (it's just another binary), so you will have your own private email system, where you and your buddies can exchange completely private messages. Not bad, huh? Just provide the new URL to the commands you run, and off you go. 
-
-Instructions below are for the latest release, 0.2 (either use git tag, or download the binaries for 0.2), the master branch has moved on to future 0.3 release, so things might be a bit different.
+And another thing - in this example, we will use the public identity, dump, and proxy servers, but nothing prevents you from running your own (it's just another binary), so you will have your own private email system, where you and your buddies can exchange completely private messages. Not bad, huh? Just provide the new URL to the commands you run, and off you go. 
 
 ### Step 1: Get the binaries
 
@@ -114,7 +121,7 @@ Name is what you use to send and receive messages. You must associate your name 
 ```
 
 ### Step 6: Specify your address
-This is where your messages are being sent. You can either run your own dump server, or use the public one, here:
+This is where your messages are being sent. The dump server only handles the encrypted messages. You can either run your own dump server, or use the public one, here:
 
 ```
 ./ubikom-cli register address bob alpha.ubikom.cc:8826
@@ -122,28 +129,10 @@ This is where your messages are being sent. You can either run your own dump ser
 
 Seriously, don't use bob with the public server. Bob is already registered. 
 
-### Step 7: Start Ubikom Proxy
-Proxy sits between your email client and the rest of Ubikom ecosystem, encrypting and signing your messages on the fly. 
+### Step 7: Configure your email client
 
-```
-./ubikom-proxy
-```
+For this example, we will use the public proxy service because it makes things easy. 
 
-***Known issue*** On Windows, you might get a "key not found" error, if you do, please specify the key location explicitly, like so:
-
-```
-ubikom-proxy --key=c:\users\bob\.ubikom\key
-```
-
-This issue will be fixed in the next release.
-
-It will start and keep running, printing out a bunch of fun messages. For your mail client to work, the proxy must be running.
-
-You can edit ubikom.conf file to configure the proxy, namely the ports and user names and passwords used by the SMTP and POP servers. 
-
-Keep in mind that the data between email client and proxy is clear text. It's fine if you run it on your laptop, since the data never leaves your machine, but don't do it in multi-user environment. 
-
-### Step 8: Configure your email client
 I use [Mozilla Thunderbird](https://www.thunderbird.net/en-US/) for testing. It's great, and it's available for multiple platforms. Other might also work, so go ahead and try. 
 
 Configure your email client as follows:
