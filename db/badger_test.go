@@ -59,6 +59,13 @@ func Test_Badger(t *testing.T) {
 		err = b.RegisterKeyParent(childPublicKey, parentPublicKey)
 		assert.NoError(err)
 
+		// Make sure another key can't be registered as a parent.
+		anotherKey, err := ecc.NewRandomPrivateKey()
+		assert.NoError(err)
+		anotherPublicKey := anotherKey.PublicKey()
+		err = b.RegisterKeyParent(childPublicKey, anotherPublicKey)
+		assert.Error(err)
+
 		// Make sure public key was successfully registered.
 		rec, err := b.GetKey(childPublicKey)
 		assert.NoError(err)
@@ -94,10 +101,13 @@ func Test_Badger(t *testing.T) {
 		parentKey, err := ecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		parentPublicKey := parentKey.PublicKey()
+		err = b.RegisterKey(parentPublicKey)
+		assert.NoError(err)
+
 		err = b.RegisterKeyParent(childPublicKey, parentPublicKey)
 		assert.NoError(err)
 
-		err = b.RegisterName(childPublicKey, "bob")
+		err = b.RegisterName(parentPublicKey, childPublicKey, "bob")
 		assert.NoError(err)
 
 		// Confirm the registration.
@@ -109,22 +119,28 @@ func Test_Badger(t *testing.T) {
 		assert.NoError(err)
 		somePublicKey := someKey.PublicKey()
 
-		err = b.RegisterName(somePublicKey, "bob")
+		err = b.RegisterName(somePublicKey, somePublicKey, "bob")
 		assert.Error(err)
 
-		// The original key can change the registration, although
-		// right now it won't do anything.
-		err = b.RegisterName(childPublicKey, "bob")
+		// The original key can't change the registration (but parent can).
+		err = b.RegisterName(childPublicKey, childPublicKey, "bob")
+		assert.Error(err)
+
+		// Parent can re-register key to another child.
+		anotherChildKey, err := ecc.NewRandomPrivateKey()
+		assert.NoError(err)
+		anotherChildPublicKey := anotherChildKey.PublicKey()
+		err = b.RegisterKey(anotherChildPublicKey)
+		assert.NoError(err)
+		err = b.RegisterKeyParent(anotherChildPublicKey, parentPublicKey)
 		assert.NoError(err)
 
-		// Parent can also change the registration, in this case,
-		// the name is re-registered to the parent.
-		err = b.RegisterName(parentPublicKey, "bob")
+		err = b.RegisterName(parentPublicKey, anotherChildPublicKey, "bob")
 		assert.NoError(err)
 
 		// Make sure the name registration is updated.
 		k, err = b.GetName("bob")
-		assert.True(parentPublicKey.Equal(k))
+		assert.True(anotherChildPublicKey.Equal(k))
 	})
 
 	t.Run("Test_Address", func(t *testing.T) {
@@ -138,10 +154,13 @@ func Test_Badger(t *testing.T) {
 		parentKey, err := ecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		parentPublicKey := parentKey.PublicKey()
+		err = b.RegisterKey(parentPublicKey)
+		assert.NoError(err)
+
 		err = b.RegisterKeyParent(childPublicKey, parentPublicKey)
 		assert.NoError(err)
 
-		err = b.RegisterName(childPublicKey, "patrick")
+		err = b.RegisterName(parentPublicKey, childPublicKey, "patrick")
 		assert.NoError(err)
 
 		// Test address registration.

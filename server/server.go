@@ -153,7 +153,7 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.R
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	key, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	originatorKey, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -166,19 +166,29 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.R
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
+	targetKey, err := ecc.NewPublicFromSerializedCompressed(nameRegistrationReq.GetKey())
+	if err != nil {
+		log.Warn().Err(err).Msg("invalid key")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
 	if !util.ValidateName(nameRegistrationReq.GetName()) {
 		log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("invalid name")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 	log.Info().Str("name", nameRegistrationReq.GetName()).Msg("registering name")
 
-	err = s.dbi.RegisterName(key, nameRegistrationReq.GetName())
-
+	err = s.dbi.RegisterName(originatorKey, targetKey, nameRegistrationReq.GetName())
 	if err != nil {
-		if err == ErrKeyExists {
+		if err == db.ErrRecordExists {
 			log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("this name is already registered")
 			return &pb.Result{
 				Result: pb.ResultCode_RC_RECORD_EXISTS}, nil
+		}
+		if err == db.ErrNotAuthorized {
+			log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("key is not authorized")
+			return &pb.Result{
+				Result: pb.ResultCode_RC_UNAUTHORIZED}, nil
 		}
 		log.Error().Str("name", nameRegistrationReq.GetName()).Err(err).Msg("error writing name")
 		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil

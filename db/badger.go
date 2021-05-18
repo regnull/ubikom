@@ -16,7 +16,7 @@ import (
 const (
 	keyPrefix     = "pkey_"
 	namePrefix    = "name_"
-	maxParentKeys = 16
+	maxParentKeys = 1 // For now, only a single parent is allowed.
 	addressPrefix = "address_"
 )
 
@@ -122,15 +122,14 @@ func (b *BadgerDB) RegisterKeyParent(childKey *ecc.PublicKey, parentKey *ecc.Pub
 	return err
 }
 
-func (b *BadgerDB) RegisterName(key *ecc.PublicKey, name string) error {
+func (b *BadgerDB) RegisterName(originator, target *ecc.PublicKey, name string) error {
 	dbKey := namePrefix + name
 	err := b.db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(dbKey))
+		var prev *ecc.PublicKey
 		if item != nil {
 			// If the name is already registered, we can change the registration,
 			// as long as we are authorized to do so.
-			// Notice that if a parent sends a request, this name will be re-registered
-			// to the parent.
 			var previousKeyBytes [33]byte
 			err = item.Value(func(val []byte) error {
 				if copy(previousKeyBytes[:], val) != 33 {
@@ -141,21 +140,20 @@ func (b *BadgerDB) RegisterName(key *ecc.PublicKey, name string) error {
 			if err != nil {
 				return err
 			}
-			previousKey, err := ecc.NewPublicFromSerializedCompressed(previousKeyBytes[:])
+			prev, err = ecc.NewPublicFromSerializedCompressed(previousKeyBytes[:])
 			if err != nil {
 				return err
-			}
-
-			ok, err := CheckSelfOrParent(txn, key, previousKey)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return ErrNotAuthorized
 			}
 		}
+		authorized, err := CheckRegisterNameAuthorization(txn, originator, target, prev)
+		if err != nil {
+			return err
+		}
+		if !authorized {
+			return ErrNotAuthorized
+		}
 
-		err = txn.Set([]byte(dbKey), key.SerializeCompressed())
+		err = txn.Set([]byte(dbKey), target.SerializeCompressed())
 		return err
 	})
 	return err
@@ -379,5 +377,106 @@ func CheckSelfOrParent(txn *badger.Txn, originator, target *ecc.PublicKey) (bool
 			return true, nil
 		}
 	}
+	return false, nil
+}
+
+func GetParent(txn *badger.Txn, key *ecc.PublicKey) (*ecc.PublicKey, error) {
+	targetBase58 := base58.Encode(key.SerializeCompressed())
+	dbKey := keyPrefix + targetBase58
+	item, err := txn.Get([]byte(dbKey))
+	if err != nil {
+		return nil, fmt.Errorf("error getting key record: %w", err)
+	}
+	if item == nil {
+		return nil, fmt.Errorf("target key not found")
+	}
+
+	keyRec := &pb.KeyRecord{}
+	err = item.Value(func(val []byte) error {
+		err := proto.Unmarshal(val, keyRec)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal key record: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("invalid key record: %w", err)
+	}
+	if len(keyRec.GetParentKey()) == 0 {
+		// No parent key.
+		return nil, nil
+	}
+	if len(keyRec.GetParentKey()) > 1 {
+		return nil, fmt.Errorf("invalid key record")
+	}
+	parent, err := ecc.NewPublicFromSerializedCompressed(keyRec.GetParentKey()[0])
+	if err != nil {
+		return nil, fmt.Errorf("invalid parent key: %w", err)
+	}
+	return parent, nil
+}
+
+func CheckRegisterNameAuthorization(txn *badger.Txn, originator, target, prev *ecc.PublicKey) (bool, error) {
+	var prevParent *ecc.PublicKey
+	if prev != nil {
+		var err error
+		prevParent, err = GetParent(txn, prev)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	targetParent, err := GetParent(txn, target)
+	if err != nil {
+		return false, err
+	}
+
+	// 1. Check if the originator has the authority.
+
+	originatorParent, err := GetParent(txn, originator)
+	if err != nil {
+		return false, err
+	}
+
+	// If there is a parent, it must be the parent who requests the change.
+	if originatorParent != nil {
+		return false, nil
+	}
+
+	// The request must be for the same key, or for the child key.
+	if prev != nil {
+		if !originator.Equal(prev) && !originator.Equal(prevParent) {
+			return false, nil
+		}
+	}
+
+	// 2. Check if the change can be done.
+
+	// Can assign to a new key.
+	if prev == nil {
+		return true, nil
+	}
+
+	// Can re-assign name to the same key (noop).
+	if prev.Equal(target) {
+		return true, nil
+	}
+
+	// Can assign from child to  parent.
+	if prevParent != nil && prevParent.Equal(target) {
+		return true, nil
+	}
+
+	// Can assign from parent to child.
+	if targetParent != nil && targetParent.Equal(prev) {
+		return true, nil
+	}
+
+	// Can assign to another child.
+	if targetParent != nil && targetParent.Equal(prevParent) {
+		return true, nil
+	}
+
+	// Nothing else can be done.
 	return false, nil
 }

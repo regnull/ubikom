@@ -55,7 +55,10 @@ message KeyDisableRequest {
 }
 
 message NameRegistrationRequest {
-    string name = 1;
+    // The key to be registered.
+    bytes key = 1;
+    // The name to be associated with this key.
+    string name = 2;
 }
 
 message AddressRegistrationRequest {

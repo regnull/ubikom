@@ -105,6 +105,9 @@ func (pbk *PublicKey) Address() string {
 
 // Equal returns true if this key is equal to the other.
 func (pbk *PublicKey) Equal(other *PublicKey) bool {
+	if other == nil {
+		return false
+	}
 	return pbk.publicKey.X.Cmp(other.publicKey.X) == 0 &&
 		pbk.publicKey.Y.Cmp(other.publicKey.Y) == 0
 }
