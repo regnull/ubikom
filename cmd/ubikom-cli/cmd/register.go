@@ -24,6 +24,8 @@ func init() {
 	registerCmd.PersistentFlags().String("url", globals.PublicIdentityServiceURL, "server URL")
 	registerCmd.PersistentFlags().String("key", "", "Location for the private key file")
 
+	registerNameCmd.Flags().String("target", "", "target key")
+	registerAddressCmd.Flags().String("target", "", "target key")
 	registerAddressCmd.Flags().String("protocol", "PL_DMS", "protocol")
 
 	registerCmd.AddCommand(registerKeyCmd)
@@ -134,6 +136,23 @@ var registerNameCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
+
+		targetKeyFile, err := cmd.Flags().GetString("target")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get target key location")
+		}
+
+		var targetKey *ecc.PrivateKey
+
+		if targetKeyFile == "" {
+			targetKey = privateKey
+		} else {
+			targetKey, err = ecc.LoadPrivateKey(targetKeyFile)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to load target key")
+			}
+		}
+
 		opts := []grpc.DialOption{
 			grpc.WithInsecure(),
 		}
@@ -155,6 +174,7 @@ var registerNameCmd = &cobra.Command{
 		}
 
 		registerKeyReq := &pb.NameRegistrationRequest{
+			Key:  targetKey.PublicKey().SerializeCompressed(),
 			Name: args[0]}
 		reqBytes, err := proto.Marshal(registerKeyReq)
 		if err != nil {
@@ -217,6 +237,22 @@ var registerAddressCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
+		targetKeyFile, err := cmd.Flags().GetString("target")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get target key location")
+		}
+
+		var targetKey *ecc.PrivateKey
+
+		if targetKeyFile == "" {
+			targetKey = privateKey
+		} else {
+			targetKey, err = ecc.LoadPrivateKey(targetKeyFile)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to load target key")
+			}
+		}
+
 		opts := []grpc.DialOption{
 			grpc.WithInsecure(),
 		}
@@ -238,6 +274,7 @@ var registerAddressCmd = &cobra.Command{
 		}
 
 		registerAddressReq := &pb.AddressRegistrationRequest{
+			Key:      targetKey.PublicKey().SerializeCompressed(),
 			Name:     name,
 			Protocol: pb.Protocol(protocol),
 			Address:  address}

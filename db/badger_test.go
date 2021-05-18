@@ -76,11 +76,11 @@ func Test_Badger(t *testing.T) {
 		someKey, err := ecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		somePublicKey := someKey.PublicKey()
-		err = b.DisableKey(childPublicKey, somePublicKey)
+		err = b.DisableKey(somePublicKey, childPublicKey)
 		assert.Error(err)
 
 		// Make sure parent can disable the child.
-		err = b.DisableKey(childPublicKey, parentPublicKey)
+		err = b.DisableKey(parentPublicKey, childPublicKey)
 		assert.NoError(err)
 
 		// Make sure child is really disabled.
@@ -164,7 +164,7 @@ func Test_Badger(t *testing.T) {
 		assert.NoError(err)
 
 		// Test address registration.
-		err = b.RegisterAddress(childPublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:1122")
+		err = b.RegisterAddress(parentPublicKey, childPublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:1122")
 		assert.NoError(err)
 
 		address, err := b.GetAddress("patrick", pb.Protocol_PL_DMS)
@@ -175,24 +175,16 @@ func Test_Badger(t *testing.T) {
 		someKey, err := ecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		somePublicKey := someKey.PublicKey()
-		err = b.RegisterAddress(somePublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:3344")
-		assert.Equal(ErrNotAuthorized, err)
+		err = b.RegisterAddress(somePublicKey, childPublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:3344")
+		assert.Error(err)
 
 		// Make sure the original key can update the registration.
-		err = b.RegisterAddress(childPublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:5566")
+		err = b.RegisterAddress(parentPublicKey, childPublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:5566")
 		assert.NoError(err)
 
 		address, err = b.GetAddress("patrick", pb.Protocol_PL_DMS)
 		assert.NoError(err)
 		assert.EqualValues("localhost:5566", address)
-
-		// Make sure the parent can also change the registration.
-		err = b.RegisterAddress(parentPublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:7788")
-		assert.NoError(err)
-
-		address, err = b.GetAddress("patrick", pb.Protocol_PL_DMS)
-		assert.NoError(err)
-		assert.EqualValues("localhost:7788", address)
 	})
 
 	// Tear down.

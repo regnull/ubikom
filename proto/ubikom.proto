@@ -62,9 +62,10 @@ message NameRegistrationRequest {
 }
 
 message AddressRegistrationRequest {
-    string name = 1;
-    Protocol protocol = 2;
-    string address = 3;
+    bytes key = 1;
+    string name = 2;
+    Protocol protocol = 3;
+    string address = 4;
 }
 
 enum KeyRelationship {

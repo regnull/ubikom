@@ -136,7 +136,7 @@ func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Res
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	err = s.dbi.DisableKey(key, originator)
+	err = s.dbi.DisableKey(originator, key)
 
 	if err != nil {
 		log.Error().Err(err).Msg("failed to disable key")
@@ -203,7 +203,7 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	key, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	originatorKey, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -219,7 +219,13 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 	log.Info().Str("name", addressRegistrationReq.GetName()).
 		Str("address", addressRegistrationReq.GetAddress()).Msg("registering address")
 
-	err = s.dbi.RegisterAddress(key, addressRegistrationReq.GetName(),
+	targetKey, err := ecc.NewPublicFromSerializedCompressed(addressRegistrationReq.GetKey())
+	if err != nil {
+		log.Warn().Err(err).Msg("invalid key")
+		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+	}
+
+	err = s.dbi.RegisterAddress(originatorKey, targetKey, addressRegistrationReq.GetName(),
 		addressRegistrationReq.GetProtocol(), addressRegistrationReq.GetAddress())
 
 	if err != nil {

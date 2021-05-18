@@ -159,8 +159,19 @@ func (b *BadgerDB) RegisterName(originator, target *ecc.PublicKey, name string) 
 	return err
 }
 
-func (b *BadgerDB) RegisterAddress(key *ecc.PublicKey, name string, protocol pb.Protocol, address string) error {
+func (b *BadgerDB) RegisterAddress(originator, target *ecc.PublicKey, name string, protocol pb.Protocol, address string) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
+		// If the target has a parent, it must be the parent who sends the request.
+		targetParent, err := GetParent(txn, target)
+		if err != nil {
+			if err != badger.ErrKeyNotFound {
+				return err
+			}
+		}
+		if targetParent != nil && !originator.Equal(targetParent) {
+			return ErrNotAuthorized
+		}
+
 		// Make sure the requested name is registered to this key.
 		nameKey := namePrefix + name
 		item, err := txn.Get([]byte(nameKey))
@@ -171,8 +182,7 @@ func (b *BadgerDB) RegisterAddress(key *ecc.PublicKey, name string, protocol pb.
 			return fmt.Errorf("name %s is not registered", name)
 		}
 
-		// This is the key associated with the name. It must match the key that signed
-		// this request.
+		// This is the key associated with the name. It must match the target key.
 		var registeredKeyBytes []byte
 		err = item.Value(func(val []byte) error {
 			registeredKeyBytes = append([]byte{}, val...)
@@ -187,13 +197,7 @@ func (b *BadgerDB) RegisterAddress(key *ecc.PublicKey, name string, protocol pb.
 			return err
 		}
 
-		// Only the original owner, or its parent, can update the registration.
-		ok, err := CheckSelfOrParent(txn, key, registeredKey)
-		if err != nil {
-			return err
-		}
-
-		if !ok {
+		if !registeredKey.Equal(target) {
 			return ErrNotAuthorized
 		}
 
@@ -204,11 +208,21 @@ func (b *BadgerDB) RegisterAddress(key *ecc.PublicKey, name string, protocol pb.
 	return err
 }
 
-func (b *BadgerDB) DisableKey(key *ecc.PublicKey, originator *ecc.PublicKey) error {
+func (b *BadgerDB) DisableKey(originator *ecc.PublicKey, key *ecc.PublicKey) error {
 	publicKeyBase58 := base58.Encode(key.SerializeCompressed())
 	dbKey := keyPrefix + publicKeyBase58
 	err := b.db.Update(func(txn *badger.Txn) error {
 
+		// If the target has a parent, it must be the parent who sends the request.
+		keyParent, err := GetParent(txn, key)
+		if err != nil {
+			if err != badger.ErrKeyNotFound {
+				return err
+			}
+		}
+		if keyParent != nil && !originator.Equal(keyParent) {
+			return ErrNotAuthorized
+		}
 		// Retrieve the key.
 
 		item, err := txn.Get([]byte(dbKey))
@@ -433,13 +447,8 @@ func CheckRegisterNameAuthorization(txn *badger.Txn, originator, target, prev *e
 
 	// 1. Check if the originator has the authority.
 
-	originatorParent, err := GetParent(txn, originator)
-	if err != nil {
-		return false, err
-	}
-
-	// If there is a parent, it must be the parent who requests the change.
-	if originatorParent != nil {
+	// If the target has a parent, only the parent can request the change.
+	if targetParent != nil && !originator.Equal(targetParent) {
 		return false, nil
 	}
 
