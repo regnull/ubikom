@@ -21,7 +21,7 @@ do
             GOOS=$OS GOARCH=$ARCH CGO_ENABLED=0 GO_EXTLINK_ENABLED=0 go build -v -o $TEMP_DIR/$BIN_NAME-$OS-$ARCH $MAIN_DIR/main.go
             mkdir $SCRIPT_DIR/../build/$OS-$ARCH > /dev/null 2>&1
             cp $TEMP_DIR/$BIN_NAME-$OS-$ARCH $SCRIPT_DIR/../build/$OS-$ARCH/$BIN_NAME$SUFFIX
-            cp $SCRIPT_DIR/../config/* $SCRIPT_DIR/../build/$OS-$ARCH/
+            cp $SCRIPT_DIR/../config/*.conf $SCRIPT_DIR/../build/$OS-$ARCH/
         done
     done
     popd > /dev/null

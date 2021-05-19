@@ -15,7 +15,6 @@ This project is about making email simple, secure, decentralized and free from g
 
 With Ubikom project, you can communicate via email in a secure way, while using the existing email clients that you know and love.
 
-
 ## Testing the prototype
 
 But enough talk, let's see how the prototype works. Before we do this, here's a necessary disclaimer:
@@ -55,7 +54,7 @@ For example, for Linux it would be (cloned repo location)/build/linux-amd64.
 
 Go there, or add this directory to the path or whatever. 
 
-### Step 3: Get your private key
+### Step 3: Create and register your main key
 To generate your private key, run the following command:
 
 ```
@@ -64,18 +63,13 @@ To generate your private key, run the following command:
 
 This will create a new key and save it under $HOME/.ubikom/key
 
-### Step 4: Register your key
-Before you start using your private key, you need to register the public key (generated from the private key) with the service:
+Now, register the key:
 
 ```
 ./ubikom-cli register key
 ```
 
-This might take a few seconds, as the server requires you to generate proof-of-work and send it with the request, to prevent spam.
-
-This is your private key, so yeah, don't give it to anyone.
-
-### Step 5: Create and register a child key
+### Step 4: Create and register a child key
 
 Because we want to use public email proxy to do encryption for us, we must create a child key that will be used to encrypt and sign emails.
 
@@ -90,22 +84,35 @@ to switch the name to another key and disable the compromised key.
 So, let's go ahead and create the child key. To do that, we will have to specify a password:
 
 ```
-./ubikom-cli create key --with-password=pumpkin123
+./ubikom-cli create key --out=child.key --from-password=pumpkin123
 ```
 
+Write down the salt value, you will need it later.
 
-### Step 5: Reserve your name
+Now, register the child key:
+
+```
+./ubikom-cli register key --key=child.key
+```
+
+Establish the parent-child relationship between the keys:
+
+```
+./ubikom-cli register child-key --child=child.key
+```
+
+### Step 6: Reserve your name
 Name is what you use to send and receive messages. You must associate your name with your private key. The name must be unique - so if you get an error, try another name:
 
 ```
-./ubikom-cli register name bob
+./ubikom-cli register name bob --target=child.key
 ```
 
 ### Step 6: Specify your address
 This is where your messages are being sent. The dump server only handles the encrypted messages. You can either run your own dump server, or use the public one, here:
 
 ```
-./ubikom-cli register address bob alpha.ubikom.cc:8826
+./ubikom-cli register address bob alpha.ubikom.cc:8826 --target=child.key
 ```
 
 Seriously, don't use bob with the public server. Bob is already registered. 
