@@ -128,6 +128,12 @@ var lookupNameCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("name lookup request failed")
 		}
+		if res.GetResult().GetResult() == pb.ResultCode_RC_RECORD_NOT_FOUND {
+			log.Fatal().Msg("not found")
+		}
+		if res.GetResult().GetResult() != pb.ResultCode_RC_OK {
+			log.Fatal().Str("result", res.GetResult().GetResult().String()).Msg("server returned error")
+		}
 		fmt.Printf("%s\n", base58.Encode(res.GetKey()))
 	},
 }

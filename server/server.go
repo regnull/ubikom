@@ -267,8 +267,12 @@ func (s *Server) LookupName(ctx context.Context, req *pb.LookupNameRequest) (*pb
 	log.Info().Str("name", req.GetName()).Msg("name lookup request")
 	key, err := s.dbi.GetName(req.GetName())
 	if err == ErrNotFound {
-		log.Info().Str("name", req.GetName()).Msg("name not found")
+		log.Debug().Str("name", req.GetName()).Msg("name not found")
 		return &pb.LookupNameResponse{Result: &pb.Result{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}}, nil
+	}
+	if err == db.ErrNotFound {
+		return &pb.LookupNameResponse{
+			Result: &pb.Result{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}}, nil
 	}
 	if err != nil {
 		log.Error().Str("name", req.GetName()).Err(err).Msg("error getting name")

@@ -315,6 +315,9 @@ func (b *BadgerDB) GetName(name string) (*ecc.PublicKey, error) {
 		nameKey := namePrefix + name
 		item, err := txn.Get([]byte(nameKey))
 		if err != nil {
+			if err == badger.ErrKeyNotFound {
+				return ErrNotFound
+			}
 			return fmt.Errorf("error getting name, %w", err)
 		}
 		if item == nil {
@@ -327,6 +330,10 @@ func (b *BadgerDB) GetName(name string) (*ecc.PublicKey, error) {
 		})
 		return err
 	})
+	if err != nil {
+		return nil, err
+	}
+
 	key, err := ecc.NewPublicFromSerializedCompressed(keyBytes)
 	if err != nil {
 		// Invalid key.
