@@ -101,3 +101,11 @@ func Test_PrivateKey_FromPassword(t *testing.T) {
 	key := NewPrivateKeyFromPassword([]byte("super secret spies"), []byte{0x11, 0x22, 0x33, 0x44})
 	assert.NotNil(key)
 }
+
+func Test_PrivateKey_NewPrivateKeyFromEncryptedWithPassphrase_InvalidData(t *testing.T) {
+	assert := assert.New(t)
+
+	key, err := NewPrivateKeyFromEncryptedWithPassphrase([]byte("bad data"), "foo")
+	assert.Nil(key)
+	assert.Error((err))
+}

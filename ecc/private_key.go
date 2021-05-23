@@ -46,6 +46,9 @@ func NewPrivateKeyFromPassword(password, salt []byte) *PrivateKey {
 }
 
 func NewPrivateKeyFromEncryptedWithPassphrase(data []byte, passphrase string) (*PrivateKey, error) {
+	if len(data) < 33 {
+		return nil, fmt.Errorf("invalid data")
+	}
 	salt, data := data[len(data)-32:], data[:len(data)-32]
 	key, _, err := deriveKey([]byte(passphrase), salt)
 	if err != nil {
@@ -193,11 +196,6 @@ func (pk *PrivateKey) EncryptKeyWithPassphrase(passphrase string) ([]byte, error
 	ciphertext := gcm.Seal(nonce, nonce, pk.privateKey.D.Bytes(), nil)
 	ciphertext = append(ciphertext, salt...)
 	return ciphertext, nil
-}
-
-// TODO: remove this.
-func (pk *PrivateKey) GetKey() *big.Int {
-	return pk.privateKey.D
 }
 
 func deriveKey(password, salt []byte) ([]byte, []byte, error) {

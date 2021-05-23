@@ -37,4 +37,8 @@ build:
 	$(ROOT_DIR)scripts/build.sh
 
 test:
-	go test -timeout=30s ./...
+	go test -cover -timeout=30s ./...
+
+cover:
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out
