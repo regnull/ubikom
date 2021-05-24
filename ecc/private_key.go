@@ -40,11 +40,14 @@ func NewPrivateKey(secret *big.Int) *PrivateKey {
 	return &PrivateKey{privateKey: privateKey}
 }
 
+// NewPrivateKeyFromPassword creates a new private key from password and salt.
 func NewPrivateKeyFromPassword(password, salt []byte) *PrivateKey {
 	secret := pbkdf2.Key(password, salt, 16384, 32, sha256.New)
 	return NewPrivateKey(new(big.Int).SetBytes(secret))
 }
 
+// NewPrivateKeyFromEncryptedWithPassphrase creates a new private key from encrypted private key
+// using the passphrase.
 func NewPrivateKeyFromEncryptedWithPassphrase(data []byte, passphrase string) (*PrivateKey, error) {
 	if len(data) < 33 {
 		return nil, fmt.Errorf("invalid data")
@@ -119,6 +122,8 @@ func (pk *PrivateKey) Sign(hash []byte) (*Signature, error) {
 	return &Signature{R: r, S: s}, nil
 }
 
+// GetSharedEncryptionKey returns a shared key that can be used to encrypt communications
+// between two parties.
 func (pk *PrivateKey) GetSharedEncryptionKey(counterParty *PublicKey) []byte {
 	x, y := btcec.S256().ScalarMult(counterParty.X(), counterParty.Y(),
 		pk.privateKey.D.Bytes())
@@ -127,6 +132,8 @@ func (pk *PrivateKey) GetSharedEncryptionKey(counterParty *PublicKey) []byte {
 	return hash[:]
 }
 
+// Encrypt encrypts content with a shared key derived from this private key and the
+// counterparty's public key.
 func (pk *PrivateKey) Encrypt(content []byte, publicKey *PublicKey) ([]byte, error) {
 	encryptionKey := pk.GetSharedEncryptionKey(publicKey)
 	c, err := aes.NewCipher(encryptionKey)
@@ -147,6 +154,8 @@ func (pk *PrivateKey) Encrypt(content []byte, publicKey *PublicKey) ([]byte, err
 	return gcm.Seal(nonce, nonce, content, nil), nil
 }
 
+// Decrypt decrypts content with a shared key derived from this private key and the
+// counterparty's public key.
 func (pk *PrivateKey) Decrypt(content []byte, publicKey *PublicKey) ([]byte, error) {
 	encryptionKey := pk.GetSharedEncryptionKey(publicKey)
 	c, err := aes.NewCipher(encryptionKey)
@@ -172,6 +181,7 @@ func (pk *PrivateKey) Decrypt(content []byte, publicKey *PublicKey) ([]byte, err
 	return plaintext, nil
 }
 
+// EncryptKeyWithPassphrase encrypts this private key using a passphrase.
 func (pk *PrivateKey) EncryptKeyWithPassphrase(passphrase string) ([]byte, error) {
 	key, salt, err := deriveKey([]byte(passphrase), nil)
 	if err != nil {

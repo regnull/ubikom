@@ -9,10 +9,10 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dgraph-io/badger/v3"
 	"github.com/golang/protobuf/proto"
+	"github.com/regnull/easyecc"
 	"github.com/rs/zerolog/log"
 
 	"github.com/regnull/ubikom/db"
-	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/pow"
 	"github.com/regnull/ubikom/protoutil"
@@ -52,7 +52,7 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Re
 	}
 
 	key := keyRegistrationReq.GetKey()
-	publicKey, err := ecc.NewPublicFromSerializedCompressed(key)
+	publicKey, err := easyecc.NewPublicFromSerializedCompressed(key)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to create public key from serialized compressed")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -88,13 +88,13 @@ func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWith
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	childKey, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	childKey, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	parentKey, err := ecc.NewPublicFromSerializedCompressed(keyRelReq.GetTargetKey())
+	parentKey, err := easyecc.NewPublicFromSerializedCompressed(keyRelReq.GetTargetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -124,13 +124,13 @@ func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Res
 	log.Debug().Str("orig-key", base58.Encode(req.GetKey())).Str("target-key",
 		base58.Encode(keyDisReq.GetKey())).Msg("disable key request")
 
-	originator, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	originator, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	key, err := ecc.NewPublicFromSerializedCompressed(keyDisReq.GetKey())
+	key, err := easyecc.NewPublicFromSerializedCompressed(keyDisReq.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -153,7 +153,7 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.R
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	originatorKey, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	originatorKey, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -166,7 +166,7 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.R
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	targetKey, err := ecc.NewPublicFromSerializedCompressed(nameRegistrationReq.GetKey())
+	targetKey, err := easyecc.NewPublicFromSerializedCompressed(nameRegistrationReq.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -203,7 +203,7 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	originatorKey, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	originatorKey, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -219,7 +219,7 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 	log.Info().Str("name", addressRegistrationReq.GetName()).
 		Str("address", addressRegistrationReq.GetAddress()).Msg("registering address")
 
-	targetKey, err := ecc.NewPublicFromSerializedCompressed(addressRegistrationReq.GetKey())
+	targetKey, err := easyecc.NewPublicFromSerializedCompressed(addressRegistrationReq.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
@@ -240,7 +240,7 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 }
 
 func (s *Server) LookupKey(ctx context.Context, req *pb.LookupKeyRequest) (*pb.LookupKeyResponse, error) {
-	key, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	key, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	publicKeyBase58 := base58.Encode(req.GetKey())
 	log.Info().Str("key", publicKeyBase58).Msg("key lookup request")
 

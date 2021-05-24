@@ -11,11 +11,12 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/protobuf v1.4.2
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/regnull/easyecc v0.0.0-20210524212420-e3e97b7972b7 // indirect
 	github.com/regnull/popgun v0.0.0-20210517023943-d5dd6fea97a2 // indirect
 	github.com/rs/zerolog v1.21.0
 	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
+	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/grpc v1.37.0
 	google.golang.org/protobuf v1.25.0

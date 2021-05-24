@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/regnull/easyecc"
+
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dgraph-io/badger/v3"
-	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
@@ -28,7 +29,7 @@ func NewBadgerDB(db *badger.DB) *BadgerDB {
 	return &BadgerDB{db: db}
 }
 
-func (b *BadgerDB) RegisterKey(publicKey *ecc.PublicKey) error {
+func (b *BadgerDB) RegisterKey(publicKey *easyecc.PublicKey) error {
 	publicKeyBase58 := base58.Encode(publicKey.SerializeCompressed())
 	log.Info().Str("key", publicKeyBase58).Msg("registering public key")
 	dbKey := keyPrefix + publicKeyBase58
@@ -67,7 +68,7 @@ func (b *BadgerDB) RegisterKey(publicKey *ecc.PublicKey) error {
 	return err
 }
 
-func (b *BadgerDB) RegisterKeyParent(childKey *ecc.PublicKey, parentKey *ecc.PublicKey) error {
+func (b *BadgerDB) RegisterKeyParent(childKey *easyecc.PublicKey, parentKey *easyecc.PublicKey) error {
 	childBase58 := base58.Encode(childKey.SerializeCompressed())
 	childDbKey := keyPrefix + childBase58
 	err := b.db.Update(func(txn *badger.Txn) error {
@@ -122,11 +123,11 @@ func (b *BadgerDB) RegisterKeyParent(childKey *ecc.PublicKey, parentKey *ecc.Pub
 	return err
 }
 
-func (b *BadgerDB) RegisterName(originator, target *ecc.PublicKey, name string) error {
+func (b *BadgerDB) RegisterName(originator, target *easyecc.PublicKey, name string) error {
 	dbKey := namePrefix + name
 	err := b.db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(dbKey))
-		var prev *ecc.PublicKey
+		var prev *easyecc.PublicKey
 		if item != nil {
 			// If the name is already registered, we can change the registration,
 			// as long as we are authorized to do so.
@@ -140,7 +141,7 @@ func (b *BadgerDB) RegisterName(originator, target *ecc.PublicKey, name string) 
 			if err != nil {
 				return err
 			}
-			prev, err = ecc.NewPublicFromSerializedCompressed(previousKeyBytes[:])
+			prev, err = easyecc.NewPublicFromSerializedCompressed(previousKeyBytes[:])
 			if err != nil {
 				return err
 			}
@@ -159,7 +160,7 @@ func (b *BadgerDB) RegisterName(originator, target *ecc.PublicKey, name string) 
 	return err
 }
 
-func (b *BadgerDB) RegisterAddress(originator, target *ecc.PublicKey, name string, protocol pb.Protocol, address string) error {
+func (b *BadgerDB) RegisterAddress(originator, target *easyecc.PublicKey, name string, protocol pb.Protocol, address string) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
 		// If the target has a parent, it must be the parent who sends the request.
 		targetParent, err := GetParent(txn, target)
@@ -192,7 +193,7 @@ func (b *BadgerDB) RegisterAddress(originator, target *ecc.PublicKey, name strin
 			return fmt.Errorf("error getting name, %w", err)
 		}
 
-		registeredKey, err := ecc.NewPublicFromSerializedCompressed(registeredKeyBytes)
+		registeredKey, err := easyecc.NewPublicFromSerializedCompressed(registeredKeyBytes)
 		if err != nil {
 			return err
 		}
@@ -208,7 +209,7 @@ func (b *BadgerDB) RegisterAddress(originator, target *ecc.PublicKey, name strin
 	return err
 }
 
-func (b *BadgerDB) DisableKey(originator *ecc.PublicKey, key *ecc.PublicKey) error {
+func (b *BadgerDB) DisableKey(originator *easyecc.PublicKey, key *easyecc.PublicKey) error {
 	publicKeyBase58 := base58.Encode(key.SerializeCompressed())
 	dbKey := keyPrefix + publicKeyBase58
 	err := b.db.Update(func(txn *badger.Txn) error {
@@ -282,7 +283,7 @@ func (b *BadgerDB) DisableKey(originator *ecc.PublicKey, key *ecc.PublicKey) err
 	return err
 }
 
-func (b *BadgerDB) GetKey(key *ecc.PublicKey) (*pb.KeyRecord, error) {
+func (b *BadgerDB) GetKey(key *easyecc.PublicKey) (*pb.KeyRecord, error) {
 	dbKey := keyPrefix + base58.Encode(key.SerializeCompressed())
 	keyRec := &pb.KeyRecord{}
 	err := b.db.View(func(txn *badger.Txn) error {
@@ -309,7 +310,7 @@ func (b *BadgerDB) GetKey(key *ecc.PublicKey) (*pb.KeyRecord, error) {
 	return keyRec, nil
 }
 
-func (b *BadgerDB) GetName(name string) (*ecc.PublicKey, error) {
+func (b *BadgerDB) GetName(name string) (*easyecc.PublicKey, error) {
 	var keyBytes []byte
 	err := b.db.View(func(txn *badger.Txn) error {
 		nameKey := namePrefix + name
@@ -334,7 +335,7 @@ func (b *BadgerDB) GetName(name string) (*ecc.PublicKey, error) {
 		return nil, err
 	}
 
-	key, err := ecc.NewPublicFromSerializedCompressed(keyBytes)
+	key, err := easyecc.NewPublicFromSerializedCompressed(keyBytes)
 	if err != nil {
 		// Invalid key.
 		return nil, err
@@ -366,7 +367,7 @@ func (b *BadgerDB) GetAddress(name string, protocol pb.Protocol) (string, error)
 	return string(addressBytes), nil
 }
 
-func CheckSelfOrParent(txn *badger.Txn, originator, target *ecc.PublicKey) (bool, error) {
+func CheckSelfOrParent(txn *badger.Txn, originator, target *easyecc.PublicKey) (bool, error) {
 	if originator.Equal(target) {
 		return true, nil
 	}
@@ -401,7 +402,7 @@ func CheckSelfOrParent(txn *badger.Txn, originator, target *ecc.PublicKey) (bool
 	return false, nil
 }
 
-func GetParent(txn *badger.Txn, key *ecc.PublicKey) (*ecc.PublicKey, error) {
+func GetParent(txn *badger.Txn, key *easyecc.PublicKey) (*easyecc.PublicKey, error) {
 	targetBase58 := base58.Encode(key.SerializeCompressed())
 	dbKey := keyPrefix + targetBase58
 	item, err := txn.Get([]byte(dbKey))
@@ -430,15 +431,15 @@ func GetParent(txn *badger.Txn, key *ecc.PublicKey) (*ecc.PublicKey, error) {
 	if len(keyRec.GetParentKey()) > 1 {
 		return nil, fmt.Errorf("invalid key record")
 	}
-	parent, err := ecc.NewPublicFromSerializedCompressed(keyRec.GetParentKey()[0])
+	parent, err := easyecc.NewPublicFromSerializedCompressed(keyRec.GetParentKey()[0])
 	if err != nil {
 		return nil, fmt.Errorf("invalid parent key: %w", err)
 	}
 	return parent, nil
 }
 
-func CheckRegisterNameAuthorization(txn *badger.Txn, originator, target, prev *ecc.PublicKey) (bool, error) {
-	var prevParent *ecc.PublicKey
+func CheckRegisterNameAuthorization(txn *badger.Txn, originator, target, prev *easyecc.PublicKey) (bool, error) {
+	var prevParent *easyecc.PublicKey
 	if prev != nil {
 		var err error
 		prevParent, err = GetParent(txn, prev)

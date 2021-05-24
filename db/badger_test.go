@@ -5,8 +5,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/regnull/easyecc"
+
 	"github.com/dgraph-io/badger/v3"
-	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,7 +24,7 @@ func Test_Badger(t *testing.T) {
 	b := NewBadgerDB(db)
 
 	t.Run("Test_Key", func(t *testing.T) {
-		key, err := ecc.NewRandomPrivateKey()
+		key, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		publicKey := key.PublicKey()
 
@@ -46,21 +47,21 @@ func Test_Badger(t *testing.T) {
 	})
 
 	t.Run("Test_ParentKey", func(t *testing.T) {
-		childKey, err := ecc.NewRandomPrivateKey()
+		childKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		childPublicKey := childKey.PublicKey()
 
 		err = b.RegisterKey(childPublicKey)
 		assert.NoError(err)
 
-		parentKey, err := ecc.NewRandomPrivateKey()
+		parentKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		parentPublicKey := parentKey.PublicKey()
 		err = b.RegisterKeyParent(childPublicKey, parentPublicKey)
 		assert.NoError(err)
 
 		// Make sure another key can't be registered as a parent.
-		anotherKey, err := ecc.NewRandomPrivateKey()
+		anotherKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		anotherPublicKey := anotherKey.PublicKey()
 		err = b.RegisterKeyParent(childPublicKey, anotherPublicKey)
@@ -73,7 +74,7 @@ func Test_Badger(t *testing.T) {
 		assert.True(parentPublicKey.EqualSerializedCompressed(rec.GetParentKey()[0]))
 
 		// Make sure some random guy can't disable the child.
-		someKey, err := ecc.NewRandomPrivateKey()
+		someKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		somePublicKey := someKey.PublicKey()
 		err = b.DisableKey(somePublicKey, childPublicKey)
@@ -91,14 +92,14 @@ func Test_Badger(t *testing.T) {
 	})
 
 	t.Run("Test_RegisterName", func(t *testing.T) {
-		childKey, err := ecc.NewRandomPrivateKey()
+		childKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		childPublicKey := childKey.PublicKey()
 
 		err = b.RegisterKey(childPublicKey)
 		assert.NoError(err)
 
-		parentKey, err := ecc.NewRandomPrivateKey()
+		parentKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		parentPublicKey := parentKey.PublicKey()
 		err = b.RegisterKey(parentPublicKey)
@@ -115,7 +116,7 @@ func Test_Badger(t *testing.T) {
 		assert.True(k.Equal(childPublicKey))
 
 		// Make sure some random guy can't change the name.
-		someKey, err := ecc.NewRandomPrivateKey()
+		someKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		somePublicKey := someKey.PublicKey()
 
@@ -127,7 +128,7 @@ func Test_Badger(t *testing.T) {
 		assert.Error(err)
 
 		// Parent can re-register key to another child.
-		anotherChildKey, err := ecc.NewRandomPrivateKey()
+		anotherChildKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		anotherChildPublicKey := anotherChildKey.PublicKey()
 		err = b.RegisterKey(anotherChildPublicKey)
@@ -144,14 +145,14 @@ func Test_Badger(t *testing.T) {
 	})
 
 	t.Run("Test_Address", func(t *testing.T) {
-		childKey, err := ecc.NewRandomPrivateKey()
+		childKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		childPublicKey := childKey.PublicKey()
 
 		err = b.RegisterKey(childPublicKey)
 		assert.NoError(err)
 
-		parentKey, err := ecc.NewRandomPrivateKey()
+		parentKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		parentPublicKey := parentKey.PublicKey()
 		err = b.RegisterKey(parentPublicKey)
@@ -172,7 +173,7 @@ func Test_Badger(t *testing.T) {
 		assert.EqualValues("localhost:1122", address)
 
 		// Make sure some random guy can't change the registration.
-		someKey, err := ecc.NewRandomPrivateKey()
+		someKey, err := easyecc.NewRandomPrivateKey()
 		assert.NoError(err)
 		somePublicKey := someKey.PublicKey()
 		err = b.RegisterAddress(somePublicKey, childPublicKey, "patrick", pb.Protocol_PL_DMS, "localhost:3344")
