@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
@@ -61,7 +61,7 @@ var registerKeyCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := ecc.LoadPrivateKey(keyFile)
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -134,7 +134,7 @@ var registerNameCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := ecc.LoadPrivateKey(keyFile)
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -144,12 +144,12 @@ var registerNameCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get target key location")
 		}
 
-		var targetKey *ecc.PrivateKey
+		var targetKey *easyecc.PrivateKey
 
 		if targetKeyFile == "" {
 			targetKey = privateKey
 		} else {
-			targetKey, err = ecc.LoadPrivateKey(targetKeyFile)
+			targetKey, err = easyecc.NewPrivateKeyFromFile(targetKeyFile, "")
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to load target key")
 			}
@@ -235,7 +235,7 @@ var registerAddressCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := ecc.LoadPrivateKey(keyFile)
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -244,12 +244,12 @@ var registerAddressCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get target key location")
 		}
 
-		var targetKey *ecc.PrivateKey
+		var targetKey *easyecc.PrivateKey
 
 		if targetKeyFile == "" {
 			targetKey = privateKey
 		} else {
-			targetKey, err = ecc.LoadPrivateKey(targetKeyFile)
+			targetKey, err = easyecc.NewPrivateKeyFromFile(targetKeyFile, "")
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to load target key")
 			}
@@ -321,7 +321,7 @@ var registerChildKeyCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := ecc.LoadPrivateKey(keyFile)
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -333,7 +333,7 @@ var registerChildKeyCmd = &cobra.Command{
 		if childKeyFile == "" {
 			log.Fatal().Msg("child key location (--child) must be specified")
 		}
-		childKey, err := ecc.LoadPrivateKey(childKeyFile)
+		childKey, err := easyecc.NewPrivateKeyFromFile(childKeyFile, "")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load child key")
 		}

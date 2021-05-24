@@ -9,7 +9,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	gosmtp "github.com/emersion/go-smtp"
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/rs/zerolog/log"
@@ -20,11 +20,11 @@ type Backend struct {
 	password     string
 	lookupClient pb.LookupServiceClient
 	dumpClient   pb.DMSDumpServiceClient
-	privateKey   *ecc.PrivateKey
+	privateKey   *easyecc.PrivateKey
 }
 
 func NewBackend(user, password string, lookupClient pb.LookupServiceClient,
-	dumpClient pb.DMSDumpServiceClient, privateKey *ecc.PrivateKey) *Backend {
+	dumpClient pb.DMSDumpServiceClient, privateKey *easyecc.PrivateKey) *Backend {
 	return &Backend{
 		user:         user,
 		password:     password,
@@ -35,7 +35,7 @@ func NewBackend(user, password string, lookupClient pb.LookupServiceClient,
 
 func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string) (gosmtp.Session, error) {
 	log.Debug().Str("user", username).Msg("[SMTP] <- LOGIN")
-	var privateKey *ecc.PrivateKey
+	var privateKey *easyecc.PrivateKey
 	ok := false
 	if b.privateKey != nil {
 		ok = username == b.user && password == b.password
@@ -44,7 +44,7 @@ func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string
 		// TODO: Validate username/password (make sure this key is registered).
 		salt := base58.Decode(username)
 		ok = len(salt) >= 4 && len(password) >= 8
-		privateKey = ecc.NewPrivateKeyFromPassword([]byte(password), salt)
+		privateKey = easyecc.NewPrivateKeyFromPassword([]byte(password), salt)
 	}
 	log.Debug().Bool("authorized", ok).Msg("[SMTP] -> LOGIN")
 	if !ok {
@@ -69,7 +69,7 @@ type Session struct {
 	from, to     string
 	lookupClient pb.LookupServiceClient
 	dumpClient   pb.DMSDumpServiceClient
-	privateKey   *ecc.PrivateKey
+	privateKey   *easyecc.PrivateKey
 }
 
 func (s *Session) Mail(from string, opts gosmtp.MailOptions) error {

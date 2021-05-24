@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/util"
@@ -52,7 +52,7 @@ var lookupKeyCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := ecc.LoadPrivateKey(keyFile)
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}

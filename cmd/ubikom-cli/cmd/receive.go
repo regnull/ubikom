@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
@@ -59,7 +59,7 @@ var receiveMessageCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := ecc.LoadPrivateKey(keyFile)
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -119,7 +119,7 @@ var receiveMessageCmd = &cobra.Command{
 		if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
 			log.Fatal().Str("result", lookupRes.Result.String()).Msg("failed to get receiver public key")
 		}
-		senderKey, err := ecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+		senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
 		if err != nil {
 			log.Fatal().Err(err).Msg("invalid receiver public key")
 		}

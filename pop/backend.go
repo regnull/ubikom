@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
@@ -31,7 +31,7 @@ Example session
 */
 
 type Session struct {
-	PrivateKey *ecc.PrivateKey
+	PrivateKey *easyecc.PrivateKey
 	Messages   []string
 	Deleted    []bool
 }
@@ -41,7 +41,7 @@ type Backend struct {
 	dumpClient   pb.DMSDumpServiceClient
 	lookupClient pb.LookupServiceClient
 	// If private key is nil, we expect to get key from the user.
-	privateKey *ecc.PrivateKey
+	privateKey *easyecc.PrivateKey
 	lock       sync.Mutex
 	user       string
 	password   string
@@ -49,7 +49,7 @@ type Backend struct {
 }
 
 func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServiceClient,
-	privateKey *ecc.PrivateKey, user, password string) *Backend {
+	privateKey *easyecc.PrivateKey, user, password string) *Backend {
 	return &Backend{
 		dumpClient:   dumpClient,
 		lookupClient: lookupClient,
@@ -70,7 +70,7 @@ func (b *Backend) Authorize(user, pass string) bool {
 		b.lock.Unlock()
 	} else {
 		salt := base58.Decode(user)
-		privateKey := ecc.NewPrivateKeyFromPassword([]byte(pass), salt)
+		privateKey := easyecc.NewPrivateKeyFromPassword([]byte(pass), salt)
 
 		// Confirm that this key is registered.
 		res, err := b.lookupClient.LookupKey(context.TODO(), &pb.LookupKeyRequest{
@@ -109,7 +109,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 	hash := util.Hash256([]byte(content))
 
 	// Get private key for this user.
-	var privateKey *ecc.PrivateKey
+	var privateKey *easyecc.PrivateKey
 	sess := b.getSession(user)
 
 	if sess == nil {
@@ -162,7 +162,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 		if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
 			return fmt.Errorf("failed to get receiver public key: %s", lookupRes.GetResult().String())
 		}
-		senderKey, err := ecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+		senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
 		if err != nil {
 			return fmt.Errorf("invalid receiver public key: %w", err)
 		}

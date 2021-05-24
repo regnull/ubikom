@@ -6,7 +6,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
+
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/pow"
 	"github.com/regnull/ubikom/util"
@@ -15,7 +16,7 @@ import (
 )
 
 // CreateSignedWithPOW creates a request signed with the given private key and generates POW of the given strength.
-func CreateSignedWithPOW(privateKey *ecc.PrivateKey, content []byte, powStrength int) (*pb.SignedWithPow, error) {
+func CreateSignedWithPOW(privateKey *easyecc.PrivateKey, content []byte, powStrength int) (*pb.SignedWithPow, error) {
 	compressedKey := privateKey.PublicKey().SerializeCompressed()
 
 	log.Debug().Msg("generating POW...")
@@ -42,13 +43,13 @@ func CreateSignedWithPOW(privateKey *ecc.PrivateKey, content []byte, powStrength
 
 // VerifySignature returns true if the provided signature is valid for the given key and content.
 func VerifySignature(sig *pb.Signature, serializedKey []byte, content []byte) bool {
-	key, err := ecc.NewPublicFromSerializedCompressed(serializedKey)
+	key, err := easyecc.NewPublicFromSerializedCompressed(serializedKey)
 	if err != nil {
 		log.Printf("invalid serialized compressed key")
 		return false
 	}
 
-	eccSig := &ecc.Signature{
+	eccSig := &easyecc.Signature{
 		R: new(big.Int).SetBytes(sig.R),
 		S: new(big.Int).SetBytes(sig.S)}
 
@@ -59,7 +60,7 @@ func VerifySignature(sig *pb.Signature, serializedKey []byte, content []byte) bo
 	return true
 }
 
-func SendMessage(ctx context.Context, privateKey *ecc.PrivateKey, body []byte,
+func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
 	sender, receiver string, lookupService pb.LookupServiceClient) error {
 
 	// TODO: Pass timeout as an argument.
@@ -77,7 +78,7 @@ func SendMessage(ctx context.Context, privateKey *ecc.PrivateKey, body []byte,
 	if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
 		return fmt.Errorf("failed to get receiver public key, result: %s", lookupRes.GetResult().String())
 	}
-	receiverKey, err := ecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+	receiverKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
 	if err != nil {
 		log.Fatal().Err(err).Msg("invalid receiver public key")
 	}

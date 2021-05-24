@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -43,7 +43,7 @@ var getAddressCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := ecc.LoadPrivateKey(keyFile)
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -69,7 +69,7 @@ var getPublicKeyCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := ecc.LoadPrivateKey(keyFile)
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}

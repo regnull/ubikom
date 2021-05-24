@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
+
 	"github.com/regnull/ubikom/pb"
 	"google.golang.org/protobuf/proto"
 )
 
-func RegisterKey(ctx context.Context, client pb.IdentityServiceClient, key *ecc.PrivateKey, powStrength int) error {
+func RegisterKey(ctx context.Context, client pb.IdentityServiceClient, key *easyecc.PrivateKey, powStrength int) error {
 	registerKeyReq := &pb.KeyRegistrationRequest{
 		Key: key.PublicKey().SerializeCompressed()}
 	reqBytes, err := proto.Marshal(registerKeyReq)
@@ -32,8 +33,8 @@ func RegisterKey(ctx context.Context, client pb.IdentityServiceClient, key *ecc.
 	return nil
 }
 
-func RegisterChildKey(ctx context.Context, client pb.IdentityServiceClient, key *ecc.PrivateKey,
-	childKey *ecc.PublicKey, powStrength int) error {
+func RegisterChildKey(ctx context.Context, client pb.IdentityServiceClient, key *easyecc.PrivateKey,
+	childKey *easyecc.PublicKey, powStrength int) error {
 	registerKeyReq := &pb.KeyRelationshipRegistrationRequest{
 		TargetKey:    childKey.SerializeCompressed(),
 		Relationship: pb.KeyRelationship_KR_PARENT}
@@ -57,8 +58,8 @@ func RegisterChildKey(ctx context.Context, client pb.IdentityServiceClient, key 
 	return nil
 }
 
-func RegisterName(ctx context.Context, client pb.IdentityServiceClient, key *ecc.PrivateKey,
-	targetKey *ecc.PublicKey, name string, powStrength int) error {
+func RegisterName(ctx context.Context, client pb.IdentityServiceClient, key *easyecc.PrivateKey,
+	targetKey *easyecc.PublicKey, name string, powStrength int) error {
 	registerKeyReq := &pb.NameRegistrationRequest{
 		Key:  targetKey.SerializeCompressed(),
 		Name: name}
@@ -82,8 +83,8 @@ func RegisterName(ctx context.Context, client pb.IdentityServiceClient, key *ecc
 	return nil
 }
 
-func RegisterAddress(ctx context.Context, client pb.IdentityServiceClient, key *ecc.PrivateKey,
-	targetKey *ecc.PublicKey, name string, address string, powStrength int) error {
+func RegisterAddress(ctx context.Context, client pb.IdentityServiceClient, key *easyecc.PrivateKey,
+	targetKey *easyecc.PublicKey, name string, address string, powStrength int) error {
 	registerAddressReq := &pb.AddressRegistrationRequest{
 		Key:      targetKey.SerializeCompressed(),
 		Name:     name,

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	gosmtp "github.com/emersion/go-smtp"
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
 )
@@ -18,7 +18,7 @@ type ServerOptions struct {
 	Password     string
 	LookupClient pb.LookupServiceClient
 	DumpClient   pb.DMSDumpServiceClient
-	PrivateKey   *ecc.PrivateKey
+	PrivateKey   *easyecc.PrivateKey
 	CertFile     string
 	KeyFile      string
 }

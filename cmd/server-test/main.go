@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
@@ -36,7 +36,7 @@ func main() {
 	defer conn.Close()
 	client := pb.NewIdentityServiceClient(conn)
 
-	privateKey, err := ecc.NewRandomPrivateKey()
+	privateKey, err := easyecc.NewRandomPrivateKey()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to generate private key")
 	}

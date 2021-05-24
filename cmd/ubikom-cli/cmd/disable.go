@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
@@ -58,7 +58,7 @@ var disableKeyCmd = &cobra.Command{
 				"If you really want to do that, re-issue the command with --confirm flag.")
 		}
 
-		privateKey, err := ecc.LoadPrivateKey(keyFile)
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}

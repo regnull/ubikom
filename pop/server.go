@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/regnull/easyecc"
 	"github.com/regnull/popgun"
-	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
 )
@@ -19,7 +19,7 @@ type ServerOptions struct {
 	Password     string
 	DumpClient   pb.DMSDumpServiceClient
 	LookupClient pb.LookupServiceClient
-	Key          *ecc.PrivateKey
+	Key          *easyecc.PrivateKey
 	CertFile     string
 	KeyFile      string
 }

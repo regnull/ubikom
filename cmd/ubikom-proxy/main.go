@@ -13,7 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/pop"
 	"github.com/regnull/ubikom/smtp"
@@ -118,9 +118,9 @@ func main() {
 
 	lookupClient := pb.NewLookupServiceClient(lookupConn)
 
-	var key *ecc.PrivateKey
+	var key *easyecc.PrivateKey
 	if !args.GetKeyFromUser {
-		key, err = ecc.LoadPrivateKey(args.KeyLocation)
+		key, err = easyecc.NewPrivateKeyFromFile(args.KeyLocation, "")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load private key")
 		}

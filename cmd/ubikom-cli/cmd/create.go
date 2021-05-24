@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 )
 
 const (
@@ -62,7 +62,7 @@ var createKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get password")
 		}
 
-		var privateKey *ecc.PrivateKey
+		var privateKey *easyecc.PrivateKey
 		if fromPassword != "" {
 			if len(fromPassword) < 8 {
 				log.Fatal().Err(err).Msg("password must be at least 8 characters long")
@@ -83,15 +83,15 @@ var createKeyCmd = &cobra.Command{
 				salt = saltArr[:]
 			}
 			fmt.Printf("salt: %s\n", base58.Encode(salt[:]))
-			privateKey = ecc.NewPrivateKeyFromPassword([]byte(fromPassword), salt[:])
+			privateKey = easyecc.NewPrivateKeyFromPassword([]byte(fromPassword), salt[:])
 		} else {
-			privateKey, err = ecc.NewRandomPrivateKey()
+			privateKey, err = easyecc.NewRandomPrivateKey()
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to generate private key")
 			}
 		}
 
-		err = privateKey.Save(out)
+		err = privateKey.Save(out, "")
 		if err != nil {
 			log.Fatal().Err(err).Str("location", out).Msg("failed to save private key")
 		}

@@ -11,8 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/regnull/easyecc"
+
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/regnull/ubikom/ecc"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
@@ -106,11 +107,11 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create key directory")
 	}
 
-	mainKey, err := ecc.NewRandomPrivateKey()
+	mainKey, err := easyecc.NewRandomPrivateKey()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to generate private key")
 	}
-	err = mainKey.Save(keyLoc)
+	err = mainKey.Save(keyLoc, "")
 	if err != nil {
 		log.Fatal().Err(err).Str("location", keyLoc).Msg("failed to save private key")
 	}
@@ -133,8 +134,8 @@ func main() {
 	}
 	salt := saltArr[:]
 	userName := base58.Encode(salt[:])
-	emailKey := ecc.NewPrivateKeyFromPassword([]byte(password), salt)
-	err = emailKey.Save(emailKeyLoc)
+	emailKey := easyecc.NewPrivateKeyFromPassword([]byte(password), salt)
+	err = emailKey.Save(emailKeyLoc, "")
 	if err != nil {
 		log.Fatal().Err(err).Str("location", emailKeyLoc).Msg("failed to save email key")
 	}

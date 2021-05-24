@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
@@ -20,7 +20,7 @@ func Test_File_StoreGetRemove(t *testing.T) {
 
 	fileStore := NewFile(dir)
 
-	pk1, _ := ecc.NewRandomPrivateKey()
+	pk1, _ := easyecc.NewRandomPrivateKey()
 	key1 := pk1.PublicKey().SerializeCompressed()
 
 	msg, err := fileStore.GetNext(key1)

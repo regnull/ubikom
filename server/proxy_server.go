@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/regnull/ubikom/ecc"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/rs/zerolog/log"
@@ -35,7 +35,7 @@ func (s *ProxyServer) StoreEncryptedKey(ctx context.Context, req *pb.Signed) (*p
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
-	publicKey, err := ecc.NewPublicFromSerializedCompressed(req.GetKey())
+	publicKey, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
