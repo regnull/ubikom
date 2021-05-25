@@ -96,7 +96,7 @@ Open Thunderbird and add new account:
 
 ![Add account](images/thunderbird-add-account.png)
 
-Your name is whatever you choose.
+Your name is whatever you choose. 
 
 Email address is bob@x. Remember, we don't want "@whatever" part, but the client expects it - so we put "@x" as a shortcut. Some stickler clients might not like it either, so you can also use `bob@ubikom.cc` format.
 
