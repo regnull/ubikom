@@ -1,19 +1,96 @@
 # Ubikom Project
 *Encrypted email service based on decentralized private identity.*
 
-## Motivation
-
-Today, most users access email via big service providers, such as Google, Yahoo and others. In 2017, 83.5% of 14 to 18 year olds reported Gmail as their primary email provider ([source](https://www.statista.com/statistics/547531/e-mail-provider-ranking-consumer-usa-age/)). In our view, there are several things that are wrong with this picture:
-
-* Big tech companies make money by selling their customer's information to advertisers. You are not their customer, [you are their product](https://slate.com/technology/2018/04/are-you-really-facebooks-product-the-history-of-a-dangerous-idea.html).
-* Your online identity does not belong to you, and it can be suspended or terminated at any time. [It](https://support.google.com/accounts/thread/19305762/account-disabled-for-no-reason?hl=en) [does](https://www.paullimitless.com/google-account-suspended-no-reason-given/) [happen](https://www.reddit.com/r/google/comments/3dtilt/google_disabled_my_account_without_showing_any/).
-* On a more idealistic note, the Internet was supposed to be a set of open standards to connect individuals and organizations. When did email become so complicated that we need trillion dollar companies to help us to send messages to each other? The ability to exchange messages in a secure way is just too fundamental to hand it over to a third party.
-
-This project is about making email simple, secure, decentralized and free from government or corporate censorship. To achieve this, we need to take user identity back to the user, which will have impact far beyond just email.
-
 ## The Project
 
 With Ubikom project, you can communicate via email in a secure way, while using the existing email clients that you know and love.
+
+All email within Ubikom ecosystem is encrypted and authenticated.
+
+There are no accounts. You create and register your private key, your possession of the private key is your identity.
+
+You can run your own server, or you can interact with the public server. If you chose the latter, you temporary delegate the authority
+to send and receive mail to the public proxy server. This delegation can be revoked at any time using your main private key.
+
+You are also able to interact with the legacy email world using our gateway (coming up later).
+
+## Getting the Binaries
+
+As of now, you must run a few commands on your machine to generate the keys in a secure way. 
+
+You can get binaries by compiling the source, or by pulling the pre-built binaries. The former is recommended, since you can examine the code to make sure no funny business is taking place. 
+
+To compile the source, you must have Go and make installed.
+
+To clone the repo, do:
+
+```
+git clone github.com/regnull/ubikom
+```
+
+Now build the binaries:
+
+```
+cd ubikom
+make build
+```
+
+The binaries are placed in build directory, corresponding to your system (linux, windows or mac).
+
+If you like to live dangerously, you can get the pre-build binaries by downloading the latest release from GitHub releases page.
+
+## Getting Started
+
+The easiest way to get started is to use our easy setup binary. When you run it, the following things will happen:
+
+* The main private key is generated and saved under $HOME/.ubikom/key
+* The additional key is generated and saved under $HOME/.ubikom/email.key
+* The email key is registered as a child of the main key. This means that the email key has limited authorization, to send and receive mail only. The main key can disable it at any time.
+* Your chosen name is registered with the identity service
+* The public proxy service is registered as the place where you receive your email
+
+So, let's go ahead and run the setup binary. It will prompt you for the name you would like to use, and password for the email key.
+
+Your name is what other users will use to send you email. Think of it as joe in joe@gmail.com - only without "@gmail.com" part. Your identity does not
+belong to any server, or domain. It belongs to you.
+
+```
+$ ./easy-setup
+Enter the name you would like to use: bob
+Enter new password: pumpkin123
+16:29:40 DBG generating POW...
+16:29:40 DBG POW found pow=571112bedeebe56f
+16:29:41 INF main key is registered
+16:29:41 DBG generating POW...
+16:29:44 DBG POW found pow=1b2340cbaadd9630
+16:29:44 INF email key is registered
+16:29:44 DBG generating POW...
+16:29:47 DBG POW found pow=6da1ab414fbed96b
+16:29:47 INF key relationship is updated
+16:29:47 DBG generating POW...
+16:29:49 DBG POW found pow=43600cb932e19d40
+16:29:49 INF name is registered
+16:29:49 DBG generating POW...
+16:29:52 DBG POW found pow=4e1d0e883508751e
+16:29:52 INF address is registered
+
+Use the following information in your email client:
+User name: 78spGfDTj5s
+Password: pumpkin123
+POP and SMTP server address: alpha.ubikom.cc
+```
+
+It might take a few seconds - while registering keys, names, and addresses, the clients are required to compute Proof-of-Work for every request, to reduce spam and name squatting. 
+
+Notice the information printed at the end, you will need it to configure your email client.
+
+## Configure Your Email Client
+
+Let's use [Mozilla Thunderbird](https://www.thunderbird.net/en-US/) as an example, other email clients can be configured in a similar way.
+
+Open Thunderbird and add new account:
+
+![Add account](images/thunderbird-add-account.png)
 
 ## Testing the prototype
 
