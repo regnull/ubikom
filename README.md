@@ -14,6 +14,10 @@ to send and receive mail to the public proxy server. This delegation can be revo
 
 You are also able to interact with the legacy email world using our gateway (coming up later).
 
+## Why?
+
+Long ago, you were able to run your own email server, which gave you an easy way to communicate with the world. Now you have to use Google or Microsoft for the simple task of sending messages to each other. Your identity is controlled by those companies, not by you. We want to give the identity back to the user and make it decentralized and not controlled by any entity. Based on this, we want to re-imagine email which is secure, private, and simple. It should be trivial for everyone (and everything) to register a name and start communicating.
+
 ## Getting the Binaries
 
 As of now, you must run a few commands on your machine to generate the keys in a secure way. 
@@ -51,7 +55,7 @@ The easiest way to get started is to use our easy setup binary. When you run it,
 
 So, let's go ahead and run the setup binary. It will prompt you for the name you would like to use, and password for the email key.
 
-Your name is what other users will use to send you email. Think of it as joe in joe@gmail.com - only without "@gmail.com" part. Your identity does not
+Your name is what other users will use to send you email. Think of it as joe in `bob@gmail.com` - only without "@gmail.com" part. Your identity does not
 belong to any server, or domain. It belongs to you.
 
 ```
