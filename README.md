@@ -92,6 +92,18 @@ Open Thunderbird and add new account:
 
 ![Add account](images/thunderbird-add-account.png)
 
+Your name is whatever you choose.
+
+Email address is bob@x. Remember, we don't want "@whatever" part, but the client expects it - so we put "@x" as a shortcut. Some stickler clients might not like it either, so you can also use bob@ubikom.cc format.
+
+The password is what you entered as a password when running easy-setup, in our case, pumpkin123.
+
+Click "Continue". You will be presented with the next dialog:
+
+
+![Configure servers](images/thunderbird-configure-servers.png)
+
+
 ## Testing the prototype
 
 But enough talk, let's see how the prototype works. Before we do this, here's a necessary disclaimer:
