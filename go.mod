@@ -3,16 +3,14 @@ module github.com/regnull/ubikom
 go 1.14
 
 require (
-	github.com/DevelHell/popgun v0.0.0-20170926125504-2c5552e4bf74
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/emersion/go-smtp v0.15.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/protobuf v1.4.2
-	github.com/kr/pretty v0.2.0 // indirect
-	github.com/regnull/easyecc v0.0.0-20210524212420-e3e97b7972b7 // indirect
-	github.com/regnull/popgun v0.0.0-20210517023943-d5dd6fea97a2 // indirect
+	github.com/regnull/easyecc v0.0.0-20210525003447-5036bc56a99e
+	github.com/regnull/popgun v0.0.0-20210517023943-d5dd6fea97a2
 	github.com/rs/zerolog v1.21.0
 	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.7.0
