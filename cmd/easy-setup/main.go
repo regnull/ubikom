@@ -47,6 +47,8 @@ func main() {
 	fmt.Printf("Enter the name you would like to use: ")
 	name, err := reader.ReadString('\n')
 	name = strings.TrimSuffix(name, "\n")
+	name = strings.TrimSuffix(name, "\r")
+
 	if err != nil {
 		log.Fatal().Err(err).Msg("error reading name")
 	}
@@ -91,6 +93,7 @@ func main() {
 	fmt.Print("Enter new password: ")
 	password, err := reader.ReadString('\n')
 	password = strings.TrimSuffix(password, "\n")
+	password = strings.TrimSuffix(password, "\r")
 	if len(password) < 8 {
 		log.Fatal().Msg("password must be at least 8 characters long")
 	}
