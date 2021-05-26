@@ -9,7 +9,7 @@ require (
 	github.com/emersion/go-smtp v0.15.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/protobuf v1.4.2
-	github.com/regnull/easyecc v0.0.0-20210525003447-5036bc56a99e
+	github.com/regnull/easyecc v0.1.2
 	github.com/regnull/popgun v0.0.0-20210517023943-d5dd6fea97a2
 	github.com/rs/zerolog v1.21.0
 	github.com/spf13/cobra v1.1.3

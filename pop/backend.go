@@ -10,6 +10,7 @@ import (
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
+	"github.com/regnull/ubikom/store"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
@@ -32,7 +33,7 @@ Example session
 
 type Session struct {
 	PrivateKey *easyecc.PrivateKey
-	Messages   []string
+	Messages   []*pb.DMSMessage
 	Deleted    []bool
 }
 
@@ -46,21 +47,23 @@ type Backend struct {
 	user       string
 	password   string
 	sessions   map[string]*Session
+	localStore store.Store
 }
 
 func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServiceClient,
-	privateKey *easyecc.PrivateKey, user, password string) *Backend {
+	privateKey *easyecc.PrivateKey, user, password string, localStore store.Store) *Backend {
 	return &Backend{
 		dumpClient:   dumpClient,
 		lookupClient: lookupClient,
 		privateKey:   privateKey,
 		user:         user,
 		password:     password,
-		sessions:     make(map[string]*Session)}
+		sessions:     make(map[string]*Session),
+		localStore:   localStore}
 }
 
 func (b *Backend) Authorize(user, pass string) bool {
-	log.Debug().Str("user", user).Msg("[POP] <- LOGIN")
+	log.Debug().Str("user", user).Str("password", pass).Msg("[POP] <- LOGIN")
 
 	ok := false
 	if b.privateKey != nil {
@@ -75,6 +78,7 @@ func (b *Backend) Authorize(user, pass string) bool {
 		// Confirm that this key is registered.
 		res, err := b.lookupClient.LookupKey(context.TODO(), &pb.LookupKeyRequest{
 			Key: privateKey.PublicKey().SerializeCompressed()})
+
 		if err != nil {
 			log.Error().Err(err).Msg("failed to look up key")
 			log.Debug().Bool("authorized", false).Msg("[POP] -> LOGIN")
@@ -133,6 +137,22 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 	}
 
 	count := 0
+	// Read all locally stored messages.
+	if b.localStore != nil {
+		localMessages, err := b.localStore.GetAll(privateKey.PublicKey().SerializeCompressed())
+		if err != nil {
+			return fmt.Errorf("failed to read local messages: %w", err)
+		}
+
+		for _, msg := range localMessages {
+			sess.Messages = append(sess.Messages, msg)
+			sess.Deleted = append(sess.Deleted, false)
+			count++
+		}
+	}
+	log.Debug().Int("count", count).Msg("got local messages")
+
+	// Read all remote messages.
 	for {
 		res, err := b.dumpClient.Receive(ctx, req)
 		if err != nil {
@@ -155,33 +175,18 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 			return fmt.Errorf("failed to unmarshal message: %w", err)
 		}
 
-		lookupRes, err := b.lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
-		if err != nil {
-			return fmt.Errorf("failed to get receiver public key: %w", err)
+		if b.localStore != nil {
+			err = b.localStore.Save(msg, privateKey.PublicKey().SerializeCompressed())
+			if err != nil {
+				log.Error().Err(err).Msg("error saving message to local store")
+			}
 		}
-		if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
-			return fmt.Errorf("failed to get receiver public key: %s", lookupRes.GetResult().String())
-		}
-		senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
-		if err != nil {
-			return fmt.Errorf("invalid receiver public key: %w", err)
-		}
-
-		if !protoutil.VerifySignature(msg.GetSignature(), lookupRes.GetKey(), msg.GetContent()) {
-			return fmt.Errorf("signature verification failed")
-		}
-
-		content, err := privateKey.Decrypt(msg.Content, senderKey)
-		if err != nil {
-			return fmt.Errorf("failed to decrypt message")
-		}
-
-		b.lock.Lock()
-		sess.Messages = append(sess.Messages, string(content))
+		sess.Messages = append(sess.Messages, msg)
 		sess.Deleted = append(sess.Deleted, false)
-		b.lock.Unlock()
+		// sess.RawMessages = append(sess.RawMessages, msg)
 		count++
 	}
+	log.Debug().Int("count", count).Msg("total messages")
 	return nil
 }
 
@@ -195,9 +200,12 @@ func (b *Backend) Stat(user string) (messages, octets int, err error) {
 	}
 	totalSize := 0
 	count := 0
-	for _, msg := range sess.Messages {
+	for i, msg := range sess.Messages {
+		if sess.Deleted[i] {
+			continue
+		}
 		count++
-		totalSize += len(msg)
+		totalSize += easyecc.GetPlainTextLength(len(msg.GetContent()))
 	}
 
 	log.Debug().Int("count", count).Int("octets", totalSize).Msg("[POP] -> STAT")
@@ -216,7 +224,7 @@ func (b *Backend) List(user string) (octets []int, err error) {
 		if sess.Deleted[i] {
 			continue
 		}
-		sizes = append(sizes, len(msg))
+		sizes = append(sizes, easyecc.GetPlainTextLength(len(msg.GetContent())))
 	}
 
 	log.Debug().Ints("sizes", sizes).Msg("[POP] -> LIST")
@@ -243,7 +251,7 @@ func (b *Backend) ListMessage(user string, msgId int) (exists bool, octets int, 
 		log.Debug().Msg("[POP] -> LIST-MESSAGE, message is deleted")
 		return false, 0, nil
 	}
-	size = len(sess.Messages[msgId])
+	size = easyecc.GetPlainTextLength(len(sess.Messages[msgId].GetContent()))
 
 	log.Debug().Int("size", size).Msg("[POP] -> LIST-MESSAGE")
 	return true, size, nil
@@ -260,7 +268,6 @@ func (b *Backend) Retr(user string, msgId int) (message string, err error) {
 		return "", fmt.Errorf("invalid session")
 	}
 
-	var msg string
 	if msgId > len(sess.Messages) {
 		log.Debug().Msg("[POP] -> RETR, no such message")
 		return "", fmt.Errorf("no such message")
@@ -269,9 +276,15 @@ func (b *Backend) Retr(user string, msgId int) (message string, err error) {
 		log.Debug().Msg("[POP] -> RETR, message is deleted")
 		return "", fmt.Errorf("message is deleted")
 	}
-	msg = sess.Messages[msgId]
-	log.Debug().Str("message", getFirst(msg, 16)).Msg("[POP] -> RETR")
-	return msg, nil
+
+	msg := sess.Messages[msgId]
+	content, err := b.decryptMessage(context.TODO(), sess.PrivateKey, msg)
+	if err != nil {
+		log.Error().Err(err).Msg("error decrypting message")
+		return "", fmt.Errorf("error decrypting message")
+	}
+	log.Debug().Str("message", getFirst(content, 16)).Msg("[POP] -> RETR")
+	return content, nil
 }
 
 // Delete message by message ID - message should be just marked as deleted until
@@ -314,6 +327,7 @@ func (b *Backend) Uidl(user string) (uids []string, err error) {
 	log.Debug().Str("user", user).Msg("[POP] <- UIDL")
 	sess := b.getSession(user)
 	if sess == nil {
+		log.Error().Str("user", user).Msg("invalid session")
 		return nil, fmt.Errorf("invalid session")
 	}
 	var ids []string
@@ -321,7 +335,11 @@ func (b *Backend) Uidl(user string) (uids []string, err error) {
 		if sess.Deleted[i] {
 			continue
 		}
-		id := fmt.Sprintf("%x", sha256.Sum256([]byte(msg)))
+		id, err := getMessageID(msg)
+		if err != nil {
+			log.Error().Err(err).Msg("error computing message id")
+			return nil, fmt.Errorf("error computing message id")
+		}
 		ids = append(ids, id)
 	}
 	log.Debug().Strs("ids", ids).Msg("[POP] -> UIDL")
@@ -345,7 +363,11 @@ func (b *Backend) UidlMessage(user string, msgId int) (exists bool, uid string, 
 		log.Error().Msg("[POP] -> UIDL-MESSAGE, message is deleted")
 		return false, "", nil
 	}
-	id := fmt.Sprintf("%x", sha256.Sum256([]byte(sess.Messages[msgId])))
+	id, err := getMessageID(sess.Messages[msgId])
+	if err != nil {
+		log.Error().Err(err).Msg("error computing message id")
+		return false, "", fmt.Errorf("error computing message id")
+	}
 	log.Debug().Str("id", id).Msg("[POP] -> UIDL-MESSAGE")
 	return true, id, nil
 }
@@ -359,10 +381,13 @@ func (b *Backend) Update(user string) error {
 		return fmt.Errorf("invalid session")
 	}
 
-	var newMessages []string
+	var newMessages []*pb.DMSMessage
 	count := 0
 	for i, msg := range sess.Messages {
 		if sess.Deleted[i] {
+			if b.localStore != nil {
+				b.localStore.Remove(msg, b.privateKey.PublicKey().SerializeCompressed())
+			}
 			count++
 			continue
 		}
@@ -406,9 +431,41 @@ func (b *Backend) getSession(user string) *Session {
 	return sess
 }
 
+func (b *Backend) decryptMessage(ctx context.Context, privateKey *easyecc.PrivateKey, msg *pb.DMSMessage) (string, error) {
+	lookupRes, err := b.lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
+	if err != nil {
+		return "", fmt.Errorf("failed to get receiver public key: %w", err)
+	}
+	if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
+		return "", fmt.Errorf("failed to get receiver public key: %s", lookupRes.GetResult().String())
+	}
+	senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+	if err != nil {
+		return "", fmt.Errorf("invalid receiver public key: %w", err)
+	}
+
+	if !protoutil.VerifySignature(msg.GetSignature(), lookupRes.GetKey(), msg.GetContent()) {
+		return "", fmt.Errorf("signature verification failed")
+	}
+
+	content, err := privateKey.Decrypt(msg.Content, senderKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to decrypt message")
+	}
+	return string(content), nil
+}
+
 func getFirst(s string, i int) string {
 	if i > len(s) {
 		return s
 	}
 	return fmt.Sprintf("%s...", s[:i])
+}
+
+func getMessageID(msg *pb.DMSMessage) (string, error) {
+	b, err := proto.Marshal(msg)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", sha256.Sum256(b)), nil
 }

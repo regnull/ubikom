@@ -17,6 +17,7 @@ import (
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/pop"
 	"github.com/regnull/ubikom/smtp"
+	"github.com/regnull/ubikom/store"
 	"github.com/regnull/ubikom/util"
 )
 
@@ -37,6 +38,7 @@ type Args struct {
 	LogLevel              string `yaml:"log-level"`
 	TLSCertFile           string `yaml:"tls-cert-file"`
 	TLSKeyFile            string `yaml:"tls-key-file"`
+	LocalStorePath        string `yaml:"local-store-path"`
 }
 
 func main() {
@@ -44,7 +46,7 @@ func main() {
 
 	// Parse the config file, if it exists.
 	var configFile string
-	flagSet := flag.NewFlagSet("", flag.ExitOnError)
+	flagSet := flag.NewFlagSet("", flag.ContinueOnError)
 	flagSet.StringVar(&configFile, "config", "", "location of the config file")
 	err := flagSet.Parse(os.Args[1:])
 	if err != nil {
@@ -77,6 +79,7 @@ func main() {
 	flag.StringVar(&args.LogLevel, "log-level", configArgs.LogLevel, "log level")
 	flag.StringVar(&args.TLSCertFile, "tls-cert-file", configArgs.TLSCertFile, "TLS certificate file")
 	flag.StringVar(&args.TLSKeyFile, "tls-key-file", configArgs.TLSKeyFile, "TLS key file")
+	flag.StringVar(&args.LocalStorePath, "local-store-path", configArgs.LocalStorePath, "path for the local messages store")
 	flag.Parse()
 
 	err = verifyArgs(&args)
@@ -130,6 +133,11 @@ func main() {
 		log.Info().Str("cert-file", args.TLSCertFile).Str("key-file", args.TLSKeyFile).Msg("using TLS")
 	}
 
+	var localStore store.Store
+	if args.LocalStorePath != "" {
+		localStore = store.NewFile(args.LocalStorePath)
+	}
+
 	popOpts := &pop.ServerOptions{
 		Ctx:          context.Background(),
 		Domain:       args.PopDomain,
@@ -141,6 +149,7 @@ func main() {
 		Key:          key,
 		CertFile:     args.TLSCertFile,
 		KeyFile:      args.TLSKeyFile,
+		LocalStore:   localStore,
 	}
 
 	var wg sync.WaitGroup
