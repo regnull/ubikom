@@ -68,6 +68,38 @@ func (f *File) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
 	return msg, nil
 }
 
+func (f *File) GetAll(receiverKey []byte) ([]*pb.DMSMessage, error) {
+	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
+
+	fileDir := getReceiverDir(f.baseDir, receiverKeyStr)
+	files, err := ioutil.ReadDir(fileDir)
+
+	if err != nil || len(files) == 0 {
+		// Maybe directory doesn't exist, it's fine.
+		return nil, nil
+	}
+
+	var ret []*pb.DMSMessage
+
+	for _, file := range files {
+		filePath := path.Join(fileDir, file.Name())
+
+		b, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file: %w", err)
+		}
+
+		msg := &pb.DMSMessage{}
+		err = proto.Unmarshal(b, msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal message: %w", err)
+		}
+		ret = append(ret, msg)
+	}
+
+	return ret, nil
+}
+
 func (f *File) Remove(msg *pb.DMSMessage, receiverKey []byte) error {
 	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
 
