@@ -63,7 +63,7 @@ func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServic
 }
 
 func (b *Backend) Authorize(user, pass string) bool {
-	log.Debug().Str("user", user).Str("password", pass).Msg("[POP] <- LOGIN")
+	log.Debug().Str("user", user).Msg("[POP] <- LOGIN")
 
 	ok := false
 	if b.privateKey != nil {

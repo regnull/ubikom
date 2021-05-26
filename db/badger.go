@@ -289,6 +289,9 @@ func (b *BadgerDB) GetKey(key *easyecc.PublicKey) (*pb.KeyRecord, error) {
 	err := b.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(dbKey))
 		if err != nil {
+			if err == badger.ErrKeyNotFound {
+				return ErrNotFound
+			}
 			return fmt.Errorf("error getting key record: %w", err)
 		}
 		if item == nil {

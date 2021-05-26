@@ -188,6 +188,16 @@ func Test_Badger(t *testing.T) {
 		assert.EqualValues("localhost:5566", address)
 	})
 
+	t.Run("Test_GetKey", func(t *testing.T) {
+		key, err := easyecc.NewRandomPrivateKey()
+		assert.NoError(err)
+		publicKey := key.PublicKey()
+
+		res, err := b.GetKey(publicKey)
+		assert.Nil(res)
+		assert.Error(err)
+	})
+
 	// Tear down.
 	os.RemoveAll(dir)
 }
