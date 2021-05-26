@@ -133,3 +133,21 @@ Send a message to yourself (bob@x) to make sure everything works. You will be pr
 * Generate keys via the web interface (but user will always have an option to generate the keys locally)
 * Email gateway
 * Decentralize the identity service
+
+## References and Other Similar Projects
+
+[Self-Sovereign Identity](https://en.wikipedia.org/wiki/Self-sovereign_identity)
+
+[Decentralized Identifiers (DID)](https://www.w3.org/TR/did-core/)
+
+[Sovrin - Global SSI](https://sovrin.org)
+
+[In Search of Self-Sovereign Identity Leveraging Blockchain Technology](https://ieeexplore.ieee.org/document/8776589)
+
+[The Path To Self-Sovereign Identity](http://www.lifewithalacrity.com/2016/04/the-path-to-self-soverereign-identity.html)
+
+[EIDAS SUPPORTED SELF-SOVEREIGN IDENTITY](https://ec.europa.eu/futurium/en/system/files/ged/eidas_supported_ssi_may_2019_0.pdf)
+
+[Blockchain and Digital Identity](https://www.eublockchainforum.eu/sites/default/files/report_identity_v0.9.4.pdf)
+
+[SelfKey - SSI startup](https://selfkey.org)
