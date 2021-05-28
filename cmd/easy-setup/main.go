@@ -31,6 +31,8 @@ const (
 type CmdArgs struct {
 	IdentityServiceURL string
 	LookupServiceURL   string
+	MainKeyLoc         string
+	EmailKeyLoc        string
 }
 
 func main() {
@@ -40,6 +42,8 @@ func main() {
 	var args CmdArgs
 	flag.StringVar(&args.IdentityServiceURL, "identity-url", globals.PublicIdentityServiceURL, "identity service url")
 	flag.StringVar(&args.LookupServiceURL, "lookup-url", globals.PublicLookupServiceURL, "lookup service url")
+	flag.StringVar(&args.MainKeyLoc, "main-key-location", "", "main key location")
+	flag.StringVar(&args.EmailKeyLoc, "email-key-location", "", "email key location")
 	flag.Parse()
 
 	reader := bufio.NewReader(os.Stdin)
@@ -100,14 +104,18 @@ func main() {
 
 	// Create the main key.
 
-	keyLoc, err := util.GetDefaultKeyLocation()
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get key location")
-	}
-	keyDir := path.Dir(keyLoc)
-	err = os.MkdirAll(keyDir, 0700)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create key directory")
+	keyLoc := args.MainKeyLoc
+
+	if keyLoc == "" {
+		keyLoc, err = util.GetDefaultKeyLocation()
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get key location")
+		}
+		keyDir := path.Dir(keyLoc)
+		err = os.MkdirAll(keyDir, 0700)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create key directory")
+		}
 	}
 
 	mainKey, err := easyecc.NewRandomPrivateKey()
@@ -129,7 +137,16 @@ func main() {
 
 	// Create the email key.
 
-	emailKeyLoc := path.Join(keyDir, "email.key")
+	emailKeyLoc := args.EmailKeyLoc
+
+	if emailKeyLoc == "" {
+		keyLoc, err = util.GetDefaultKeyLocation()
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get key location")
+		}
+		keyDir := path.Dir(keyLoc)
+		emailKeyLoc = path.Join(keyDir, "email.key")
+	}
 	var saltArr [8]byte
 	_, err = rand.Read(saltArr[:])
 	if err != nil {

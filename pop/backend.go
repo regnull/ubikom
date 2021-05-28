@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -397,6 +398,51 @@ func (b *Backend) Update(user string) error {
 	sess.Deleted = make([]bool, len(newMessages))
 	log.Debug().Int("deleted", count).Msg("[POP] -> UPDATE")
 	return nil
+}
+
+func (b *Backend) Top(user string, msgId int, n int) (lines []string, err error) {
+	log.Debug().Str("user", user).Int("msgId", msgId).Int("n", n).Msg("[POP] <- TOP")
+	sess := b.getSession(user)
+	if sess == nil {
+		return nil, fmt.Errorf("invalid session")
+	}
+
+	if msgId > len(sess.Messages) {
+		log.Debug().Msg("[POP] -> TOP, no such message")
+		return nil, fmt.Errorf("no such message")
+	}
+	if sess.Deleted[msgId] {
+		log.Debug().Msg("[POP] -> TOP, message is deleted")
+		return nil, fmt.Errorf("message is deleted")
+	}
+
+	msg := sess.Messages[msgId]
+	content, err := b.decryptMessage(context.TODO(), sess.PrivateKey, msg)
+	if err != nil {
+		log.Error().Err(err).Msg("error decrypting message")
+		log.Debug().Msg("[POP] -> TOP, error decrypting message")
+		return nil, fmt.Errorf("error decrypting message")
+	}
+	allLines := strings.Split(content, "\n")
+	bodyIndex := 0
+	for i, line := range lines {
+		if line == "" {
+			// Empty line that separates headers from the content.
+			lines = append(lines, "")
+			bodyIndex = i + 1
+			break
+		}
+		lines = append(lines, line)
+	}
+	for i := 0; i < n; i++ {
+		j := bodyIndex + i
+		if j >= len(allLines) {
+			break
+		}
+		lines = append(lines, allLines[j])
+	}
+	log.Debug().Int("lines", len(lines)).Msg("[POP] -> TOP")
+	return lines, nil
 }
 
 // Lock is called immediately after client is connected. The best way what to use Lock() for

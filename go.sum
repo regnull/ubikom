@@ -232,8 +232,12 @@ github.com/regnull/easyecc v0.1.1 h1:EHGk20zBEGjZZyDDRRiu3OYneNmh8zlJNAJLZMO0nbU
 github.com/regnull/easyecc v0.1.1/go.mod h1:mqwc7XQsVJzgCW7s1GH/xa4mde8asnXu2E8TEBsmbgM=
 github.com/regnull/easyecc v0.1.2 h1:zkCOyFWmjxg+2oBOQm1xXGn+3fB+uhvjCGKGFvL8dqw=
 github.com/regnull/easyecc v0.1.2/go.mod h1:mqwc7XQsVJzgCW7s1GH/xa4mde8asnXu2E8TEBsmbgM=
-github.com/regnull/popgun v0.0.0-20210517023943-d5dd6fea97a2 h1:fCDv/nzsR4bPEqND7pcbnv65W4EzKJ/+qX6X61Rutgw=
-github.com/regnull/popgun v0.0.0-20210517023943-d5dd6fea97a2/go.mod h1:BMb9PrSmRMcwhZt9qcnh7vfyE5rVW1nbCgZ2SqSwaxw=
+github.com/regnull/popgun v0.0.0-20210528181618-bba4d3cc6c17 h1:arkmXQzbInV6ZvHiox8z8pDPpxd6ho/IaUBfM45dVBo=
+github.com/regnull/popgun v0.0.0-20210528181618-bba4d3cc6c17/go.mod h1:BMb9PrSmRMcwhZt9qcnh7vfyE5rVW1nbCgZ2SqSwaxw=
+github.com/regnull/popgun v0.1.1 h1:DkuchP8YzuRK10/XwTQKliU0M5oH8Z4QopQQ5OvMGYs=
+github.com/regnull/popgun v0.1.1/go.mod h1:BMb9PrSmRMcwhZt9qcnh7vfyE5rVW1nbCgZ2SqSwaxw=
+github.com/regnull/popgun v0.1.2 h1:aydgJjJDw17vi/pqDDw57U7WaJAyhH1aecKsY1WeBoM=
+github.com/regnull/popgun v0.1.2/go.mod h1:BMb9PrSmRMcwhZt9qcnh7vfyE5rVW1nbCgZ2SqSwaxw=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rs/xid v1.2.1/go.mod h1:+uKXf+4Djp6Md1KODXJxgGQPKngRmWyn10oCKFzNHOQ=
