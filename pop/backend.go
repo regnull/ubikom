@@ -480,14 +480,14 @@ func (b *Backend) getSession(user string) *Session {
 func (b *Backend) decryptMessage(ctx context.Context, privateKey *easyecc.PrivateKey, msg *pb.DMSMessage) (string, error) {
 	lookupRes, err := b.lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
 	if err != nil {
-		return "", fmt.Errorf("failed to get receiver public key: %w", err)
+		return "", fmt.Errorf("failed to get sender public key: %w", err)
 	}
 	if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
-		return "", fmt.Errorf("failed to get receiver public key: %s", lookupRes.GetResult().String())
+		return "", fmt.Errorf("failed to get sender public key: %s", lookupRes.GetResult().String())
 	}
 	senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
 	if err != nil {
-		return "", fmt.Errorf("invalid receiver public key: %w", err)
+		return "", fmt.Errorf("invalid sender public key: %w", err)
 	}
 
 	if !protoutil.VerifySignature(msg.GetSignature(), lookupRes.GetKey(), msg.GetContent()) {

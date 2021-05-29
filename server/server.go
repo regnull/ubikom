@@ -36,6 +36,7 @@ func NewServer(d *badger.DB) *Server {
 
 func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
 	if !verifyPowAndSignature(req) {
+		log.Warn().Msg("insufficient POW or invalid signature")
 		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
 	}
 
@@ -68,7 +69,7 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Re
 		log.Error().Err(err).Str("key", publicKeyBase58).Msg("error writing public key")
 		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
-	log.Info().Str("key", publicKeyBase58).Msg("key is registered successfully")
+	log.Info().Str("key", util.SerializedCompressedToAddress(keyRegistrationReq.GetKey())).Msg("key is registered successfully")
 	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }
 
@@ -105,7 +106,7 @@ func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWith
 		log.Error().Err(err).Msg("failed to register parent key")
 		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
-	log.Info().Str("key", base58.Encode(req.GetKey())).Msg("parent key registered successfully")
+	log.Info().Str("key", util.SerializedCompressedToAddress(req.GetKey())).Msg("parent key registered successfully")
 	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }
 
@@ -143,7 +144,7 @@ func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Res
 		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
 	}
 
-	log.Info().Str("key", base58.Encode(key.SerializeCompressed())).Msg("key disabled")
+	log.Info().Str("key", util.SerializedCompressedToAddress(key.SerializeCompressed())).Msg("key disabled")
 
 	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
 }

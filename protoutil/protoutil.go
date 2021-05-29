@@ -135,3 +135,27 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	log.Info().Msg("sent message successfully")
 	return nil
 }
+
+func DecryptMessage(ctx context.Context, lookupClient pb.LookupServiceClient, privateKey *easyecc.PrivateKey, msg *pb.DMSMessage) (string, error) {
+	lookupRes, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
+	if err != nil {
+		return "", fmt.Errorf("failed to get sender public key: %w", err)
+	}
+	if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
+		return "", fmt.Errorf("failed to get sender public key: %s", lookupRes.GetResult().String())
+	}
+	senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+	if err != nil {
+		return "", fmt.Errorf("invalid sender public key: %w", err)
+	}
+
+	if !VerifySignature(msg.GetSignature(), lookupRes.GetKey(), msg.GetContent()) {
+		return "", fmt.Errorf("signature verification failed")
+	}
+
+	content, err := privateKey.Decrypt(msg.Content, senderKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to decrypt message")
+	}
+	return string(content), nil
+}

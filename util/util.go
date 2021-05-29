@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/regnull/easyecc"
 	"golang.org/x/crypto/ripemd160"
 	"gopkg.in/yaml.v2"
 )
@@ -137,4 +138,15 @@ func FindAndParseConfigFile(configFile string, out interface{}) error {
 		return fmt.Errorf("failed to parse config file: %w", err)
 	}
 	return nil
+}
+
+// SerializedCompressedToAddress is a convenience function which converts
+// serialized compressed representation of the private key to its address (which is shorter).
+// If the key is invalid, the return string will contain an error message.
+func SerializedCompressedToAddress(key []byte) string {
+	publicKey, err := easyecc.NewPublicFromSerializedCompressed(key)
+	if err != nil {
+		return "**invalid key**"
+	}
+	return publicKey.Address()
 }
