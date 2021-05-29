@@ -8,14 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	defaultURL = "https://one.washmi.net"
-)
-
-func init() {
-	rootCmd.PersistentFlags().String("url", defaultURL, "server URL")
-}
-
 var rootCmd = &cobra.Command{
 	Use:   "ubikom-cli",
 	Short: "ubikom-cli is a command line client for Ubikom",

@@ -1,10 +1,13 @@
 package smtp
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"net/mail"
 	"strings"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -114,11 +117,29 @@ func (s *Session) Data(r io.Reader) error {
 		receiver = strings.Replace(receiver, "@ubikom.cc", "", -1)
 	}
 
+	contentReader := bytes.NewReader(body)
+	mailMsg, err := mail.ReadMessage(contentReader)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to parse email message")
+		return fmt.Errorf("failed to send message: %w", err)
+	}
+	to := mailMsg.Header.Get("To")
+	toAddr, err := mail.ParseAddress(to)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to parse address")
+		return fmt.Errorf("failed to send message: %w", err)
+	}
+	if !strings.HasSuffix(toAddr.Address, "@x") && !strings.HasSuffix(toAddr.Address, "@ubikom.cc") {
+		log.Debug().Str("to", to).Msg("this looks like a message to an external recipeint, I will send it to the gateway")
+		receiver = "gateway"
+	}
+
 	log.Debug().Str("sender", sender).Str("receiver", receiver).Msg("about to send message")
 
 	err = protoutil.SendMessage(context.Background(), s.privateKey, body, sender, receiver, s.lookupClient)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to send message")
+		return fmt.Errorf("failed to send message: %w", err)
 	}
 	return nil
 }
