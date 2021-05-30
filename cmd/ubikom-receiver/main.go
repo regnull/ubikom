@@ -18,26 +18,37 @@ import (
 	"google.golang.org/grpc"
 )
 
+const (
+	defaultKeyLocation       = "/home/ubuntu/ubikom/gateway.key"
+	defaultLogFileLocation   = "/home/ubuntu/ubikom/log/ubikom-receive.log"
+	defaultSenderName        = "gateway"
+	defaultConnectionTimeout = 5000 * time.Millisecond
+)
+
 type CmdArgs struct {
-	KeyLocation           string
-	LookupURL             string
-	ConnectionTimeoutMsec int
+	LogFileLocation   string
+	KeyLocation       string
+	LookupURL         string
+	SenderName        string
+	ConnectionTimeout time.Duration
 }
 
 func main() {
-	out, err := os.OpenFile("/home/ubuntu/ubikom/log/ubikom-receive.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	var args CmdArgs
+	flag.StringVar(&args.LogFileLocation, "log-file-location", defaultLogFileLocation, "log file location")
+	flag.StringVar(&args.KeyLocation, "key", defaultKeyLocation, "key location")
+	flag.StringVar(&args.LookupURL, "lookup-url", globals.PublicLookupServiceURL, "lookup service URL")
+	flag.DurationVar(&args.ConnectionTimeout, "connection-timeout", defaultConnectionTimeout, "connection timeout")
+	flag.StringVar(&args.SenderName, "sender-name", defaultSenderName, "sender name (must correspond to the key)")
+	flag.Parse()
+
+	out, err := os.OpenFile(args.LogFileLocation, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: out, TimeFormat: "15:04:05"})
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-
-	var args CmdArgs
-	flag.StringVar(&args.KeyLocation, "key", "/home/ubuntu/ubikom/gateway.key", "key location")
-	flag.StringVar(&args.LookupURL, "lookup-url", globals.PublicLookupServiceURL, "lookup service URL")
-	flag.IntVar(&args.ConnectionTimeoutMsec, "connection-timeout-msec", 5000, "connection timeout, milliseconds")
-	flag.Parse()
 
 	if args.KeyLocation == "" {
 		log.Fatal().Msg("--key argument must be specified")
@@ -50,7 +61,7 @@ func main() {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
-		grpc.WithTimeout(time.Millisecond * time.Duration(args.ConnectionTimeoutMsec)),
+		grpc.WithTimeout(args.ConnectionTimeout),
 	}
 
 	log.Debug().Str("url", args.LookupURL).Msg("connecting to lookup service")
@@ -75,21 +86,5 @@ func main() {
 	}
 
 	log.Debug().Str("receiver", receiver).Msg("sending mail")
-	err = protoutil.SendMessage(ctx, privateKey, body, "gateway", receiver, lookupClient)
-
-	/*
-		out, err := os.OpenFile("/home/ubuntu/ubikom/receive.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(1)
-		}
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: out, TimeFormat: "15:04:05"})
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-
-		bytes, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to read stdin")
-		}
-		log.Debug().Str("content", string(bytes)).Msg("read data from stdin")
-	*/
+	err = protoutil.SendMessage(ctx, privateKey, body, args.SenderName, receiver, lookupClient)
 }
