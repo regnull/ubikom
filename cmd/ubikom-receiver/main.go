@@ -75,16 +75,22 @@ func main() {
 
 	ctx := context.Background()
 
+	// Read the email from stdin.
 	body, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to read stdin")
 	}
 
+	// Get the receiver name.
 	receiver, err := mail.ExtractReceiverInternalName(string(body))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get receiver name")
 	}
 
+	// Send the message.
 	log.Debug().Str("receiver", receiver).Msg("sending mail")
 	err = protoutil.SendMessage(ctx, privateKey, body, args.SenderName, receiver, lookupClient)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to send message")
+	}
 }
