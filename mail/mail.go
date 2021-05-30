@@ -38,6 +38,21 @@ func ExtractSenderAddress(content string) (address string, err error) {
 	return
 }
 
+func ExtractReceiverInternalName(content string) (receiver string, err error) {
+	contentReader := strings.NewReader(content)
+	mailMsg, err := mail.ReadMessage(contentReader)
+	if err != nil {
+		return
+	}
+	addressStr := mailMsg.Header.Get("To")
+	address, err := mail.ParseAddress(addressStr)
+	if err != nil {
+		return
+	}
+	receiver = strings.Replace(address.Address, "@ubikom.cc", "", 1)
+	return
+}
+
 // RewriteFromHeader rewrites the message to change sender from internal to external format.
 func RewriteFromHeader(message string) (rewrittenMessage string, fromAddr, toAddr string, err error) {
 	contentReader := strings.NewReader(message)
