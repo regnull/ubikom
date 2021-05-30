@@ -4,18 +4,15 @@ import (
 	"bytes"
 	"context"
 	"flag"
-	"fmt"
-	"io"
-	"net/mail"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	"golang.org/x/time/rate"
 
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/globals"
+	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
@@ -31,6 +28,7 @@ type CmdArgs struct {
 	LookupURL              string
 	ConnectionTimeoutMsec  int
 	GlobalRateLimitPerHour int
+	PollInterval           time.Duration
 }
 
 func main() {
@@ -43,6 +41,7 @@ func main() {
 	flag.StringVar(&args.LookupURL, "lookup-url", globals.PublicLookupServiceURL, "lookup service URL")
 	flag.IntVar(&args.ConnectionTimeoutMsec, "connection-timeout-msec", 5000, "connection timeout, milliseconds")
 	flag.IntVar(&args.GlobalRateLimitPerHour, "global-rate-limit-per-hour", 100, "global rate limit, per hour")
+	flag.DurationVar(&args.PollInterval, "poll-interval", time.Minute, "poll interval")
 	flag.Parse()
 
 	if args.KeyLocation == "" {
@@ -134,60 +133,23 @@ func main() {
 
 			// Parse email.
 
-			contentReader := strings.NewReader(content)
-			mailMsg, err := mail.ReadMessage(contentReader)
+			rewritten, from, to, err := mail.RewriteFromHeader(content)
 			if err != nil {
-				log.Error().Err(err).Msg("failed to parse email message")
+				log.Error().Err(err).Msg("error re-writting message")
 				break
 			}
-
-			// Process headers.
-
-			from := mailMsg.Header.Get("From")
-			address, err := mail.ParseAddress(from)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to parse address")
-				break
-			}
-
-			addr := address.Address
-			addr = strings.Replace(addr, "@x", "@ubikom.cc", 1)
-
-			addrStr := ""
-			if address.Name != "" {
-				addrStr = fmt.Sprintf("%s <%s>", address.Name, addr)
-			} else {
-				addrStr = addr
-			}
-
-			var buf bytes.Buffer
-
-			buf.Write([]byte(fmt.Sprintf("To: %s\n", mailMsg.Header.Get("To"))))
-			buf.Write([]byte(fmt.Sprintf("From: %s\n", addrStr)))
-			for name, values := range mailMsg.Header {
-				if name == "From" {
-					continue
-				}
-				if name == "To" {
-					continue
-				}
-				for _, value := range values {
-					buf.Write([]byte(fmt.Sprintf("%s: %s\n", name, value)))
-				}
-			}
-			buf.Write([]byte("\n"))
-			io.Copy(&buf, mailMsg.Body)
 
 			// Pipe to sendmail.
-			cmd := exec.Command("sendmail", "-t", "-f", addr)
-			cmd.Stdin = bytes.NewReader(buf.Bytes())
+
+			cmd := exec.Command("sendmail", "-t", "-f", from)
+			cmd.Stdin = bytes.NewReader([]byte(rewritten))
 			err = cmd.Run()
 			if err != nil {
 				log.Error().Err(err).Msg("error running sendmail")
 			}
 
-			log.Debug().Str("to", mailMsg.Header.Get("To")).Msg("external mail sent")
+			log.Debug().Str("to", to).Msg("external mail sent")
 		}
-		time.Sleep(60 * time.Second)
+		time.Sleep(args.PollInterval)
 	}
 }
