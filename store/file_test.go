@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
@@ -20,7 +21,7 @@ func Test_File_StoreGetRemove(t *testing.T) {
 	assert.NotEmpty(dir)
 	defer os.RemoveAll(dir)
 
-	fileStore := NewFile(dir)
+	fileStore := NewFile(dir, time.Hour)
 
 	pk1, _ := easyecc.NewRandomPrivateKey()
 	key1 := pk1.PublicKey().SerializeCompressed()
@@ -55,7 +56,7 @@ func Test_File_GetAll(t *testing.T) {
 	assert.NotEmpty(dir)
 	defer os.RemoveAll(dir)
 
-	fileStore := NewFile(dir)
+	fileStore := NewFile(dir, time.Hour)
 
 	privateKey, err := easyecc.NewRandomPrivateKey()
 	assert.NoError(err)

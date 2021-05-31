@@ -16,16 +16,18 @@ import (
 )
 
 const (
-	defaultPort              = 8826
-	defaultIdentityServerURL = "localhost:8825"
-	defaultHomeSubDir        = ".ubikom"
-	defaultDataSubDir        = "dump"
+	defaultPort               = 8826
+	defaultIdentityServerURL  = "localhost:8825"
+	defaultHomeSubDir         = ".ubikom"
+	defaultDataSubDir         = "dump"
+	defaultMaxMessageAgeHours = 14 * 24
 )
 
 type CmdArgs struct {
-	DataDir         string
-	Port            int
-	LookupServerURL string
+	DataDir            string
+	Port               int
+	LookupServerURL    string
+	MaxMessageAgeHours int
 }
 
 func main() {
@@ -36,6 +38,7 @@ func main() {
 	flag.IntVar(&args.Port, "port", defaultPort, "port to listen to")
 	flag.StringVar(&args.DataDir, "data-dir", "", "base directory")
 	flag.StringVar(&args.LookupServerURL, "lookup-server-url", defaultIdentityServerURL, "URL of the lookup server")
+	flag.IntVar(&args.MaxMessageAgeHours, "max-message-age-hours", defaultMaxMessageAgeHours, "max message age, in hours")
 	flag.Parse()
 
 	if args.DataDir == "" {
@@ -57,7 +60,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	dumpServer := server.NewDumpServer(args.DataDir, lookupService)
+	dumpServer := server.NewDumpServer(args.DataDir, lookupService, args.MaxMessageAgeHours)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", args.Port))
 	if err != nil {

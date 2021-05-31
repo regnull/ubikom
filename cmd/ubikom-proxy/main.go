@@ -39,6 +39,7 @@ type Args struct {
 	TLSCertFile           string `yaml:"tls-cert-file"`
 	TLSKeyFile            string `yaml:"tls-key-file"`
 	LocalStorePath        string `yaml:"local-store-path"`
+	MaxMessageAgeHours    int    `yaml:"max-message-age-hours"`
 }
 
 func main() {
@@ -80,6 +81,7 @@ func main() {
 	flag.StringVar(&args.TLSCertFile, "tls-cert-file", configArgs.TLSCertFile, "TLS certificate file")
 	flag.StringVar(&args.TLSKeyFile, "tls-key-file", configArgs.TLSKeyFile, "TLS key file")
 	flag.StringVar(&args.LocalStorePath, "local-store-path", configArgs.LocalStorePath, "path for the local messages store")
+	flag.IntVar(&args.MaxMessageAgeHours, "max-message-age-hours", configArgs.MaxMessageAgeHours, "max message age, in hours")
 	flag.Parse()
 
 	err = verifyArgs(&args)
@@ -135,7 +137,7 @@ func main() {
 
 	var localStore store.Store
 	if args.LocalStorePath != "" {
-		localStore = store.NewFile(args.LocalStorePath)
+		localStore = store.NewFile(args.LocalStorePath, time.Duration(args.MaxMessageAgeHours)*time.Hour)
 	}
 
 	popOpts := &pop.ServerOptions{
@@ -205,6 +207,10 @@ func verifyArgs(args *Args) error {
 
 	if args.LookupURL == "" {
 		return fmt.Errorf("lookup url must be specified")
+	}
+
+	if args.MaxMessageAgeHours == 0 {
+		args.MaxMessageAgeHours = 7 * 24
 	}
 
 	if !args.GetKeyFromUser {

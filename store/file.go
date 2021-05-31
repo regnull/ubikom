@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"time"
 
 	"github.com/regnull/ubikom/pb"
 	"google.golang.org/protobuf/proto"
@@ -13,10 +14,11 @@ import (
 
 type File struct {
 	baseDir string
+	maxAge  time.Duration
 }
 
-func NewFile(baseDir string) *File {
-	return &File{baseDir: baseDir}
+func NewFile(baseDir string, maxAge time.Duration) *File {
+	return &File{baseDir: baseDir, maxAge: maxAge}
 }
 
 func (f *File) Save(msg *pb.DMSMessage, receiverKey []byte) error {
@@ -52,20 +54,29 @@ func (f *File) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
 		return nil, nil
 	}
 
-	filePath := path.Join(fileDir, files[0].Name())
+	now := time.Now()
+	for _, file := range files {
+		filePath := path.Join(fileDir, file.Name())
+		age := now.Sub(file.ModTime())
+		if age > f.maxAge {
+			// Delete file if it's too old.
+			os.Remove(filePath)
+			continue
+		}
+		b, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file: %w", err)
+		}
 
-	b, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+		msg := &pb.DMSMessage{}
+		err = proto.Unmarshal(b, msg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal message: %w", err)
+		}
+
+		return msg, nil
 	}
-
-	msg := &pb.DMSMessage{}
-	err = proto.Unmarshal(b, msg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal message: %w", err)
-	}
-
-	return msg, nil
+	return nil, nil
 }
 
 func (f *File) GetAll(receiverKey []byte) ([]*pb.DMSMessage, error) {
@@ -81,8 +92,16 @@ func (f *File) GetAll(receiverKey []byte) ([]*pb.DMSMessage, error) {
 
 	var ret []*pb.DMSMessage
 
+	now := time.Now()
 	for _, file := range files {
 		filePath := path.Join(fileDir, file.Name())
+
+		age := now.Sub(file.ModTime())
+		if age > f.maxAge {
+			// Delete file if it's too old.
+			os.Remove(filePath)
+			continue
+		}
 
 		b, err := ioutil.ReadFile(filePath)
 		if err != nil {

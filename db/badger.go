@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/regnull/easyecc"
 
@@ -124,6 +125,7 @@ func (b *BadgerDB) RegisterKeyParent(childKey *easyecc.PublicKey, parentKey *eas
 }
 
 func (b *BadgerDB) RegisterName(originator, target *easyecc.PublicKey, name string) error {
+	name = strings.ToLower(name)
 	dbKey := namePrefix + name
 	err := b.db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(dbKey))

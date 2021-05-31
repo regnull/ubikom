@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"time"
 
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
@@ -18,11 +19,11 @@ type DumpServer struct {
 	store        store.Store
 }
 
-func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient) *DumpServer {
+func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient, maxMessageAgeHours int) *DumpServer {
 	return &DumpServer{
 		baseDir:      baseDir,
 		lookupClient: lookupClient,
-		store:        store.NewFile(baseDir)}
+		store:        store.NewFile(baseDir, time.Duration(maxMessageAgeHours)*time.Hour)}
 }
 
 func (s *DumpServer) Send(ctx context.Context, req *pb.DMSMessage) (*pb.Result, error) {
