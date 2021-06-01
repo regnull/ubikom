@@ -266,6 +266,10 @@ func (s *Server) LookupKey(ctx context.Context, req *pb.LookupKeyRequest) (*pb.L
 
 func (s *Server) LookupName(ctx context.Context, req *pb.LookupNameRequest) (*pb.LookupNameResponse, error) {
 	log.Info().Str("name", req.GetName()).Msg("name lookup request")
+	if !util.ValidateName(req.GetName()) {
+		log.Warn().Str("name", req.GetName()).Msg("invalid name")
+		return &pb.LookupNameResponse{Result: &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}}, nil
+	}
 	key, err := s.dbi.GetName(req.GetName())
 	if err == ErrNotFound {
 		log.Debug().Str("name", req.GetName()).Msg("name not found")

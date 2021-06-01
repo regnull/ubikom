@@ -1,6 +1,6 @@
 syntax = "proto3";
 package Ubikom;
-option go_package=".;pb";
+option go_package="./;pb";
 
 enum ResultCode {
     RC_OK = 0;

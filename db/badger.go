@@ -316,6 +316,7 @@ func (b *BadgerDB) GetKey(key *easyecc.PublicKey) (*pb.KeyRecord, error) {
 }
 
 func (b *BadgerDB) GetName(name string) (*easyecc.PublicKey, error) {
+	name = strings.ToLower(name)
 	var keyBytes []byte
 	err := b.db.View(func(txn *badger.Txn) error {
 		nameKey := namePrefix + name
