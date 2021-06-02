@@ -11,6 +11,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/regnull/easyecc"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/regnull/ubikom/db"
 	"github.com/regnull/ubikom/pb"
@@ -34,29 +36,29 @@ func NewServer(d *badger.DB) *Server {
 	return &Server{dbi: db.NewBadgerDB(d)}
 }
 
-func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
+func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.KeyRegistrationResponse, error) {
 	if !verifyPowAndSignature(req) {
 		log.Warn().Msg("insufficient POW or invalid signature")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "insufficient pow")
 	}
 
 	keyRegistrationReq := &pb.KeyRegistrationRequest{}
 	err := proto.Unmarshal(req.GetContent(), keyRegistrationReq)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to unmarshal key registration request")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "failed to marshal request")
 	}
 
 	if bytes.Compare(keyRegistrationReq.GetKey(), req.GetKey()) != 0 {
 		log.Warn().Hex("content", req.GetContent()).Hex("key", req.GetKey()).Msg("key and content do not match (key registration request)")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "keys do not match")
 	}
 
 	key := keyRegistrationReq.GetKey()
 	publicKey, err := easyecc.NewPublicFromSerializedCompressed(key)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to create public key from serialized compressed")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
 	}
 	publicKeyBase58 := base58.Encode(publicKey.SerializeCompressed())
 
@@ -64,13 +66,13 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Re
 	if err != nil {
 		if err == db.ErrRecordExists {
 			log.Warn().Str("key", publicKeyBase58).Msg("this key is already registered")
-			return &pb.Result{Result: pb.ResultCode_RC_RECORD_EXISTS}, nil
+			return nil, status.Error(codes.AlreadyExists, "key is already registered")
 		}
 		log.Error().Err(err).Str("key", publicKeyBase58).Msg("error writing public key")
-		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+		return nil, status.Error(codes.Internal, "failed to register key")
 	}
 	log.Info().Str("key", util.SerializedCompressedToAddress(keyRegistrationReq.GetKey())).Msg("key is registered successfully")
-	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
+	return &pb.KeyRegistrationResponse{}, nil
 }
 
 func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {

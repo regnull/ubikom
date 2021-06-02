@@ -7,6 +7,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/emersion/go-smtp v0.15.0
 	github.com/golang/protobuf v1.5.2
+	github.com/google/uuid v1.2.0
 	github.com/regnull/easyecc v0.1.3
 	github.com/regnull/popgun v0.1.2
 	github.com/rs/zerolog v1.21.0

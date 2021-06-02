@@ -50,6 +50,9 @@ message KeyRegistrationRequest {
     bytes key = 1;
 }
 
+message KeyRegistrationResponse {
+}
+
 message KeyDisableRequest {
     bytes key = 1;
 }
@@ -82,7 +85,7 @@ service IdentityService {
     // Register public key. Each public key can be registered only once.
     // The key must be registered before it's associated with the name.
     // Content is public key.
-    rpc RegisterKey(SignedWithPow) returns (Result);
+    rpc RegisterKey(SignedWithPow) returns (KeyRegistrationResponse);
 
     rpc RegisterKeyRelationship(SignedWithPow) returns (Result);
 

@@ -101,12 +101,9 @@ var registerKeyCmd = &cobra.Command{
 
 		client := pb.NewIdentityServiceClient(conn)
 		ctx := context.Background()
-		res, err := client.RegisterKey(ctx, req)
+		_, err = client.RegisterKey(ctx, req)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to register key")
-		}
-		if res.Result != pb.ResultCode_RC_OK {
-			log.Fatal().Str("code", res.GetResult().Enum().String()).Msg("server returned error")
 		}
 		log.Info().Msg("key registered successfully")
 	},

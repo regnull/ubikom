@@ -20,7 +20,7 @@ type IdentityServiceClient interface {
 	// Register public key. Each public key can be registered only once.
 	// The key must be registered before it's associated with the name.
 	// Content is public key.
-	RegisterKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
+	RegisterKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*KeyRegistrationResponse, error)
 	RegisterKeyRelationship(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
 	// Once a key is disabled, it is dead forever. This happens
 	// if a key is compromised, or the owner has decided to kill
@@ -42,8 +42,8 @@ func NewIdentityServiceClient(cc grpc.ClientConnInterface) IdentityServiceClient
 	return &identityServiceClient{cc}
 }
 
-func (c *identityServiceClient) RegisterKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error) {
-	out := new(Result)
+func (c *identityServiceClient) RegisterKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*KeyRegistrationResponse, error) {
+	out := new(KeyRegistrationResponse)
 	err := c.cc.Invoke(ctx, "/Ubikom.IdentityService/RegisterKey", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ type IdentityServiceServer interface {
 	// Register public key. Each public key can be registered only once.
 	// The key must be registered before it's associated with the name.
 	// Content is public key.
-	RegisterKey(context.Context, *SignedWithPow) (*Result, error)
+	RegisterKey(context.Context, *SignedWithPow) (*KeyRegistrationResponse, error)
 	RegisterKeyRelationship(context.Context, *SignedWithPow) (*Result, error)
 	// Once a key is disabled, it is dead forever. This happens
 	// if a key is compromised, or the owner has decided to kill
@@ -113,7 +113,7 @@ type IdentityServiceServer interface {
 type UnimplementedIdentityServiceServer struct {
 }
 
-func (*UnimplementedIdentityServiceServer) RegisterKey(context.Context, *SignedWithPow) (*Result, error) {
+func (*UnimplementedIdentityServiceServer) RegisterKey(context.Context, *SignedWithPow) (*KeyRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterKey not implemented")
 }
 func (*UnimplementedIdentityServiceServer) RegisterKeyRelationship(context.Context, *SignedWithPow) (*Result, error) {
