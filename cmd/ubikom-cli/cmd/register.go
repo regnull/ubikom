@@ -187,12 +187,9 @@ var registerNameCmd = &cobra.Command{
 
 		client := pb.NewIdentityServiceClient(conn)
 		ctx := context.Background()
-		res, err := client.RegisterName(ctx, req)
+		_, err = client.RegisterName(ctx, req)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to register key")
-		}
-		if res.Result != pb.ResultCode_RC_OK {
-			log.Fatal().Str("code", res.GetResult().Enum().String()).Msg("server returned error")
 		}
 		log.Info().Msg("name registered successfully")
 	},
@@ -290,12 +287,9 @@ var registerAddressCmd = &cobra.Command{
 
 		client := pb.NewIdentityServiceClient(conn)
 		ctx := context.Background()
-		res, err := client.RegisterAddress(ctx, req)
+		_, err = client.RegisterAddress(ctx, req)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to register address")
-		}
-		if res.Result != pb.ResultCode_RC_OK {
-			log.Fatal().Str("code", res.GetResult().Enum().String()).Msg("server returned error")
 		}
 		log.Info().Msg("address registered successfully")
 	},

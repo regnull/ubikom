@@ -98,12 +98,9 @@ var disableKeyCmd = &cobra.Command{
 		defer conn.Close()
 		client := pb.NewIdentityServiceClient(conn)
 		ctx := context.Background()
-		res, err := client.DisableKey(ctx, req)
+		_, err = client.DisableKey(ctx, req)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to disable key")
-		}
-		if res.Result != pb.ResultCode_RC_OK {
-			log.Fatal().Str("code", res.GetResult().Enum().String()).Msg("failed to disable key")
 		}
 		log.Info().Msg("key is disabled")
 	},

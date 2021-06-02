@@ -113,16 +113,17 @@ func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWith
 	return &pb.KeyRelationshipRegistrationResponse{}, nil
 }
 
-func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
+func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.KeyDisableResponse, error) {
 	if !verifyPowAndSignature(req) {
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		log.Warn().Msg("insufficient POW or invalid signature")
+		return nil, status.Error(codes.InvalidArgument, "invalid pow or signature")
 	}
 
 	keyDisReq := &pb.KeyDisableRequest{}
 	err := proto.Unmarshal(req.GetContent(), keyDisReq)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to unmarshal key disable request")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "failed to unmarshal request")
 	}
 
 	log.Debug().Str("orig-key", base58.Encode(req.GetKey())).Str("target-key",
@@ -131,54 +132,55 @@ func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Res
 	originator, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
 	}
 
 	key, err := easyecc.NewPublicFromSerializedCompressed(keyDisReq.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
 	}
 
 	err = s.dbi.DisableKey(originator, key)
 
 	if err != nil {
 		log.Error().Err(err).Msg("failed to disable key")
-		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+		return nil, status.Error(codes.Internal, "failed to disable key")
 	}
 
 	log.Info().Str("key", util.SerializedCompressedToAddress(key.SerializeCompressed())).Msg("key disabled")
 
-	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
+	return &pb.KeyDisableResponse{}, nil
 }
 
-func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
+func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.NameRegistrationResponse, error) {
 	if !verifyPowAndSignature(req) {
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		log.Warn().Msg("insufficient POW or invalid signature")
+		return nil, status.Error(codes.InvalidArgument, "invalid pow or signature")
 	}
 
 	originatorKey, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
 	}
 
 	nameRegistrationReq := &pb.NameRegistrationRequest{}
 	err = proto.Unmarshal(req.GetContent(), nameRegistrationReq)
 	if err != nil {
 		log.Warn().Msg("invalid name registration request")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "failed to unmarshal request")
 	}
 
 	targetKey, err := easyecc.NewPublicFromSerializedCompressed(nameRegistrationReq.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
 	}
 
 	if !util.ValidateName(nameRegistrationReq.GetName()) {
 		log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("invalid name")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid name")
 	}
 	log.Info().Str("name", nameRegistrationReq.GetName()).Msg("registering name")
 
@@ -186,38 +188,36 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.R
 	if err != nil {
 		if err == db.ErrRecordExists {
 			log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("this name is already registered")
-			return &pb.Result{
-				Result: pb.ResultCode_RC_RECORD_EXISTS}, nil
+			return nil, status.Error(codes.AlreadyExists, "name is already registered")
 		}
 		if err == db.ErrNotAuthorized {
 			log.Warn().Str("name", nameRegistrationReq.GetName()).Msg("key is not authorized")
-			return &pb.Result{
-				Result: pb.ResultCode_RC_UNAUTHORIZED}, nil
+			return nil, status.Error(codes.PermissionDenied, "key is not authorized")
 		}
 		log.Error().Str("name", nameRegistrationReq.GetName()).Err(err).Msg("error writing name")
-		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+		return nil, status.Error(codes.Internal, "db error")
 	}
 	log.Info().Str("name", nameRegistrationReq.GetName()).Msg("name registered successfully")
-	return &pb.Result{
-		Result: pb.ResultCode_RC_OK}, nil
+	return &pb.NameRegistrationResponse{}, nil
 }
 
-func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
+func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*pb.AddressRegistrationResponse, error) {
 	if !verifyPowAndSignature(req) {
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		log.Warn().Msg("insufficient POW or invalid signature")
+		return nil, status.Error(codes.InvalidArgument, "invalid pow or signature")
 	}
 
 	originatorKey, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
 	}
 
 	addressRegistrationReq := &pb.AddressRegistrationRequest{}
 	err = proto.Unmarshal(req.GetContent(), addressRegistrationReq)
 	if err != nil {
 		log.Warn().Msg("invalid address registration request")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "failed to unmarshal request")
 	}
 
 	log.Info().Str("name", addressRegistrationReq.GetName()).
@@ -226,7 +226,7 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 	targetKey, err := easyecc.NewPublicFromSerializedCompressed(addressRegistrationReq.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
 	}
 
 	err = s.dbi.RegisterAddress(originatorKey, targetKey, addressRegistrationReq.GetName(),
@@ -235,12 +235,12 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 	if err != nil {
 		log.Error().Str("name", addressRegistrationReq.GetName()).
 			Str("address", addressRegistrationReq.GetAddress()).Msg("error registering address")
-		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+		return nil, status.Error(codes.Internal, "db error")
 	}
 
 	log.Info().Str("name", addressRegistrationReq.GetName()).
 		Str("address", addressRegistrationReq.GetAddress()).Msg("address registered successfully")
-	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
+	return &pb.AddressRegistrationResponse{}, nil
 }
 
 func (s *Server) LookupKey(ctx context.Context, req *pb.LookupKeyRequest) (*pb.LookupKeyResponse, error) {

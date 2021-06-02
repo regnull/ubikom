@@ -57,6 +57,9 @@ message KeyDisableRequest {
     bytes key = 1;
 }
 
+message KeyDisableResponse {
+}
+
 message NameRegistrationRequest {
     // The key to be registered.
     bytes key = 1;
@@ -64,11 +67,17 @@ message NameRegistrationRequest {
     string name = 2;
 }
 
+message NameRegistrationResponse {
+}
+
 message AddressRegistrationRequest {
     bytes key = 1;
     string name = 2;
     Protocol protocol = 3;
     string address = 4;
+}
+
+message AddressRegistrationResponse {
 }
 
 enum KeyRelationship {
@@ -96,15 +105,15 @@ service IdentityService {
     // Once a key is disabled, it is dead forever. This happens
     // if a key is compromised, or the owner has decided to kill
     // it for another reason. Use with caution.
-    rpc DisableKey(SignedWithPow) returns (Result);
+    rpc DisableKey(SignedWithPow) returns (KeyDisableResponse);
 
     // Links name and the public key.
     // Content is NameRegistrationRequest.
-    rpc RegisterName(SignedWithPow) returns (Result);
+    rpc RegisterName(SignedWithPow) returns (NameRegistrationResponse);
 
     // Associate name and protocol with an address.
     // Content is AddressRegistrationRequest.
-    rpc RegisterAddress(SignedWithPow) returns (Result);
+    rpc RegisterAddress(SignedWithPow) returns (AddressRegistrationResponse);
 }
 
 message LookupKeyRequest {

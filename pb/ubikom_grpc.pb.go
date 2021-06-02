@@ -26,13 +26,13 @@ type IdentityServiceClient interface {
 	// Once a key is disabled, it is dead forever. This happens
 	// if a key is compromised, or the owner has decided to kill
 	// it for another reason. Use with caution.
-	DisableKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
+	DisableKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*KeyDisableResponse, error)
 	// Links name and the public key.
 	// Content is NameRegistrationRequest.
-	RegisterName(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
+	RegisterName(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*NameRegistrationResponse, error)
 	// Associate name and protocol with an address.
 	// Content is AddressRegistrationRequest.
-	RegisterAddress(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
+	RegisterAddress(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*AddressRegistrationResponse, error)
 }
 
 type identityServiceClient struct {
@@ -61,8 +61,8 @@ func (c *identityServiceClient) RegisterKeyRelationship(ctx context.Context, in 
 	return out, nil
 }
 
-func (c *identityServiceClient) DisableKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error) {
-	out := new(Result)
+func (c *identityServiceClient) DisableKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*KeyDisableResponse, error) {
+	out := new(KeyDisableResponse)
 	err := c.cc.Invoke(ctx, "/Ubikom.IdentityService/DisableKey", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -70,8 +70,8 @@ func (c *identityServiceClient) DisableKey(ctx context.Context, in *SignedWithPo
 	return out, nil
 }
 
-func (c *identityServiceClient) RegisterName(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error) {
-	out := new(Result)
+func (c *identityServiceClient) RegisterName(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*NameRegistrationResponse, error) {
+	out := new(NameRegistrationResponse)
 	err := c.cc.Invoke(ctx, "/Ubikom.IdentityService/RegisterName", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -79,8 +79,8 @@ func (c *identityServiceClient) RegisterName(ctx context.Context, in *SignedWith
 	return out, nil
 }
 
-func (c *identityServiceClient) RegisterAddress(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error) {
-	out := new(Result)
+func (c *identityServiceClient) RegisterAddress(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*AddressRegistrationResponse, error) {
+	out := new(AddressRegistrationResponse)
 	err := c.cc.Invoke(ctx, "/Ubikom.IdentityService/RegisterAddress", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -101,13 +101,13 @@ type IdentityServiceServer interface {
 	// Once a key is disabled, it is dead forever. This happens
 	// if a key is compromised, or the owner has decided to kill
 	// it for another reason. Use with caution.
-	DisableKey(context.Context, *SignedWithPow) (*Result, error)
+	DisableKey(context.Context, *SignedWithPow) (*KeyDisableResponse, error)
 	// Links name and the public key.
 	// Content is NameRegistrationRequest.
-	RegisterName(context.Context, *SignedWithPow) (*Result, error)
+	RegisterName(context.Context, *SignedWithPow) (*NameRegistrationResponse, error)
 	// Associate name and protocol with an address.
 	// Content is AddressRegistrationRequest.
-	RegisterAddress(context.Context, *SignedWithPow) (*Result, error)
+	RegisterAddress(context.Context, *SignedWithPow) (*AddressRegistrationResponse, error)
 	mustEmbedUnimplementedIdentityServiceServer()
 }
 
@@ -121,13 +121,13 @@ func (*UnimplementedIdentityServiceServer) RegisterKey(context.Context, *SignedW
 func (*UnimplementedIdentityServiceServer) RegisterKeyRelationship(context.Context, *SignedWithPow) (*KeyRelationshipRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterKeyRelationship not implemented")
 }
-func (*UnimplementedIdentityServiceServer) DisableKey(context.Context, *SignedWithPow) (*Result, error) {
+func (*UnimplementedIdentityServiceServer) DisableKey(context.Context, *SignedWithPow) (*KeyDisableResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DisableKey not implemented")
 }
-func (*UnimplementedIdentityServiceServer) RegisterName(context.Context, *SignedWithPow) (*Result, error) {
+func (*UnimplementedIdentityServiceServer) RegisterName(context.Context, *SignedWithPow) (*NameRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterName not implemented")
 }
-func (*UnimplementedIdentityServiceServer) RegisterAddress(context.Context, *SignedWithPow) (*Result, error) {
+func (*UnimplementedIdentityServiceServer) RegisterAddress(context.Context, *SignedWithPow) (*AddressRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterAddress not implemented")
 }
 func (*UnimplementedIdentityServiceServer) mustEmbedUnimplementedIdentityServiceServer() {}
