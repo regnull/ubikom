@@ -81,13 +81,17 @@ message KeyRelationshipRegistrationRequest {
     KeyRelationship relationship = 2;
 }
 
+message KeyRelationshipRegistrationResponse {
+}
+
 service IdentityService {
     // Register public key. Each public key can be registered only once.
     // The key must be registered before it's associated with the name.
     // Content is public key.
     rpc RegisterKey(SignedWithPow) returns (KeyRegistrationResponse);
 
-    rpc RegisterKeyRelationship(SignedWithPow) returns (Result);
+    // Register key relationship. The content is KeyRelationshipRegistrationRequest.
+    rpc RegisterKeyRelationship(SignedWithPow) returns (KeyRelationshipRegistrationResponse);
 
     // Once a key is disabled, it is dead forever. This happens
     // if a key is compromised, or the owner has decided to kill

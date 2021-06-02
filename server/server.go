@@ -39,7 +39,7 @@ func NewServer(d *badger.DB) *Server {
 func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.KeyRegistrationResponse, error) {
 	if !verifyPowAndSignature(req) {
 		log.Warn().Msg("insufficient POW or invalid signature")
-		return nil, status.Error(codes.InvalidArgument, "insufficient pow")
+		return nil, status.Error(codes.InvalidArgument, "invalid pow or signature")
 	}
 
 	keyRegistrationReq := &pb.KeyRegistrationRequest{}
@@ -75,41 +75,42 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Ke
 	return &pb.KeyRegistrationResponse{}, nil
 }
 
-func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {
+func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWithPow) (*pb.KeyRelationshipRegistrationResponse, error) {
 	if !verifyPowAndSignature(req) {
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		log.Warn().Msg("insufficient POW or invalid signature")
+		return nil, status.Error(codes.InvalidArgument, "invalid pow or signature")
 	}
 
 	keyRelReq := &pb.KeyRelationshipRegistrationRequest{}
 	err := proto.Unmarshal(req.GetContent(), keyRelReq)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to unmarshal key relationship registration request")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "failed to unmarshal request")
 	}
 
 	if keyRelReq.GetRelationship() != pb.KeyRelationship_KR_PARENT {
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid relationship")
 	}
 
 	childKey, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
 	}
 
 	parentKey, err := easyecc.NewPublicFromSerializedCompressed(keyRelReq.GetTargetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
 	}
 
 	err = s.dbi.RegisterKeyParent(childKey, parentKey)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register parent key")
-		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+		return nil, status.Error(codes.Internal, "failed to register key relationship")
 	}
 	log.Info().Str("key", util.SerializedCompressedToAddress(req.GetKey())).Msg("parent key registered successfully")
-	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
+	return &pb.KeyRelationshipRegistrationResponse{}, nil
 }
 
 func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Result, error) {

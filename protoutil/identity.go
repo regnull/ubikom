@@ -45,12 +45,9 @@ func RegisterChildKey(ctx context.Context, client pb.IdentityServiceClient, key 
 		return err
 	}
 
-	res, err := client.RegisterKeyRelationship(ctx, req)
+	_, err = client.RegisterKeyRelationship(ctx, req)
 	if err != nil {
 		return err
-	}
-	if res.Result != pb.ResultCode_RC_OK {
-		return fmt.Errorf("server returned error: %s", res.GetResult().String())
 	}
 	return nil
 }

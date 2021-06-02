@@ -372,12 +372,9 @@ var registerChildKeyCmd = &cobra.Command{
 
 		client := pb.NewIdentityServiceClient(conn)
 		ctx := context.Background()
-		res, err := client.RegisterKeyRelationship(ctx, req)
+		_, err = client.RegisterKeyRelationship(ctx, req)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to register child key")
-		}
-		if res.Result != pb.ResultCode_RC_OK {
-			log.Fatal().Str("code", res.GetResult().Enum().String()).Msg("server returned error")
 		}
 		log.Info().Msg("child key registered successfully")
 	},

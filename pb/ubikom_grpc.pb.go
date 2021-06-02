@@ -21,7 +21,8 @@ type IdentityServiceClient interface {
 	// The key must be registered before it's associated with the name.
 	// Content is public key.
 	RegisterKey(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*KeyRegistrationResponse, error)
-	RegisterKeyRelationship(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error)
+	// Register key relationship. The content is KeyRelationshipRegistrationRequest.
+	RegisterKeyRelationship(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*KeyRelationshipRegistrationResponse, error)
 	// Once a key is disabled, it is dead forever. This happens
 	// if a key is compromised, or the owner has decided to kill
 	// it for another reason. Use with caution.
@@ -51,8 +52,8 @@ func (c *identityServiceClient) RegisterKey(ctx context.Context, in *SignedWithP
 	return out, nil
 }
 
-func (c *identityServiceClient) RegisterKeyRelationship(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*Result, error) {
-	out := new(Result)
+func (c *identityServiceClient) RegisterKeyRelationship(ctx context.Context, in *SignedWithPow, opts ...grpc.CallOption) (*KeyRelationshipRegistrationResponse, error) {
+	out := new(KeyRelationshipRegistrationResponse)
 	err := c.cc.Invoke(ctx, "/Ubikom.IdentityService/RegisterKeyRelationship", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -95,7 +96,8 @@ type IdentityServiceServer interface {
 	// The key must be registered before it's associated with the name.
 	// Content is public key.
 	RegisterKey(context.Context, *SignedWithPow) (*KeyRegistrationResponse, error)
-	RegisterKeyRelationship(context.Context, *SignedWithPow) (*Result, error)
+	// Register key relationship. The content is KeyRelationshipRegistrationRequest.
+	RegisterKeyRelationship(context.Context, *SignedWithPow) (*KeyRelationshipRegistrationResponse, error)
 	// Once a key is disabled, it is dead forever. This happens
 	// if a key is compromised, or the owner has decided to kill
 	// it for another reason. Use with caution.
@@ -116,7 +118,7 @@ type UnimplementedIdentityServiceServer struct {
 func (*UnimplementedIdentityServiceServer) RegisterKey(context.Context, *SignedWithPow) (*KeyRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterKey not implemented")
 }
-func (*UnimplementedIdentityServiceServer) RegisterKeyRelationship(context.Context, *SignedWithPow) (*Result, error) {
+func (*UnimplementedIdentityServiceServer) RegisterKeyRelationship(context.Context, *SignedWithPow) (*KeyRelationshipRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterKeyRelationship not implemented")
 }
 func (*UnimplementedIdentityServiceServer) DisableKey(context.Context, *SignedWithPow) (*Result, error) {
