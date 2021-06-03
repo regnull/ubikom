@@ -2,17 +2,6 @@ syntax = "proto3";
 package Ubikom;
 option go_package="./;pb";
 
-enum ResultCode {
-    RC_OK = 0;
-    RC_INVALID_REQUEST = 1;
-    RC_INVALID_KEY = 2;
-    RC_RECORD_EXISTS = 3;
-    RC_RECORD_NOT_FOUND = 4;
-    RC_INSUFFICIENT_POW = 5;
-    RC_UNAUTHORIZED = 6;
-    RC_INTERNAL_ERROR = 100;
-}
-
 enum Protocol {
     PL_UNKNOWN = 0;
     PL_DMS = 1;
@@ -39,11 +28,6 @@ message SignedWithPow {
     Signature signature = 2;
     bytes key = 3;  // Public key used to sign the request.
     bytes pow = 4;
-}
-
-message Result {
-    ResultCode result = 1;
-    string message = 2;
 }
 
 message KeyRegistrationRequest {
@@ -121,13 +105,11 @@ message LookupKeyRequest {
 }
 
 message LookupKeyResponse {
-    Result result = 1;
-
-    int64 registration_timestamp = 2;
-    bool disabled = 3;
-    int64 disabled_timestamp = 4;
-    bytes disabled_by = 5;
-    repeated bytes parent_key = 6;
+    int64 registration_timestamp = 1;
+    bool disabled = 2;
+    int64 disabled_timestamp = 3;
+    bytes disabled_by = 4;
+    repeated bytes parent_key = 5;
 }
 
 message LookupNameRequest {
@@ -144,9 +126,8 @@ message LookupAddressRequest {
 }
 
 message LookupAddressResponse {
-    Result result = 1;
-    string message = 2;
-    string address = 3;
+    string message = 1;
+    string address = 2;
 }
 
 service LookupService {
@@ -167,21 +148,22 @@ message DMSMessage {
     Signature signature = 4;
 }
 
-message ResultWithContent {
-    Result result = 1;
-    bytes content = 2;
+message SendRequest {
+    DMSMessage message = 1;
+}
+
+message SendResponse {
+}
+
+message ReceiveRequest {
+    Signed identity_proof = 1;
+}
+
+message ReceiveResponse {
+    DMSMessage message = 1;
 }
 
 service DMSDumpService {
-    rpc Send(DMSMessage) returns (Result);
-    rpc Receive(Signed) returns (ResultWithContent);
-}
-
-message StoreEncryptedKeyRequest {
-    string name = 1;
-    bytes encryptedPrivateKey = 2;
-}
-
-service ProxyService {
-    rpc StoreEncryptedKey(Signed) returns (Result);
+    rpc Send(SendRequest) returns (SendResponse);
+    rpc Receive(ReceiveRequest) returns (ReceiveResponse);
 }

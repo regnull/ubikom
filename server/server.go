@@ -251,11 +251,15 @@ func (s *Server) LookupKey(ctx context.Context, req *pb.LookupKeyRequest) (*pb.L
 	rec, err := s.dbi.GetKey(key)
 
 	if err == db.ErrNotFound {
-		return &pb.LookupKeyResponse{Result: &pb.Result{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}}, nil
+		return nil, status.Error(codes.NotFound, "key not found")
+	}
+
+	if err != nil {
+		log.Error().Err(err).Msg("key lookup failed")
+		return nil, status.Error(codes.Internal, "db error")
 	}
 
 	res := &pb.LookupKeyResponse{
-		Result:                &pb.Result{Result: pb.ResultCode_RC_OK},
 		RegistrationTimestamp: rec.GetRegistrationTimestamp(),
 		Disabled:              rec.GetDisabled(),
 		ParentKey:             rec.GetParentKey(),
@@ -293,14 +297,13 @@ func (s *Server) LookupAddress(ctx context.Context, req *pb.LookupAddressRequest
 	address, err := s.dbi.GetAddress(req.GetName(), req.GetProtocol())
 	if err == ErrNotFound {
 		log.Info().Str("name", req.GetName()).Str("protocol", req.GetProtocol().String()).Msg("address not found")
-		return &pb.LookupAddressResponse{Result: &pb.Result{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}}, nil
+		return nil, status.Error(codes.NotFound, "address not found")
 	}
 	if err != nil {
 		log.Error().Str("name", req.GetName()).Str("protocol", req.GetProtocol().String()).Msg("error getting address")
-		return &pb.LookupAddressResponse{Result: &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}}, nil
+		return nil, status.Error(codes.Internal, "db error")
 	}
 	return &pb.LookupAddressResponse{
-		Result:  &pb.Result{Result: pb.ResultCode_RC_OK},
 		Address: address,
 	}, nil
 }

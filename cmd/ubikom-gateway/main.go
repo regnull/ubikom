@@ -19,7 +19,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/grpc/codes"
 )
 
 type CmdArgs struct {
@@ -81,43 +81,17 @@ func main() {
 
 	ctx := context.Background()
 	for {
-		content := "we will need a bigger boat"
-		hash := util.Hash256([]byte(content))
-
-		sig, err := privateKey.Sign(hash)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to sign message")
-		}
-
-		req := &pb.Signed{
-			Content: []byte(content),
-			Signature: &pb.Signature{
-				R: sig.R.Bytes(),
-				S: sig.S.Bytes(),
-			},
-			Key: privateKey.PublicKey().SerializeCompressed(),
-		}
 		for {
-			res, err := dumpClient.Receive(ctx, req)
+			res, err := dumpClient.Receive(ctx, &pb.ReceiveRequest{IdentityProof: protoutil.IdentityProof(privateKey)})
+			if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
+				log.Info().Msg("no new messages")
+				break
+			}
 			if err != nil {
 				log.Error().Err(err).Msg("failed to receive message")
 				break
 			}
-			if res.GetResult().GetResult() == pb.ResultCode_RC_RECORD_NOT_FOUND {
-				log.Info().Msg("no new messages")
-				break
-			}
-			if res.Result.Result != pb.ResultCode_RC_OK {
-				log.Error().Str("result", res.GetResult().GetResult().String()).Msg("server returned error")
-				break
-			}
-			msg := &pb.DMSMessage{}
-			err = proto.Unmarshal(res.GetContent(), msg)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to unmarshal message")
-				break
-			}
-
+			msg := res.GetMessage()
 			content, err := protoutil.DecryptMessage(ctx, lookupClient, privateKey, msg)
 			if err != nil {
 				log.Error().Err(err).Msg("failed to decrypt message")

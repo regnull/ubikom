@@ -8,7 +8,8 @@ import (
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/store"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type DumpServer struct {
@@ -26,75 +27,67 @@ func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient, maxMessa
 		store:        store.NewFile(baseDir, time.Duration(maxMessageAgeHours)*time.Hour)}
 }
 
-func (s *DumpServer) Send(ctx context.Context, req *pb.DMSMessage) (*pb.Result, error) {
+func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
 	log.Debug().Msg("got send request")
 	// Get the public key associated with the sender's and receiver's name.
-	senderKey, resErr := getKeyByName(ctx, s.lookupClient, req.Sender)
+	senderKey, resErr := getKeyByName(ctx, s.lookupClient, req.GetMessage().GetSender())
 	if resErr != nil {
-		return resErr, nil
+		return nil, status.Error(codes.Internal, "failed to lookup name")
 	}
 
-	receiverKey, resErr := getKeyByName(ctx, s.lookupClient, req.Receiver)
+	receiverKey, resErr := getKeyByName(ctx, s.lookupClient, req.GetMessage().GetReceiver())
 	if resErr != nil {
-		return resErr, nil
+		return nil, status.Error(codes.Internal, "failed to lookup name")
 	}
 
 	// Verify signature.
-	if !protoutil.VerifySignature(req.Signature, senderKey, req.Content) {
+	if !protoutil.VerifySignature(req.GetMessage().GetSignature(), senderKey, req.GetMessage().GetContent()) {
 		log.Warn().Msg("signature verification failed")
-		return &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}, nil
+		return nil, status.Error(codes.InvalidArgument, "bad signature")
 	}
 
-	err := s.store.Save(req, receiverKey)
+	err := s.store.Save(req.GetMessage(), receiverKey)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to save message")
-		return &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}, nil
+		return nil, status.Error(codes.Internal, "message store error")
 	}
 
 	// Save message.
-	return &pb.Result{Result: pb.ResultCode_RC_OK}, nil
+	return &pb.SendResponse{}, nil
 }
 
-func (s *DumpServer) Receive(ctx context.Context, req *pb.Signed) (*pb.ResultWithContent, error) {
+func (s *DumpServer) Receive(ctx context.Context, req *pb.ReceiveRequest) (*pb.ReceiveResponse, error) {
 	log.Debug().Msg("got receive request")
-	if !protoutil.VerifySignature(req.Signature, req.Key, req.Content) {
+	if !protoutil.VerifySignature(req.GetIdentityProof().GetSignature(), req.GetIdentityProof().GetKey(),
+		req.GetIdentityProof().GetContent()) {
 		log.Warn().Msg("signature verification failed")
-		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}}, nil
+		return nil, status.Error(codes.InvalidArgument, "bad signature")
 	}
 
-	msg, err := s.store.GetNext(req.GetKey())
+	msg, err := s.store.GetNext(req.GetIdentityProof().GetKey())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get next message")
-		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}}, nil
+		return nil, status.Error(codes.Internal, "message store error")
 	}
 
 	if msg == nil {
-		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}}, nil
+		return nil, status.Error(codes.NotFound, "not found")
 	}
 
-	b, err := proto.Marshal(msg)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to serialize the message")
-		return &pb.ResultWithContent{Result: &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}}, nil
-	}
-
-	err = s.store.Remove(msg, req.GetKey())
+	err = s.store.Remove(msg, req.GetIdentityProof().GetKey())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to remove message")
 	}
 
-	return &pb.ResultWithContent{
-		Result:  &pb.Result{Result: pb.ResultCode_RC_OK},
-		Content: b,
-	}, nil
+	return &pb.ReceiveResponse{Message: msg}, nil
 }
 
-func getKeyByName(ctx context.Context, lookupClient pb.LookupServiceClient, name string) ([]byte, *pb.Result) {
+func getKeyByName(ctx context.Context, lookupClient pb.LookupServiceClient, name string) ([]byte, error) {
 	res, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{
 		Name: name})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to lookup name")
-		return nil, &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}
+		return nil, err
 	}
 	return res.Key, nil
 }

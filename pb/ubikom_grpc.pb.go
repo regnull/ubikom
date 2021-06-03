@@ -407,8 +407,8 @@ var _LookupService_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DMSDumpServiceClient interface {
-	Send(ctx context.Context, in *DMSMessage, opts ...grpc.CallOption) (*Result, error)
-	Receive(ctx context.Context, in *Signed, opts ...grpc.CallOption) (*ResultWithContent, error)
+	Send(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, error)
+	Receive(ctx context.Context, in *ReceiveRequest, opts ...grpc.CallOption) (*ReceiveResponse, error)
 }
 
 type dMSDumpServiceClient struct {
@@ -419,8 +419,8 @@ func NewDMSDumpServiceClient(cc grpc.ClientConnInterface) DMSDumpServiceClient {
 	return &dMSDumpServiceClient{cc}
 }
 
-func (c *dMSDumpServiceClient) Send(ctx context.Context, in *DMSMessage, opts ...grpc.CallOption) (*Result, error) {
-	out := new(Result)
+func (c *dMSDumpServiceClient) Send(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, error) {
+	out := new(SendResponse)
 	err := c.cc.Invoke(ctx, "/Ubikom.DMSDumpService/Send", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -428,8 +428,8 @@ func (c *dMSDumpServiceClient) Send(ctx context.Context, in *DMSMessage, opts ..
 	return out, nil
 }
 
-func (c *dMSDumpServiceClient) Receive(ctx context.Context, in *Signed, opts ...grpc.CallOption) (*ResultWithContent, error) {
-	out := new(ResultWithContent)
+func (c *dMSDumpServiceClient) Receive(ctx context.Context, in *ReceiveRequest, opts ...grpc.CallOption) (*ReceiveResponse, error) {
+	out := new(ReceiveResponse)
 	err := c.cc.Invoke(ctx, "/Ubikom.DMSDumpService/Receive", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -441,8 +441,8 @@ func (c *dMSDumpServiceClient) Receive(ctx context.Context, in *Signed, opts ...
 // All implementations must embed UnimplementedDMSDumpServiceServer
 // for forward compatibility
 type DMSDumpServiceServer interface {
-	Send(context.Context, *DMSMessage) (*Result, error)
-	Receive(context.Context, *Signed) (*ResultWithContent, error)
+	Send(context.Context, *SendRequest) (*SendResponse, error)
+	Receive(context.Context, *ReceiveRequest) (*ReceiveResponse, error)
 	mustEmbedUnimplementedDMSDumpServiceServer()
 }
 
@@ -450,10 +450,10 @@ type DMSDumpServiceServer interface {
 type UnimplementedDMSDumpServiceServer struct {
 }
 
-func (*UnimplementedDMSDumpServiceServer) Send(context.Context, *DMSMessage) (*Result, error) {
+func (*UnimplementedDMSDumpServiceServer) Send(context.Context, *SendRequest) (*SendResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Send not implemented")
 }
-func (*UnimplementedDMSDumpServiceServer) Receive(context.Context, *Signed) (*ResultWithContent, error) {
+func (*UnimplementedDMSDumpServiceServer) Receive(context.Context, *ReceiveRequest) (*ReceiveResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Receive not implemented")
 }
 func (*UnimplementedDMSDumpServiceServer) mustEmbedUnimplementedDMSDumpServiceServer() {}
@@ -463,7 +463,7 @@ func RegisterDMSDumpServiceServer(s *grpc.Server, srv DMSDumpServiceServer) {
 }
 
 func _DMSDumpService_Send_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DMSMessage)
+	in := new(SendRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -475,13 +475,13 @@ func _DMSDumpService_Send_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: "/Ubikom.DMSDumpService/Send",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DMSDumpServiceServer).Send(ctx, req.(*DMSMessage))
+		return srv.(DMSDumpServiceServer).Send(ctx, req.(*SendRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _DMSDumpService_Receive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Signed)
+	in := new(ReceiveRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -493,7 +493,7 @@ func _DMSDumpService_Receive_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/Ubikom.DMSDumpService/Receive",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DMSDumpServiceServer).Receive(ctx, req.(*Signed))
+		return srv.(DMSDumpServiceServer).Receive(ctx, req.(*ReceiveRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -509,82 +509,6 @@ var _DMSDumpService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Receive",
 			Handler:    _DMSDumpService_Receive_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "ubikom.proto",
-}
-
-// ProxyServiceClient is the client API for ProxyService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type ProxyServiceClient interface {
-	StoreEncryptedKey(ctx context.Context, in *Signed, opts ...grpc.CallOption) (*Result, error)
-}
-
-type proxyServiceClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewProxyServiceClient(cc grpc.ClientConnInterface) ProxyServiceClient {
-	return &proxyServiceClient{cc}
-}
-
-func (c *proxyServiceClient) StoreEncryptedKey(ctx context.Context, in *Signed, opts ...grpc.CallOption) (*Result, error) {
-	out := new(Result)
-	err := c.cc.Invoke(ctx, "/Ubikom.ProxyService/StoreEncryptedKey", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// ProxyServiceServer is the server API for ProxyService service.
-// All implementations must embed UnimplementedProxyServiceServer
-// for forward compatibility
-type ProxyServiceServer interface {
-	StoreEncryptedKey(context.Context, *Signed) (*Result, error)
-	mustEmbedUnimplementedProxyServiceServer()
-}
-
-// UnimplementedProxyServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedProxyServiceServer struct {
-}
-
-func (*UnimplementedProxyServiceServer) StoreEncryptedKey(context.Context, *Signed) (*Result, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StoreEncryptedKey not implemented")
-}
-func (*UnimplementedProxyServiceServer) mustEmbedUnimplementedProxyServiceServer() {}
-
-func RegisterProxyServiceServer(s *grpc.Server, srv ProxyServiceServer) {
-	s.RegisterService(&_ProxyService_serviceDesc, srv)
-}
-
-func _ProxyService_StoreEncryptedKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Signed)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ProxyServiceServer).StoreEncryptedKey(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Ubikom.ProxyService/StoreEncryptedKey",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProxyServiceServer).StoreEncryptedKey(ctx, req.(*Signed))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _ProxyService_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "Ubikom.ProxyService",
-	HandlerType: (*ProxyServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "StoreEncryptedKey",
-			Handler:    _ProxyService_StoreEncryptedKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

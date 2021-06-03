@@ -88,9 +88,6 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	if err != nil {
 		return fmt.Errorf("failed to get receiver's address: %w", err)
 	}
-	if addressLookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
-		return fmt.Errorf("failed to get receiver's address: %s", addressLookupRes.GetResult().String())
-	}
 
 	log.Debug().Str("address", addressLookupRes.GetAddress()).Msg("got receiver's address")
 
@@ -122,12 +119,9 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	}
 
 	client := pb.NewDMSDumpServiceClient(dumpConn)
-	res, err := client.Send(ctx, msg)
+	_, err = client.Send(ctx, &pb.SendRequest{Message: msg})
 	if err != nil {
 		return fmt.Errorf("failed to send message: %w", err)
-	}
-	if res.Result != pb.ResultCode_RC_OK {
-		return fmt.Errorf("failed to send message: %s", res.GetResult().String())
 	}
 	log.Info().Msg("sent message successfully")
 	return nil
@@ -152,4 +146,23 @@ func DecryptMessage(ctx context.Context, lookupClient pb.LookupServiceClient, pr
 		return "", fmt.Errorf("failed to decrypt message")
 	}
 	return string(content), nil
+}
+
+// IdentityProof generates an identity proof that can be used in receive requests.
+func IdentityProof(key *easyecc.PrivateKey) *pb.Signed {
+	hash := util.Hash256([]byte("we need a bigger boat"))
+	sig, err := key.Sign(hash)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to sign message")
+	}
+
+	signed := &pb.Signed{
+		Content: []byte("we need a bigger boat"),
+		Signature: &pb.Signature{
+			R: sig.R.Bytes(),
+			S: sig.S.Bytes(),
+		},
+		Key: key.PublicKey().SerializeCompressed(),
+	}
+	return signed
 }

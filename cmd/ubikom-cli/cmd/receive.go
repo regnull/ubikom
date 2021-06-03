@@ -13,7 +13,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/proto"
 )
 
 func init() {
@@ -82,7 +81,7 @@ var receiveMessageCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to sign message")
 		}
 
-		req := &pb.Signed{
+		signed := &pb.Signed{
 			Content: []byte("we need a bigger boat"),
 			Signature: &pb.Signature{
 				R: sig.R.Bytes(),
@@ -93,18 +92,11 @@ var receiveMessageCmd = &cobra.Command{
 
 		ctx := context.Background()
 		client := pb.NewDMSDumpServiceClient(dumpConn)
-		res, err := client.Receive(ctx, req)
+		res, err := client.Receive(ctx, &pb.ReceiveRequest{IdentityProof: signed})
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to send message")
 		}
-		if res.Result.Result != pb.ResultCode_RC_OK {
-			log.Fatal().Str("code", res.GetResult().GetResult().Enum().String()).Msg("server returned error")
-		}
-		msg := &pb.DMSMessage{}
-		err = proto.Unmarshal(res.GetContent(), msg)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to unmarshal message")
-		}
+		msg := res.GetMessage()
 
 		lookupConn, err := grpc.Dial(lookupServiceURL, opts...)
 		if err != nil {

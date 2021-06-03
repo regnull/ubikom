@@ -154,9 +154,16 @@ func SerializedCompressedToAddress(key []byte) string {
 }
 
 func StatusCodeFromError(err error) codes.Code {
+	if err == nil {
+		return codes.OK
+	}
 	s, ok := status.FromError(err)
 	if !ok {
 		return codes.Unknown
 	}
 	return s.Code()
+}
+
+func ErrEqualCode(err error, code codes.Code) bool {
+	return StatusCodeFromError(err) == code
 }

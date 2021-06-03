@@ -14,6 +14,7 @@ import (
 	"github.com/regnull/ubikom/store"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -85,11 +86,6 @@ func (b *Backend) Authorize(user, pass string) bool {
 			log.Debug().Bool("authorized", false).Msg("[POP] -> LOGIN")
 			return false
 		}
-		if res.GetResult().GetResult() != pb.ResultCode_RC_OK {
-			log.Error().Interface("result", res.GetResult()).Msg("failed to look up key")
-			log.Debug().Bool("authorized", false).Msg("[POP] -> LOGIN")
-			return false
-		}
 		if res.GetDisabled() {
 			log.Error().Msg("this key is disabled")
 			log.Debug().Bool("authorized", false).Msg("[POP] -> LOGIN")
@@ -110,9 +106,6 @@ func (b *Backend) Authorize(user, pass string) bool {
 }
 
 func (b *Backend) Poll(ctx context.Context, user string) error {
-	content := "we will need a bigger boat"
-	hash := util.Hash256([]byte(content))
-
 	// Get private key for this user.
 	var privateKey *easyecc.PrivateKey
 	sess := b.getSession(user)
@@ -122,20 +115,6 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 		return fmt.Errorf("invalid session")
 	}
 	privateKey = sess.PrivateKey
-
-	sig, err := privateKey.Sign(hash)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to sign message")
-	}
-
-	req := &pb.Signed{
-		Content: []byte(content),
-		Signature: &pb.Signature{
-			R: sig.R.Bytes(),
-			S: sig.S.Bytes(),
-		},
-		Key: privateKey.PublicKey().SerializeCompressed(),
-	}
 
 	count := 0
 	// Read all locally stored messages.
@@ -155,11 +134,9 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 
 	// Read all remote messages.
 	for {
-		res, err := b.dumpClient.Receive(ctx, req)
-		if err != nil {
-			return fmt.Errorf("failed to receive message: %w", err)
-		}
-		if res.GetResult().GetResult() == pb.ResultCode_RC_RECORD_NOT_FOUND {
+		res, err := b.dumpClient.Receive(ctx, &pb.ReceiveRequest{
+			IdentityProof: protoutil.IdentityProof(privateKey)})
+		if util.ErrEqualCode(err, codes.NotFound) {
 			if count == 0 {
 				log.Debug().Msg("no new messages")
 			} else {
@@ -167,14 +144,10 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 			}
 			break
 		}
-		if res.Result.Result != pb.ResultCode_RC_OK {
-			return fmt.Errorf("server returned error: %s", res.GetResult().GetResult().Enum().String())
-		}
-		msg := &pb.DMSMessage{}
-		err = proto.Unmarshal(res.GetContent(), msg)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal message: %w", err)
+			return fmt.Errorf("failed to receive message: %w", err)
 		}
+		msg := res.GetMessage()
 
 		if b.localStore != nil {
 			err = b.localStore.Save(msg, privateKey.PublicKey().SerializeCompressed())
