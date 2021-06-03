@@ -135,9 +135,7 @@ message LookupNameRequest {
 }
 
 message LookupNameResponse {
-    Result result = 1;
-    string message = 2;
-    bytes key = 3;
+    bytes key = 1;
 }
 
 message LookupAddressRequest {

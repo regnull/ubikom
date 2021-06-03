@@ -15,9 +15,11 @@ import (
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
+	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 const (
@@ -30,6 +32,8 @@ type CmdArgs struct {
 	LookupServiceURL   string
 	IdentityServiceURL string
 	Timeout            time.Duration
+	CertFile           string
+	KeyFile            string
 }
 
 type Server struct {
@@ -48,42 +52,54 @@ func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentitySe
 
 func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
-	res, err := s.lookupClient.LookupName(r.Context(), &pb.LookupNameRequest{
+	_, err := s.lookupClient.LookupName(r.Context(), &pb.LookupNameRequest{
 		Name: name,
 	})
 	w.Header().Add("Content-Type", "application/json")
-	if err != nil {
+	if err != nil && util.StatusCodeFromError(err) != codes.NotFound {
 		log.Error().Err(err).Msg("name lookup request failed")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if res.GetResult().GetResult() == pb.ResultCode_RC_RECORD_NOT_FOUND {
-		fmt.Fprintf(w, `{
-	"name": "%s", 
-	"available": true
-}`, name)
-		return
-	}
-	if res.GetResult().GetResult() == pb.ResultCode_RC_INVALID_REQUEST {
-		log.Warn().Str("name", name).Msg("invalid request")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	if res.GetResult().GetResult() != pb.ResultCode_RC_OK {
-		log.Error().Str("result", res.GetResult().GetResult().String()).Msg("server returned error")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+
+	found := err == nil
+
 	// If we got here, the name record was found.
 	fmt.Fprintf(w, `{
 	"name": "%s", 
-	"available": false
-}`, name)
+	"available": %v
+}`, name, !found)
 }
 
 func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	password := r.URL.Query().Get("password")
+
+	if len(name) < 3 {
+		log.Warn().Str("name", name).Msg("name is too short")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if len(password) < 6 {
+		log.Warn().Str("name", name).Msg("password is too short")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	_, err := s.lookupClient.LookupName(r.Context(), &pb.LookupNameRequest{Name: name})
+	if err == nil {
+		// This name is taken.
+		log.Warn().Str("name", name).Msg("name is not available")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err != nil && util.StatusCodeFromError(err) != codes.NotFound {
+		log.Error().Err(err).Msg("failed to check name availability")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	mainKey, err := easyecc.NewRandomPrivateKey()
 	if err != nil {
@@ -188,7 +204,8 @@ func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/octet-stream")
 	w.Header().Add("Content-Disposition", "attachment; filename=\"ubikom.private_key\"")
 	w.Write(key)
-	delete(s.keys, keyID)
+	// TODO: Remove this after the testing is done.
+	// delete(s.keys, keyID)
 }
 
 func main() {
@@ -200,6 +217,8 @@ func main() {
 	flag.StringVar(&args.LookupServiceURL, "lookup-service-url", globals.PublicLookupServiceURL, "lookup service url")
 	flag.StringVar(&args.IdentityServiceURL, "identity-service-url", globals.PublicIdentityServiceURL, "identity service url")
 	flag.DurationVar(&args.Timeout, "timeout", 5*time.Second, "timeout when connecting to the lookup service")
+	flag.StringVar(&args.CertFile, "cert-file", "", "certificate file")
+	flag.StringVar(&args.KeyFile, "key-file", "", "key file")
 	flag.Parse()
 
 	opts := []grpc.DialOption{
@@ -232,5 +251,10 @@ func main() {
 	http.HandleFunc("/easySetup", server.HandleEasySetup)
 	http.HandleFunc("/getKey", server.HandleGetKey)
 	log.Info().Int("port", args.Port).Msg("listening...")
-	log.Fatal().Err(http.ListenAndServe(fmt.Sprintf(":%d", args.Port), nil))
+
+	if args.CertFile != "" && args.KeyFile != "" {
+		log.Fatal().Err(http.ListenAndServeTLS(fmt.Sprintf(":%d", args.Port), args.CertFile, args.KeyFile, nil))
+	} else {
+		log.Fatal().Err(http.ListenAndServe(fmt.Sprintf(":%d", args.Port), nil))
+	}
 }

@@ -13,6 +13,8 @@ import (
 
 	"github.com/regnull/easyecc"
 	"golang.org/x/crypto/ripemd160"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/yaml.v2"
 )
 
@@ -149,4 +151,12 @@ func SerializedCompressedToAddress(key []byte) string {
 		return "**invalid key**"
 	}
 	return publicKey.Address()
+}
+
+func StatusCodeFromError(err error) codes.Code {
+	s, ok := status.FromError(err)
+	if !ok {
+		return codes.Unknown
+	}
+	return s.Code()
 }

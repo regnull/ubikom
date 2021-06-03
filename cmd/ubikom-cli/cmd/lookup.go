@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 func init() {
@@ -125,14 +126,11 @@ var lookupNameCmd = &cobra.Command{
 		client := pb.NewLookupServiceClient(conn)
 		ctx := context.Background()
 		res, err := client.LookupName(ctx, req)
-		if err != nil {
-			log.Fatal().Err(err).Msg("name lookup request failed")
-		}
-		if res.GetResult().GetResult() == pb.ResultCode_RC_RECORD_NOT_FOUND {
+		if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
 			log.Fatal().Msg("not found")
 		}
-		if res.GetResult().GetResult() != pb.ResultCode_RC_OK {
-			log.Fatal().Str("result", res.GetResult().GetResult().String()).Msg("server returned error")
+		if err != nil {
+			log.Fatal().Err(err).Msg("name lookup request failed")
 		}
 		fmt.Printf("%s\n", base58.Encode(res.GetKey()))
 	},

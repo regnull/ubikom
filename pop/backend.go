@@ -482,9 +482,6 @@ func (b *Backend) decryptMessage(ctx context.Context, privateKey *easyecc.Privat
 	if err != nil {
 		return "", fmt.Errorf("failed to get sender public key: %w", err)
 	}
-	if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
-		return "", fmt.Errorf("failed to get sender public key: %s", lookupRes.GetResult().String())
-	}
 	senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
 	if err != nil {
 		return "", fmt.Errorf("invalid sender public key: %w", err)

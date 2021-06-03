@@ -75,9 +75,6 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	if err != nil {
 		return fmt.Errorf("failed to get receiver public key: %w", err)
 	}
-	if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
-		return fmt.Errorf("failed to get receiver public key, result: %s", lookupRes.GetResult().String())
-	}
 	receiverKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
 	if err != nil {
 		log.Fatal().Err(err).Msg("invalid receiver public key")
@@ -140,9 +137,6 @@ func DecryptMessage(ctx context.Context, lookupClient pb.LookupServiceClient, pr
 	lookupRes, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
 	if err != nil {
 		return "", fmt.Errorf("failed to get sender public key: %w", err)
-	}
-	if lookupRes.GetResult().GetResult() != pb.ResultCode_RC_OK {
-		return "", fmt.Errorf("failed to get sender public key: %s", lookupRes.GetResult().String())
 	}
 	senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
 	if err != nil {

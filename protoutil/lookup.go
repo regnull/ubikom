@@ -2,21 +2,20 @@ package protoutil
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/util"
+	"google.golang.org/grpc/codes"
 )
 
 func CheckNameAvailability(ctx context.Context, client pb.LookupServiceClient, name string) (bool, error) {
-	resp, err := client.LookupName(ctx, &pb.LookupNameRequest{Name: name})
-	if err != nil {
+	_, err := client.LookupName(ctx, &pb.LookupNameRequest{Name: name})
+	if err != nil && util.StatusCodeFromError(err) != codes.NotFound {
 		return false, err
 	}
-	if resp.GetResult().GetResult() == pb.ResultCode_RC_RECORD_NOT_FOUND {
+
+	if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
 		return true, nil
-	}
-	if resp.GetResult().GetResult() != pb.ResultCode_RC_OK {
-		return false, fmt.Errorf("server returned %s", resp.GetResult().GetResult().String())
 	}
 	return false, nil
 }

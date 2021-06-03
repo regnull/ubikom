@@ -96,13 +96,5 @@ func getKeyByName(ctx context.Context, lookupClient pb.LookupServiceClient, name
 		log.Error().Err(err).Msg("failed to lookup name")
 		return nil, &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}
 	}
-	if res.GetResult().GetResult() == pb.ResultCode_RC_RECORD_NOT_FOUND {
-		log.Error().Str("name", name).Msg("name record not found")
-		return nil, &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}
-	}
-	if res.GetResult().GetResult() != pb.ResultCode_RC_OK {
-		log.Error().Str("result", res.Result.String()).Msg("unexpected error when retrieving name")
-		return nil, &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}
-	}
 	return res.Key, nil
 }

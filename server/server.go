@@ -271,25 +271,20 @@ func (s *Server) LookupName(ctx context.Context, req *pb.LookupNameRequest) (*pb
 	log.Info().Str("name", req.GetName()).Msg("name lookup request")
 	if !util.ValidateName(req.GetName()) {
 		log.Warn().Str("name", req.GetName()).Msg("invalid name")
-		return &pb.LookupNameResponse{Result: &pb.Result{Result: pb.ResultCode_RC_INVALID_REQUEST}}, nil
+		return nil, status.Error(codes.InvalidArgument, "invalid name")
 	}
 	key, err := s.dbi.GetName(req.GetName())
-	if err == ErrNotFound {
-		log.Debug().Str("name", req.GetName()).Msg("name not found")
-		return &pb.LookupNameResponse{Result: &pb.Result{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}}, nil
-	}
 	if err == db.ErrNotFound {
-		return &pb.LookupNameResponse{
-			Result: &pb.Result{Result: pb.ResultCode_RC_RECORD_NOT_FOUND}}, nil
+		log.Debug().Str("name", req.GetName()).Msg("name not found")
+		return nil, status.Error(codes.NotFound, "name was not found")
 	}
 	if err != nil {
 		log.Error().Str("name", req.GetName()).Err(err).Msg("error getting name")
-		return &pb.LookupNameResponse{Result: &pb.Result{Result: pb.ResultCode_RC_INTERNAL_ERROR}}, nil
+		return nil, status.Error(codes.Internal, "db error")
 	}
 
 	return &pb.LookupNameResponse{
-		Result: &pb.Result{Result: pb.ResultCode_RC_OK},
-		Key:    key.SerializeCompressed(),
+		Key: key.SerializeCompressed(),
 	}, nil
 }
 
