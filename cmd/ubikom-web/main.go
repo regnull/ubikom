@@ -23,8 +23,10 @@ import (
 )
 
 const (
-	powStrength = 23
-	dumpAddress = "alpha.ubikom.cc:8826"
+	powStrength       = 23
+	dumpAddress       = "alpha.ubikom.cc:8826"
+	minNameLength     = 3
+	minPasswordLength = 6
 )
 
 type CmdArgs struct {
@@ -75,13 +77,13 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	password := r.URL.Query().Get("password")
 
-	if len(name) < 3 {
+	if len(name) < minNameLength {
 		log.Warn().Str("name", name).Msg("name is too short")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if len(password) < 6 {
+	if len(password) < minPasswordLength {
 		log.Warn().Str("name", name).Msg("password is too short")
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -190,8 +192,9 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		"user_name": "%s", 
 		"server_url": "alpha.ubikom.cc",
 		"key_mnemonic": [%s],
-		"key_id": "%s"
-}`, name, userName, strings.Join(mnemonicQuoted, ", "), keyID)
+		"key_id": "%s",
+		"password": "%s"
+}`, name, userName, strings.Join(mnemonicQuoted, ", "), keyID, password)
 }
 
 func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
