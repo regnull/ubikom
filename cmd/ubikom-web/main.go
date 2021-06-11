@@ -66,6 +66,8 @@ func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
 
 	found := err == nil
 
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+
 	// If we got here, the name record was found.
 	fmt.Fprintf(w, `{
 	"name": "%s", 
@@ -186,6 +188,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		mnemonicQuoted[i] = "\"" + mnemonicList[i] + "\""
 	}
 
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprintf(w, `{
 		"name": "%s",
@@ -204,6 +207,7 @@ func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Content-Type", "application/octet-stream")
 	w.Header().Add("Content-Disposition", "attachment; filename=\"ubikom.private_key\"")
 	w.Write(key)

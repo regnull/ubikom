@@ -18,6 +18,11 @@ You are also able to interact with the legacy email world using our gateway (com
 
 Long ago, you were able to run your own email server, which gave you an easy way to communicate with the world. Now you have to use Google or Microsoft for the simple task of sending messages to each other. Your identity is controlled by those companies, not by you. We want to give the identity back to the user and make it decentralized and not controlled by any entity. Based on this, we want to re-imagine email which is secure, private, and simple. It should be trivial for everyone (and everything) to register a name and start communicating.
 
+## New in v0.4
+
+You can now try Ubikom without running anything on your computer. At [ubikom.cc](https://ubikom.cc) you can get your identity
+so that you can configure your email client right away. You can also do everything locally, as described below.
+
 ## Getting the Binaries
 
 As of now, you must run a few commands on your machine to generate the keys in a secure way. 
