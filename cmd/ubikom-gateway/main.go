@@ -122,7 +122,7 @@ func main() {
 				log.Error().Err(err).Msg("error running sendmail")
 			}
 
-			log.Debug().Str("to", to).Msg("external mail sent")
+			log.Debug().Strs("to", to).Msg("external mail sent")
 		}
 		time.Sleep(args.PollInterval)
 	}

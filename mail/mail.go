@@ -54,7 +54,7 @@ func ExtractReceiverInternalName(content string) (receiver string, err error) {
 }
 
 // RewriteFromHeader rewrites the message to change sender from internal to external format.
-func RewriteFromHeader(message string) (rewrittenMessage string, fromAddr, toAddr string, err error) {
+func RewriteFromHeader(message string) (rewrittenMessage string, fromAddr string, toAddr []string, err error) {
 	contentReader := strings.NewReader(message)
 	mailMsg, err := mail.ReadMessage(contentReader)
 	if err != nil {
@@ -67,15 +67,22 @@ func RewriteFromHeader(message string) (rewrittenMessage string, fromAddr, toAdd
 		return
 	}
 
-	to := mailMsg.Header.Get("To")
-	a, err := mail.ParseAddress(to)
-	if err != nil {
-		return
+	// Remove internal addresses from the list of recipients.
+	var externalAddresses []string
+	for _, to := range strings.Split(mailMsg.Header.Get("To"), ",") {
+		a, err := mail.ParseAddress(to)
+		if err != nil {
+			// Invalid address.
+			return "", "", nil, err
+		}
+		if !IsInternal(a.Address) {
+			externalAddresses = append(externalAddresses, to)
+			toAddr = append(toAddr, a.Address)
+		}
 	}
-	toAddr = a.Address
 
 	var buf bytes.Buffer
-	buf.Write([]byte(fmt.Sprintf("To: %s\n", mailMsg.Header.Get("To"))))
+	buf.Write([]byte(fmt.Sprintf("To: %s\n", strings.Join(externalAddresses, ","))))
 	buf.Write([]byte(fmt.Sprintf("From: %s\n", fullAddr)))
 	for name, values := range mailMsg.Header {
 		if name == "From" {

@@ -12,7 +12,7 @@ X-UIDL: a0670b6f6749ce00f2c3ad6777ae2f8db98c83bdbbfc6321c39f3a888a460809
 X-Mozilla-Status: 0001
 X-Mozilla-Status2: 00000000
 X-Mozilla-Keys:                                                                                 
-To: Leonid Gorkin <regnull@gmail.com>
+To: Leonid Gorkin <regnull@gmail.com>, Geonid Lorkin <nullreg@gmail.com>
 From: Leonid Gorkin <lgx@x>
 Subject: testing
 Message-ID: <a0a78dfe-f4f4-3f41-f52a-f965071d7404@x>
@@ -50,7 +50,8 @@ func Test_RewriteFromHeader(t *testing.T) {
 	_, from, to, err := RewriteFromHeader(testMessage)
 	assert.NoError(err)
 	assert.EqualValues("lgx@ubikom.cc", from)
-	assert.EqualValues("regnull@gmail.com", to)
+	assert.Contains(to, "regnull@gmail.com")
+	assert.Contains(to, "nullreg@gmail.com")
 }
 
 func Test_StripDomain(t *testing.T) {
