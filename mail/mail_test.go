@@ -52,3 +52,22 @@ func Test_RewriteFromHeader(t *testing.T) {
 	assert.EqualValues("lgx@ubikom.cc", from)
 	assert.EqualValues("regnull@gmail.com", to)
 }
+
+func Test_StripDomain(t *testing.T) {
+	assert := assert.New(t)
+
+	assert.EqualValues("foo", StripDomain("foo"))
+	assert.EqualValues("foo", StripDomain("foo@bar"))
+	assert.EqualValues("foo", StripDomain("foo@bar.com"))
+}
+
+func Test_IsInternal(t *testing.T) {
+	assert := assert.New(t)
+
+	assert.True(IsInternal("foo"))
+	assert.True(IsInternal("foo@x"))
+	assert.True(IsInternal("foo@ubikom.cc"))
+
+	assert.False(IsInternal("foo@gmail.com"))
+	assert.False(IsInternal("foo@somewhere"))
+}

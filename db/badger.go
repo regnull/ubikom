@@ -163,6 +163,7 @@ func (b *BadgerDB) RegisterName(originator, target *easyecc.PublicKey, name stri
 }
 
 func (b *BadgerDB) RegisterAddress(originator, target *easyecc.PublicKey, name string, protocol pb.Protocol, address string) error {
+	name = strings.ToLower(name)
 	err := b.db.Update(func(txn *badger.Txn) error {
 		// If the target has a parent, it must be the parent who sends the request.
 		targetParent, err := GetParent(txn, target)

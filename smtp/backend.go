@@ -1,18 +1,16 @@
 package smtp
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/mail"
-	"strings"
 
 	"github.com/btcsuite/btcutil/base58"
 	gosmtp "github.com/emersion/go-smtp"
 	"github.com/regnull/easyecc"
+	umail "github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/rs/zerolog/log"
@@ -69,7 +67,8 @@ func (bkd *Backend) AnonymousLogin(state *gosmtp.ConnectionState) (gosmtp.Sessio
 
 // A Session is returned after successful login.
 type Session struct {
-	from, to     string
+	from         string
+	to           []string
 	lookupClient pb.LookupServiceClient
 	dumpClient   pb.DMSDumpServiceClient
 	privateKey   *easyecc.PrivateKey
@@ -84,7 +83,7 @@ func (s *Session) Mail(from string, opts gosmtp.MailOptions) error {
 
 func (s *Session) Rcpt(to string) error {
 	log.Debug().Str("to", to).Msg("[SMTP] <- RCPT")
-	s.to = to
+	s.to = append(s.to, to)
 	log.Debug().Msg("[SMTP] -> RCPT")
 	return nil
 }
@@ -101,46 +100,41 @@ func (s *Session) Data(r io.Reader) error {
 	}
 
 	// Send the actual message.
-	sender := s.from
-	if strings.HasSuffix(sender, "@x") {
-		sender = strings.Replace(sender, "@x", "", -1)
-	}
-	if strings.HasSuffix(sender, "@ubikom.cc") {
-		sender = strings.Replace(sender, "@ubikom.cc", "", -1)
+	sender := umail.StripDomain(s.from)
+
+	var internalAddresses []string
+	var externalAddresses []string
+
+	for _, to := range s.to {
+		if umail.IsInternal(to) {
+			internalAddresses = append(internalAddresses, umail.StripDomain(to))
+		} else {
+			externalAddresses = append(externalAddresses, umail.StripDomain(to))
+		}
 	}
 
-	receiver := s.to
-	if strings.HasSuffix(receiver, "@x") {
-		receiver = strings.Replace(receiver, "@x", "", -1)
-	}
-	if strings.HasSuffix(receiver, "@ubikom.cc") {
-		receiver = strings.Replace(receiver, "@ubikom.cc", "", -1)
+	// Send to internal addresses one by one.
+	for _, addr := range internalAddresses {
+		log.Debug().Str("sender", sender).Str("receiver", addr).Msg("about to send message")
+
+		err = protoutil.SendMessage(context.Background(), s.privateKey, body, sender, addr, s.lookupClient)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to send message")
+			return fmt.Errorf("failed to send message: %w", err)
+		}
 	}
 
-	contentReader := bytes.NewReader(body)
-	mailMsg, err := mail.ReadMessage(contentReader)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to parse email message")
-		return fmt.Errorf("failed to send message: %w", err)
-	}
-	to := mailMsg.Header.Get("To")
-	toAddr, err := mail.ParseAddress(to)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to parse address")
-		return fmt.Errorf("failed to send message: %w", err)
-	}
-	if !strings.HasSuffix(toAddr.Address, "@x") && !strings.HasSuffix(toAddr.Address, "@ubikom.cc") {
-		log.Debug().Str("to", to).Msg("this looks like a message to an external recipeint, I will send it to the gateway")
-		receiver = "gateway"
+	// If we have any external addresses, send the message to the gateway, and it will deal with it.
+	if len(externalAddresses) > 0 {
+		log.Debug().Str("sender", sender).Str("receiver", "gateway").Msg("about to send message to the gateway")
+
+		err = protoutil.SendMessage(context.Background(), s.privateKey, body, sender, "gateway", s.lookupClient)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to send message")
+			return fmt.Errorf("failed to send message: %w", err)
+		}
 	}
 
-	log.Debug().Str("sender", sender).Str("receiver", receiver).Msg("about to send message")
-
-	err = protoutil.SendMessage(context.Background(), s.privateKey, body, sender, receiver, s.lookupClient)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to send message")
-		return fmt.Errorf("failed to send message: %w", err)
-	}
 	return nil
 }
 

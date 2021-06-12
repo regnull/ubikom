@@ -93,3 +93,27 @@ func RewriteFromHeader(message string) (rewrittenMessage string, fromAddr, toAdd
 	rewrittenMessage = string(buf.Bytes())
 	return
 }
+
+// StripDomain removes the domain name from name.
+func StripDomain(name string) string {
+	i := strings.Index(name, "@")
+	if i == -1 {
+		return name
+	}
+	return name[:i]
+}
+
+// IsInternal returns true if the name refers to an internal recipient.
+func IsInternal(name string) bool {
+	i := strings.Index(name, "@")
+	if i == -1 {
+		return true
+	}
+	if strings.HasSuffix(name, ubikomShortSuffix) {
+		return true
+	}
+	if strings.HasSuffix(name, ubikomLongSuffix) {
+		return true
+	}
+	return false
+}
