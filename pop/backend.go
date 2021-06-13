@@ -360,7 +360,7 @@ func (b *Backend) Update(user string) error {
 	for i, msg := range sess.Messages {
 		if sess.Deleted[i] {
 			if b.localStore != nil {
-				b.localStore.Remove(msg, b.privateKey.PublicKey().SerializeCompressed())
+				b.localStore.Remove(msg, sess.PrivateKey.PublicKey().SerializeCompressed())
 			}
 			count++
 			continue
