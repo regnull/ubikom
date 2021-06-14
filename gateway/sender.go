@@ -1,10 +1,8 @@
 package gateway
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"time"
 
 	"github.com/regnull/easyecc"
@@ -24,6 +22,7 @@ type SenderOptions struct {
 	DumpClient             pb.DMSDumpServiceClient
 	GlobalRateLimitPerHour int
 	PollInterval           time.Duration
+	ExternalSender         ExternalSender
 }
 
 // Sender sends emails to the outside world.
@@ -33,6 +32,7 @@ type Sender struct {
 	dumpClient             pb.DMSDumpServiceClient
 	globalRateLimitPerHour int
 	pollInterval           time.Duration
+	externalSender         ExternalSender
 }
 
 // NewSender creates and returns a new sender.
@@ -42,7 +42,8 @@ func NewSender(opts *SenderOptions) *Sender {
 		lookupClient:           opts.LookupClient,
 		dumpClient:             opts.DumpClient,
 		globalRateLimitPerHour: opts.GlobalRateLimitPerHour,
-		pollInterval:           opts.PollInterval}
+		pollInterval:           opts.PollInterval,
+		externalSender:         opts.ExternalSender}
 }
 
 // Run blocks while running receive loop and returns when the context expires, or
@@ -53,6 +54,7 @@ func (s *Sender) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			ticker.Stop()
 			return fmt.Errorf("context done")
 		case <-ticker.C:
 			// Poll for messages, ignore errors.
@@ -90,7 +92,7 @@ func (s *Sender) poll(ctx context.Context, rateLimiter *rate.Limiter) error {
 	for _, content := range messages {
 		// Check rate limit.
 
-		if !rateLimiter.Allow() {
+		if rateLimiter != nil && !rateLimiter.Allow() {
 			log.Warn().Msg("external send is blocked by the global rate limiter")
 			continue
 		}
@@ -104,12 +106,9 @@ func (s *Sender) poll(ctx context.Context, rateLimiter *rate.Limiter) error {
 		}
 
 		// Pipe to sendmail.
-
-		cmd := exec.Command("sendmail", "-t", "-f", from)
-		cmd.Stdin = bytes.NewReader([]byte(rewritten))
-		err = cmd.Run()
+		err = s.externalSender.Send(from, rewritten)
 		if err != nil {
-			log.Error().Err(err).Msg("error running sendmail")
+			log.Error().Err(err).Msg("error sending mail")
 			continue
 		}
 

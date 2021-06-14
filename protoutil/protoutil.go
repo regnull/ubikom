@@ -60,6 +60,32 @@ func VerifySignature(sig *pb.Signature, serializedKey []byte, content []byte) bo
 	return true
 }
 
+// CreateMessages creates a new DMSMessage, signed and encrypted.
+func CreateMessage(privateKey *easyecc.PrivateKey, body []byte, sender, receiver string,
+	receiverKey *easyecc.PublicKey) (*pb.DMSMessage, error) {
+	encryptedBody, err := privateKey.Encrypt([]byte(body), receiverKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt message: %w", err)
+	}
+
+	hash := util.Hash256(encryptedBody)
+	sig, err := privateKey.Sign(hash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign message, %w", err)
+	}
+
+	return &pb.DMSMessage{
+		Sender:   sender,
+		Receiver: receiver,
+		Content:  encryptedBody,
+		Signature: &pb.Signature{
+			R: sig.R.Bytes(),
+			S: sig.S.Bytes(),
+		},
+	}, nil
+}
+
+// SendMessage creates a new DMSMessage and sends it out to the appropriate address.
 func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
 	sender, receiver string, lookupService pb.LookupServiceClient) error {
 
@@ -97,25 +123,9 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	}
 	defer dumpConn.Close()
 
-	encryptedBody, err := privateKey.Encrypt([]byte(body), receiverKey)
+	msg, err := CreateMessage(privateKey, body, sender, receiver, receiverKey)
 	if err != nil {
-		return fmt.Errorf("failed to encrypt message: %w", err)
-	}
-
-	hash := util.Hash256(encryptedBody)
-	sig, err := privateKey.Sign(hash)
-	if err != nil {
-		return fmt.Errorf("failed to sign message, %w", err)
-	}
-
-	msg := &pb.DMSMessage{
-		Sender:   sender,
-		Receiver: receiver,
-		Content:  encryptedBody,
-		Signature: &pb.Signature{
-			R: sig.R.Bytes(),
-			S: sig.S.Bytes(),
-		},
+		return err
 	}
 
 	client := pb.NewDMSDumpServiceClient(dumpConn)
