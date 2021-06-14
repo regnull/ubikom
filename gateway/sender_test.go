@@ -93,7 +93,9 @@ func Test_Sender_Run(t *testing.T) {
 			cancel()
 		}).
 		Return(
-			nil, status.Error(codes.NotFound, "no more messages")).Once()
+			nil, status.Error(codes.NotFound, "no more messages")).Once().
+		Return(
+			nil, status.Error(codes.NotFound, "no more messages")).Once().Maybe() // In case of race condition.
 
 	// Make sure the right emails get sent out.
 	externalSender.On("Send", "spongebob@ubikom.cc",
