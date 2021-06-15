@@ -79,6 +79,8 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	password := r.URL.Query().Get("password")
 
+	log.Info().Str("password", password).Msg("got password")
+
 	if len(name) < minNameLength {
 		log.Warn().Str("name", name).Msg("name is too short")
 		w.WriteHeader(http.StatusBadRequest)

@@ -124,3 +124,24 @@ func IsInternal(name string) bool {
 	}
 	return false
 }
+
+// AddHeaders adds headers to a message.
+func AddHeaders(content string, headers map[string]string) string {
+	lines := strings.Split(content, "\n")
+	var newLines []string
+
+	for i, line := range lines {
+		if line == "" {
+			// This line separates headers from the body.
+			for name, value := range headers {
+				headerLine := name + ": " + value
+				newLines = append(newLines, headerLine)
+			}
+			newLines = append(newLines, lines[i:]...)
+			return strings.Join(newLines, "\n")
+		}
+		newLines = append(newLines, line)
+	}
+	// This means the body was not found, weird.
+	return strings.Join(newLines, "\n")
+}

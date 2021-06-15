@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,4 +72,17 @@ func Test_IsInternal(t *testing.T) {
 
 	assert.False(IsInternal("foo@gmail.com"))
 	assert.False(IsInternal("foo@somewhere"))
+}
+
+func Test_AddHeaders(t *testing.T) {
+	assert := assert.New(t)
+
+	headers := map[string]string{
+		"X-foo": "bar",
+		"X-baz": "bazbaz",
+	}
+	newMessage := AddHeaders(testMessage, headers)
+	assert.True(len(newMessage) > len(testMessage))
+	assert.True(strings.Index(newMessage, "X-foo:") != -1)
+	assert.True(strings.Index(newMessage, "X-baz:") != -1)
 }

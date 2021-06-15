@@ -157,7 +157,6 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 		}
 		sess.Messages = append(sess.Messages, msg)
 		sess.Deleted = append(sess.Deleted, false)
-		// sess.RawMessages = append(sess.RawMessages, msg)
 		count++
 	}
 	log.Debug().Int("count", count).Msg("total messages")
