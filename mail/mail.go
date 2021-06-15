@@ -131,6 +131,7 @@ func AddHeaders(content string, headers map[string]string) string {
 	var newLines []string
 
 	for i, line := range lines {
+		line = strings.Replace(line, "\r", "", -1)
 		if line == "" {
 			// This line separates headers from the body.
 			for name, value := range headers {

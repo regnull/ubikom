@@ -8,6 +8,7 @@ import (
 
 	"github.com/regnull/easyecc"
 
+	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/pow"
 	"github.com/regnull/ubikom/util"
@@ -63,7 +64,13 @@ func VerifySignature(sig *pb.Signature, serializedKey []byte, content []byte) bo
 // CreateMessages creates a new DMSMessage, signed and encrypted.
 func CreateMessage(privateKey *easyecc.PrivateKey, body []byte, sender, receiver string,
 	receiverKey *easyecc.PublicKey) (*pb.DMSMessage, error) {
-	encryptedBody, err := privateKey.Encrypt([]byte(body), receiverKey)
+	headers := map[string]string{
+		"X-Ubikom-Sender":       sender,
+		"X-Ubikom-Sender-Key":   privateKey.PublicKey().Address(),
+		"X-Ubikom-Receiver":     receiver,
+		"X-Ubikom-Receiver-Key": receiverKey.Address()}
+	withHeaders := mail.AddHeaders(string(body), headers)
+	encryptedBody, err := privateKey.Encrypt([]byte(withHeaders), receiverKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt message: %w", err)
 	}

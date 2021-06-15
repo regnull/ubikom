@@ -3,7 +3,6 @@ package gateway
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -98,10 +97,8 @@ func Test_Sender_Run(t *testing.T) {
 			nil, status.Error(codes.NotFound, "no more messages")).Once().Maybe() // In case of race condition.
 
 	// Make sure the right emails get sent out.
-	externalSender.On("Send", "spongebob@ubikom.cc",
-		strings.Replace(content1, "spongebob@x", "spongebob@ubikom.cc", 1)).Return(nil).Once()
-	externalSender.On("Send", "spongebob@ubikom.cc",
-		strings.Replace(content2, "spongebob@x", "spongebob@ubikom.cc", 1)).Return(nil).Once()
+	externalSender.On("Send", "spongebob@ubikom.cc", mock.Anything).Return(nil).Once()
+	externalSender.On("Send", "spongebob@ubikom.cc", mock.Anything).Return(nil).Once()
 
 	senderOpts := &SenderOptions{
 		PrivateKey:             gatewayKey,
