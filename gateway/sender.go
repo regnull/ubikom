@@ -71,7 +71,11 @@ func (s *Sender) poll(ctx context.Context, rateLimiter *rate.Limiter) error {
 	for {
 		res, err := s.dumpClient.Receive(ctx, &pb.ReceiveRequest{IdentityProof: protoutil.IdentityProof(s.privateKey)})
 		if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
-			log.Info().Msg("no new messages")
+			if len(messages) == 0 {
+				log.Info().Msg("no new messages")
+			} else {
+				log.Info().Int("count", len(messages)).Msg("messages received")
+			}
 			break
 		}
 		if err != nil {

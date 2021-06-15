@@ -1,25 +1,18 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"os"
-	"os/exec"
 	"time"
 
-	"golang.org/x/time/rate"
-
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/gateway"
 	"github.com/regnull/ubikom/globals"
-	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
-	"github.com/regnull/ubikom/protoutil"
-	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 )
 
 type CmdArgs struct {
@@ -76,54 +69,16 @@ func main() {
 
 	lookupClient := pb.NewLookupServiceClient(lookupConn)
 
-	// For now, we use a global rate limiter to prevent spam.
-	globalRateLimiter := rate.NewLimiter(rate.Every(time.Hour), args.GlobalRateLimitPerHour)
-
-	ctx := context.Background()
-	for {
-		for {
-			res, err := dumpClient.Receive(ctx, &pb.ReceiveRequest{IdentityProof: protoutil.IdentityProof(privateKey)})
-			if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
-				log.Info().Msg("no new messages")
-				break
-			}
-			if err != nil {
-				log.Error().Err(err).Msg("failed to receive message")
-				break
-			}
-			msg := res.GetMessage()
-			content, err := protoutil.DecryptMessage(ctx, lookupClient, privateKey, msg)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to decrypt message")
-				break
-			}
-
-			// Check rate limit.
-
-			if !globalRateLimiter.Allow() {
-				log.Warn().Msg("external send is blocked by the global rate limiter")
-				break
-			}
-
-			// Parse email.
-
-			rewritten, from, to, err := mail.RewriteFromHeader(content)
-			if err != nil {
-				log.Error().Err(err).Msg("error re-writting message")
-				break
-			}
-
-			// Pipe to sendmail.
-
-			cmd := exec.Command("sendmail", "-t", "-f", from)
-			cmd.Stdin = bytes.NewReader([]byte(rewritten))
-			err = cmd.Run()
-			if err != nil {
-				log.Error().Err(err).Msg("error running sendmail")
-			}
-
-			log.Debug().Strs("to", to).Msg("external mail sent")
-		}
-		time.Sleep(args.PollInterval)
+	senderOpts := &gateway.SenderOptions{
+		PrivateKey:             privateKey,
+		LookupClient:           lookupClient,
+		DumpClient:             dumpClient,
+		GlobalRateLimitPerHour: args.GlobalRateLimitPerHour,
+		PollInterval:           args.PollInterval,
+		ExternalSender:         gateway.NewSendmailSender(),
 	}
+
+	sender := gateway.NewSender(senderOpts)
+	err = sender.Run(context.Background())
+	log.Info().Err(err).Msg("exiting")
 }
