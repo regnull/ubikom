@@ -130,7 +130,10 @@ func main() {
 
 	var localStore store.Store
 	if args.LocalStorePath != "" {
-		localStore = store.NewFile(args.LocalStorePath, time.Duration(args.MaxMessageAgeHours)*time.Hour)
+		localStore, err = store.NewBadger(args.LocalStorePath, time.Duration(args.MaxMessageAgeHours)*time.Hour)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create local store")
+		}
 	}
 
 	popOpts := &pop.ServerOptions{
