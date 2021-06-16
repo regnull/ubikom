@@ -45,17 +45,10 @@ type Args struct {
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
 
-	// Parse the config file, if it exists.
-	var configFile string
-	flagSet := flag.NewFlagSet("", flag.ContinueOnError)
-	flagSet.StringVar(&configFile, "config", "", "location of the config file")
-	err := flagSet.Parse(os.Args[1:])
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to parse command line arguments")
-	}
+	configFile := util.GetConfigFromArgs(os.Args)
 
 	configArgs := &Args{}
-	err = util.FindAndParseConfigFile(configFile, &configArgs)
+	err := util.FindAndParseConfigFile(configFile, &configArgs)
 	if err != nil {
 		log.Warn().Err(err).Msg("not using config file")
 	}

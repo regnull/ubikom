@@ -164,6 +164,20 @@ func StatusCodeFromError(err error) codes.Code {
 	return s.Code()
 }
 
+// ErrEqualCode returns true if the given error has the specified code (gRPC status code).
 func ErrEqualCode(err error, code codes.Code) bool {
 	return StatusCodeFromError(err) == code
+}
+
+// GetConfigFromArgs returns the value of --config flag from the arguments.
+func GetConfigFromArgs(args []string) string {
+	for i, arg := range args {
+		if arg == "--config" {
+			if len(args) <= i+1 {
+				return ""
+			}
+			return args[i+1]
+		}
+	}
+	return ""
 }

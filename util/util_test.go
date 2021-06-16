@@ -19,3 +19,16 @@ func Test_ValidateName(t *testing.T) {
 	assert.False(ValidateName("some-name-here-$$$"))
 	assert.False(ValidateName("some-very-long-name-here-yes-sir-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890-1234567890"))
 }
+
+func Test_GetConfigFromArgs(t *testing.T) {
+	assert := assert.New(t)
+
+	c := GetConfigFromArgs([]string{"whatever", "--config", "foo"})
+	assert.EqualValues("foo", c)
+
+	c = GetConfigFromArgs([]string{"whatever", "--config"})
+	assert.EqualValues("", c)
+
+	c = GetConfigFromArgs([]string{"foo", "bar", "baz"})
+	assert.EqualValues("", c)
+}
