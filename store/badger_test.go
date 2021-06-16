@@ -3,6 +3,7 @@ package store
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -29,7 +30,7 @@ func createTestBadgerStore() (Store, CleanupFunc, error) {
 		return nil, func() {}, err
 	}
 
-	store, err := NewBadger(dir)
+	store, err := NewBadger(dir, time.Hour)
 	if err != nil {
 		return nil, func() {}, err
 	}

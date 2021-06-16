@@ -3,6 +3,7 @@ package store
 import (
 	"crypto/sha256"
 	"fmt"
+	"time"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/regnull/ubikom/pb"
@@ -11,15 +12,16 @@ import (
 )
 
 type Badger struct {
-	db *badger.DB
+	db  *badger.DB
+	ttl time.Duration
 }
 
-func NewBadger(dir string) (*Badger, error) {
+func NewBadger(dir string, ttl time.Duration) (*Badger, error) {
 	db, err := badger.Open(badger.DefaultOptions(dir))
 	if err != nil {
 		return nil, err
 	}
-	return &Badger{db: db}, nil
+	return &Badger{db: db, ttl: ttl}, nil
 }
 
 func (b *Badger) Save(msg *pb.DMSMessage, receiverKey []byte) error {
@@ -31,7 +33,8 @@ func (b *Badger) Save(msg *pb.DMSMessage, receiverKey []byte) error {
 
 	dbKey := "msg_" + util.SerializedCompressedToAddress(receiverKey) + "_" + msgID
 	err = b.db.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte(dbKey), bb)
+		e := badger.NewEntry([]byte(dbKey), bb).WithTTL(b.ttl)
+		err := txn.SetEntry(e)
 		if err != nil {
 			return err
 		}
