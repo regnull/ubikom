@@ -20,11 +20,15 @@ type DumpServer struct {
 	store        store.Store
 }
 
-func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient, maxMessageAgeHours int) *DumpServer {
+func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient, maxMessageAgeHours int) (*DumpServer, error) {
+	store, err := store.NewBadger(baseDir, time.Duration(maxMessageAgeHours)*time.Hour)
+	if err != nil {
+		return nil, err
+	}
 	return &DumpServer{
 		baseDir:      baseDir,
 		lookupClient: lookupClient,
-		store:        store.NewFile(baseDir, time.Duration(maxMessageAgeHours)*time.Hour)}
+		store:        store}, nil
 }
 
 func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {

@@ -5,7 +5,7 @@ TEMP_DIR=$(mktemp -d)
 GOOS="linux darwin windows"
 GOARCH="amd64"
 WIN_EXE=".exe"
-for BIN_NAME in ubikom-server ubikom-dump ubikom-cli ubikom-proxy easy-setup ubikom-gateway ubikom-receiver ubikom-web
+for BIN_NAME in ubikom-server ubikom-dump ubikom-cli ubikom-proxy easy-setup ubikom-gateway ubikom-web
 do
     MAIN_DIR="$SCRIPT_DIR/../cmd/$BIN_NAME"
     pushd $MAIN_DIR > /dev/null

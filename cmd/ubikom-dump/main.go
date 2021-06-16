@@ -60,7 +60,10 @@ func main() {
 	}
 	defer conn.Close()
 
-	dumpServer := server.NewDumpServer(args.DataDir, lookupService, args.MaxMessageAgeHours)
+	dumpServer, err := server.NewDumpServer(args.DataDir, lookupService, args.MaxMessageAgeHours)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create data store")
+	}
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", args.Port))
 	if err != nil {
