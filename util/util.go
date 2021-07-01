@@ -177,6 +177,12 @@ func GetConfigFromArgs(args []string) string {
 				return ""
 			}
 			return args[i+1]
+		} else if strings.HasPrefix(arg, "--config=") {
+			parts := strings.Split(arg, "=")
+			if len(parts) != 2 {
+				return ""
+			}
+			return parts[1]
 		}
 	}
 	return ""

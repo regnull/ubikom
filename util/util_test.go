@@ -31,4 +31,7 @@ func Test_GetConfigFromArgs(t *testing.T) {
 
 	c = GetConfigFromArgs([]string{"foo", "bar", "baz"})
 	assert.EqualValues("", c)
+
+	c = GetConfigFromArgs([]string{"whatever", "--config=blah"})
+	assert.EqualValues("blah", c)
 }
