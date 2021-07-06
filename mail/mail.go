@@ -49,7 +49,30 @@ func ExtractReceiverInternalName(content string) (receiver string, err error) {
 	if err != nil {
 		return
 	}
-	receiver = strings.Replace(address.Address, "@ubikom.cc", "", 1)
+	receiver = strings.Replace(address.Address, ubikomLongSuffix, "", 1)
+	return
+}
+
+func ExtractReceiverInternalNames(content string) (receiver []string, err error) {
+	contentReader := strings.NewReader(content)
+	mailMsg, err := mail.ReadMessage(contentReader)
+	if err != nil {
+		return
+	}
+	addressStr := mailMsg.Header.Get("To")
+	receivers := strings.Split(addressStr, ",")
+	for _, r := range receivers {
+		var address *mail.Address
+		address, err = mail.ParseAddress(r)
+		if err != nil {
+			return
+		}
+		if !strings.HasSuffix(address.Address, ubikomLongSuffix) {
+			// This is not a message for us.
+			continue
+		}
+		receiver = append(receiver, strings.Replace(address.Address, ubikomLongSuffix, "", 1))
+	}
 	return
 }
 

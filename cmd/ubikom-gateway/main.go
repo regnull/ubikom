@@ -101,16 +101,18 @@ func receive(ctx context.Context, privateKey *easyecc.PrivateKey, lookupClient p
 	}
 
 	// Get the receiver name.
-	receiver, err := mail.ExtractReceiverInternalName(string(body))
+	receivers, err := mail.ExtractReceiverInternalNames(string(body))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get receiver name")
 	}
 
-	// Send the message.
-	log.Debug().Str("receiver", receiver).Msg("sending mail")
-	err = protoutil.SendMessage(ctx, privateKey, body, sender, receiver, lookupClient)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to send message")
+	for _, r := range receivers {
+		// Send the message.
+		log.Debug().Str("receiver", r).Msg("sending mail")
+		err = protoutil.SendMessage(ctx, privateKey, body, sender, r, lookupClient)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to send message")
+		}
 	}
 }
 

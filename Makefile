@@ -59,3 +59,7 @@ test:
 cover:
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out
+
+compile-diag:
+	java -jar tools/plantuml.jar -o ../doc diagram
+
