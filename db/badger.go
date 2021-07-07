@@ -10,6 +10,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/dgraph-io/badger/v3"
 	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/protoio"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
@@ -503,4 +504,41 @@ func CheckRegisterNameAuthorization(txn *badger.Txn, originator, target, prev *e
 
 	// Nothing else can be done.
 	return false, nil
+}
+
+func (b *BadgerDB) WriteKeys(w protoio.Writer, cutoffTime uint64) error {
+	err := b.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		prefix := []byte(keyPrefix)
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			name := string(item.Key())
+			publicKeyBase58 := name[len(keyPrefix):]
+			keyRec := &pb.KeyRecord{}
+			err := item.Value(func(val []byte) error {
+				err := proto.Unmarshal(val, keyRec)
+				if err != nil {
+					return fmt.Errorf("failed to unmarshal key record: %w", err)
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			if keyRec.RegistrationTimestamp > int64(cutoffTime) {
+				continue
+			}
+			rec := &pb.DBRecord{
+				Name: publicKeyBase58,
+				Payload: &pb.DBRecord_Key{
+					Key: keyRec}}
+			err = w.Write(rec)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
 }

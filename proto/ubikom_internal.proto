@@ -15,3 +15,10 @@ message KeyRecord {
     // Parent key (it can do everything this key can do).
     repeated bytes parent_key = 5;
 }
+
+message DBRecord {
+    string name = 1;
+    oneof payload {
+        KeyRecord key = 10;
+    }
+}
