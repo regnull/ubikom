@@ -2,6 +2,8 @@ syntax = "proto3";
 package Ubikom;
 option go_package="./;pb";
 
+import "google/protobuf/any.proto";
+
 message KeyRecord {
     // Timestamp when the key was registered.
     int64 registration_timestamp = 1;
@@ -21,4 +23,13 @@ message DBRecord {
     oneof payload {
         KeyRecord key = 10;
     }
+}
+
+message DBValue {
+    uint64 timestamp = 1;
+    google.protobuf.Any payload = 2;
+}
+
+message DBEntry {
+    repeated DBValue = 1;
 }

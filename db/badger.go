@@ -526,9 +526,9 @@ func (b *BadgerDB) WriteKeys(w protoio.Writer, cutoffTime uint64) error {
 			if err != nil {
 				return err
 			}
-			if keyRec.RegistrationTimestamp > int64(cutoffTime) {
-				continue
-			}
+			// if keyRec.RegistrationTimestamp > int64(cutoffTime) {
+			// 	continue
+			// }
 			rec := &pb.DBRecord{
 				Name: publicKeyBase58,
 				Payload: &pb.DBRecord_Key{
