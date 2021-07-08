@@ -2,6 +2,7 @@ package protoio
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/regnull/ubikom/pb"
@@ -14,11 +15,13 @@ func Test_ReaderWriter(t *testing.T) {
 
 	msg := pb.DMSMessage{Sender: "foo", Receiver: "bar"}
 	var buf bytes.Buffer
-	writer := NewWriter(&buf)
+	hashWriter := NewSha256Writer(&buf)
+	writer := NewWriter(hashWriter)
 	err := writer.Write(&msg)
 	assert.NoError(err)
 
 	assert.True(len(buf.Bytes()) > 6)
+	assert.EqualValues("d34eb71a6a9b9a077536f4b29bc454885e4a17bddce56dcd1910fc8fea327429", fmt.Sprintf("%x", hashWriter.Hash()))
 
 	readBuf := bytes.NewBuffer(buf.Bytes())
 	reader := NewReader(readBuf)
