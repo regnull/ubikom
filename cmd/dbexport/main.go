@@ -30,7 +30,8 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create file")
 	}
 	w := bufio.NewWriter(f)
-	protoWriter := protoio.NewWriter(w)
+	hashWriter := protoio.NewSha256Writer(w)
+	protoWriter := protoio.NewWriter(hashWriter)
 	err = db.WriteKeys(protoWriter, math.MaxUint64)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to write keys")
