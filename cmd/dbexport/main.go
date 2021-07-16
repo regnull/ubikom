@@ -69,7 +69,7 @@ func main() {
 	f.Close()
 
 	// The header will include hashes of all files, one line per file, in "name hash\n" format.
-	header := fmt.Sprintf("keys %X\n", hashWriter.Hash())
+	header := fmt.Sprintf("keys %x\n", hashWriter.Hash())
 
 	signed, err := protoutil.CreateSigned(key, []byte(header))
 	if err != nil {
