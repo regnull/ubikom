@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"math"
 	"os"
@@ -67,7 +68,10 @@ func main() {
 	w.Flush()
 	f.Close()
 
-	signed, err := protoutil.CreateSigned(key, hashWriter.Hash())
+	// The header will include hashes of all files, one line per file, in "name hash\n" format.
+	header := fmt.Sprintf("keys %X\n", hashWriter.Hash())
+
+	signed, err := protoutil.CreateSigned(key, []byte(header))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create signature")
 	}
