@@ -328,15 +328,17 @@ func (b *Backend) UidlMessage(user string, msgId int) (exists bool, uid string, 
 		return false, "", fmt.Errorf("invalid session")
 	}
 
-	if msgId > len(sess.Messages) {
+	// Although it's not quite clear from RFC 1939, msgId ranges from 1 to len(sess.Messages).
+
+	if msgId <= 0 || msgId > len(sess.Messages) {
 		log.Error().Msg("[POP] -> UIDL-MESSAGE, no such message")
 		return false, "", nil
 	}
-	if sess.Deleted[msgId] {
+	if sess.Deleted[msgId-1] {
 		log.Error().Msg("[POP] -> UIDL-MESSAGE, message is deleted")
 		return false, "", nil
 	}
-	id, err := getMessageID(sess.Messages[msgId])
+	id, err := getMessageID(sess.Messages[msgId-1])
 	if err != nil {
 		log.Error().Err(err).Msg("error computing message id")
 		return false, "", fmt.Errorf("error computing message id")
