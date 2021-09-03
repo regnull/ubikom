@@ -139,6 +139,12 @@ Send a message to yourself (bob@x) to make sure everything works. You will be pr
 * Email gateway
 * Decentralize the identity service
 
+## Using CLI
+
+Ubikom CLI utility allows you to perform all low-level key, name and address operations. 
+
+You can find the CLI command reference [here](https://github.com/regnull/ubikom/blob/master/doc/cli.md).
+
 ## References and Other Similar Projects
 
 [Self-Sovereign Identity](https://en.wikipedia.org/wiki/Self-sovereign_identity)
