@@ -239,6 +239,8 @@ github.com/regnull/easyecc v0.1.3 h1:XFNdGq6DQf7J24d98fmMYFfxt45YzhVSyB4hDn/+Was
 github.com/regnull/easyecc v0.1.3/go.mod h1:w5fHwaq+q9ZQ1DW/H4111lTpc4mA7F70pzGRG+qmJ6g=
 github.com/regnull/popgun v0.1.2 h1:aydgJjJDw17vi/pqDDw57U7WaJAyhH1aecKsY1WeBoM=
 github.com/regnull/popgun v0.1.2/go.mod h1:BMb9PrSmRMcwhZt9qcnh7vfyE5rVW1nbCgZ2SqSwaxw=
+github.com/regnull/popgun v0.1.3-0.20210903011109-470099233a53 h1:4JfnieKepWh3NJV+Q64yzHKrxwdMZU03KhK0Dvo/jtY=
+github.com/regnull/popgun v0.1.3-0.20210903011109-470099233a53/go.mod h1:BMb9PrSmRMcwhZt9qcnh7vfyE5rVW1nbCgZ2SqSwaxw=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rs/xid v1.2.1/go.mod h1:+uKXf+4Djp6Md1KODXJxgGQPKngRmWyn10oCKFzNHOQ=
