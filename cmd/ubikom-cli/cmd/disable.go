@@ -58,7 +58,20 @@ var disableKeyCmd = &cobra.Command{
 				"If you really want to do that, re-issue the command with --confirm flag.")
 		}
 
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
+		encrypted, err := util.IsKeyEncrypted(keyFile)
+		if err != nil {
+			log.Fatal().Err(err).Msg("cannot find key file")
+		}
+
+		passphrase := ""
+		if encrypted {
+			passphrase, err = util.ReadPassphase()
+			if err != nil {
+				log.Fatal().Err(err).Msg("cannot read passphrase")
+			}
+		}
+
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}

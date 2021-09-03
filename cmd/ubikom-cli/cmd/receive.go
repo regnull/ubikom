@@ -58,7 +58,20 @@ var receiveMessageCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
+		encrypted, err := util.IsKeyEncrypted(keyFile)
+		if err != nil {
+			log.Fatal().Err(err).Msg("cannot find key file")
+		}
+
+		passphrase := ""
+		if encrypted {
+			passphrase, err = util.ReadPassphase()
+			if err != nil {
+				log.Fatal().Err(err).Msg("cannot read passphrase")
+			}
+		}
+
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}

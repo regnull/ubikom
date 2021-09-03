@@ -23,7 +23,7 @@ func Execute() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
 	cmd, _, err := rootCmd.Find(os.Args[1:])
-	// default cmd if no cmd is given
+	// If no command is given, show help.
 	if err == nil && cmd.Use == rootCmd.Use && cmd.Flags().Parse(os.Args[1:]) != pflag.ErrHelp {
 		args := append([]string{"help"}, os.Args[1:]...)
 		rootCmd.SetArgs(args)

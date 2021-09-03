@@ -61,7 +61,20 @@ var registerKeyCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
+		encrypted, err := util.IsKeyEncrypted(keyFile)
+		if err != nil {
+			log.Fatal().Err(err).Msg("cannot find key file")
+		}
+
+		passphrase := ""
+		if encrypted {
+			passphrase, err = util.ReadPassphase()
+			if err != nil {
+				log.Fatal().Err(err).Msg("cannot read passphrase")
+			}
+		}
+
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -131,7 +144,20 @@ var registerNameCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
+		encrypted, err := util.IsKeyEncrypted(keyFile)
+		if err != nil {
+			log.Fatal().Err(err).Msg("cannot find key file")
+		}
+
+		passphrase := ""
+		if encrypted {
+			passphrase, err = util.ReadPassphase()
+			if err != nil {
+				log.Fatal().Err(err).Msg("cannot read passphrase")
+			}
+		}
+
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -229,7 +255,20 @@ var registerAddressCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
+		encrypted, err := util.IsKeyEncrypted(keyFile)
+		if err != nil {
+			log.Fatal().Err(err).Msg("cannot find key file")
+		}
+
+		passphrase := ""
+		if encrypted {
+			passphrase, err = util.ReadPassphase()
+			if err != nil {
+				log.Fatal().Err(err).Msg("cannot read passphrase")
+			}
+		}
+
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -312,7 +351,20 @@ var registerChildKeyCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, "")
+		encrypted, err := util.IsKeyEncrypted(keyFile)
+		if err != nil {
+			log.Fatal().Err(err).Msg("cannot find key file")
+		}
+
+		passphrase := ""
+		if encrypted {
+			passphrase, err = util.ReadPassphase()
+			if err != nil {
+				log.Fatal().Err(err).Msg("cannot read passphrase")
+			}
+		}
+
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -324,7 +376,21 @@ var registerChildKeyCmd = &cobra.Command{
 		if childKeyFile == "" {
 			log.Fatal().Msg("child key location (--child) must be specified")
 		}
-		childKey, err := easyecc.NewPrivateKeyFromFile(childKeyFile, "")
+
+		encrypted, err = util.IsKeyEncrypted(childKeyFile)
+		if err != nil {
+			log.Fatal().Err(err).Msg("cannot find key file")
+		}
+
+		passphrase = ""
+		if encrypted {
+			passphrase, err = util.ReadPassphase()
+			if err != nil {
+				log.Fatal().Err(err).Msg("cannot read passphrase")
+			}
+		}
+
+		childKey, err := easyecc.NewPrivateKeyFromFile(childKeyFile, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load child key")
 		}
