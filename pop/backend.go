@@ -165,58 +165,6 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 	return nil
 }
 
-/* message-number (or message ID)
-
-   After the POP3 server has opened the maildrop, it assigns a message-
-   number to each message, and notes the size of each message in octets.
-   The first message in the maildrop is assigned a message-number of
-   "1", the second is assigned "2", and so on, so that the nth message
-   in a maildrop is assigned a message-number of "n".  In POP3 commands
-   and responses, all message-numbers and message sizes are expressed in
-   base-10 (i.e., decimal).
-
-*/
-
-/*
-STAT
-
-Arguments: none
-
-Restrictions:
-	may only be given in the TRANSACTION state
-
-Discussion:
-	The POP3 server issues a positive response with a line
-	containing information for the maildrop.  This line is
-	called a "drop listing" for that maildrop.
-
-	In order to simplify parsing, all POP3 servers are
-	required to use a certain format for drop listings.  The
-	positive response consists of "+OK" followed by a single
-	space, the number of messages in the maildrop, a single
-	space, and the size of the maildrop in octets.  This memo
-	makes no requirement on what follows the maildrop size.
-	Minimal implementations should just end that line of the
-	response with a CRLF pair.  More advanced implementations
-	may include other information.
-
-	   NOTE: This memo STRONGLY discourages implementations
-	   from supplying additional information in the drop
-	   listing.  Other, optional, facilities are discussed
-	   later on which permit the client to parse the messages
-	   in the maildrop.
-
-	Note that messages marked as deleted are not counted in
-	either total.
-
-Possible Responses:
-	+OK nn mm
-
-Examples:
-	C: STAT
-	S: +OK 2 320
-*/
-
 // Returns total message count and total mailbox size in bytes (octets).
 // Deleted messages are ignored.
 func (b *Backend) Stat(user string) (messages, octets int, err error) {
@@ -527,7 +475,9 @@ func getMessageID(msg *pb.DMSMessage) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%x", sha256.Sum256(b)), nil
+	fullID := fmt.Sprintf("%x", sha256.Sum256(b))
+	partialID := fullID[:12]
+	return partialID, nil
 }
 
 func checkMessageID(sess *Session, id int) error {
