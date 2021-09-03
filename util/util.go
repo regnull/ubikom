@@ -9,10 +9,12 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/regnull/easyecc"
 	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/term"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/yaml.v2"
@@ -186,4 +188,46 @@ func GetConfigFromArgs(args []string) string {
 		}
 	}
 	return ""
+}
+
+func EnterPassphrase() (string, error) {
+	fmt.Print("Passphrase (enter for none): ")
+	bytePassphrase, err := term.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return "", fmt.Errorf("failed to read passphrase")
+	}
+	passphrase1 := string(bytePassphrase)
+
+	fmt.Print("\nConfirm passphrase (enter for none): ")
+	bytePassphrase, err = term.ReadPassword(int(syscall.Stdin))
+	fmt.Print("\n")
+	if err != nil {
+		return "", fmt.Errorf("failed to read passphrase")
+	}
+	passphrase2 := string(bytePassphrase)
+	if passphrase1 != passphrase2 {
+		return "", fmt.Errorf("passphrase mismatch")
+	}
+	return passphrase1, nil
+}
+
+func ReadPassphase() (string, error) {
+	fmt.Print("Passphrase: ")
+	bytePassphrase, err := term.ReadPassword(int(syscall.Stdin))
+	fmt.Print("\n")
+	if err != nil {
+		return "", fmt.Errorf("failed to read passphrase")
+	}
+	passphrase := string(bytePassphrase)
+	return passphrase, nil
+}
+
+func IsKeyEncrypted(filePath string) (bool, error) {
+	fi, err := os.Stat(filePath)
+	if err != nil {
+		return false, fmt.Errorf("file not found")
+	}
+	// get the size
+	size := fi.Size()
+	return size > 32, nil
 }

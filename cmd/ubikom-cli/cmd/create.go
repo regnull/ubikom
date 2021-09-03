@@ -6,16 +6,15 @@ import (
 	"os"
 	"path"
 	"strings"
-	"syscall"
 
 	"crypto/rand"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/util"
 )
 
 const (
@@ -120,28 +119,15 @@ var createKeyCmd = &cobra.Command{
 			}
 		}
 
-		fmt.Print("Passphrase (enter for none): ")
-		bytePassphrase, err := term.ReadPassword(int(syscall.Stdin))
+		passphrase, err := util.EnterPassphrase()
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to read passphrase")
-		}
-		passphrase1 := string(bytePassphrase)
-
-		fmt.Print("\nConfirm passphrase (enter for none): ")
-		bytePassphrase, err = term.ReadPassword(int(syscall.Stdin))
-		fmt.Print("\n")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to read passphrase")
-		}
-		passphrase2 := string(bytePassphrase)
-		if passphrase1 != passphrase2 {
-			log.Fatal().Msg("passphrase mismatch")
+			log.Fatal().Err(err).Msg("failed to get passphase")
 		}
 
-		if passphrase1 == "" {
+		if passphrase == "" {
 			log.Warn().Msg("saving private key without passphrase")
 		}
-		err = privateKey.Save(out, passphrase1)
+		err = privateKey.Save(out, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", out).Msg("failed to save private key")
 		}
