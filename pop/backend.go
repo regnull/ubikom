@@ -332,21 +332,10 @@ func (b *Backend) ListMessage(user string, msgId int) (exists bool, octets int, 
 		return false, 0, fmt.Errorf("invalid session")
 	}
 
-	if msgId <= 0 || msgId > len(sess.Messages) {
-		b.lock.Unlock()
-		log.Debug().Msg("[POP] -> LIST-MESSAGE, no such message")
-		return false, 0, nil
-	}
-	if sess.Deleted[msgId-1] {
-		b.lock.Unlock()
-		log.Debug().Msg("[POP] -> LIST-MESSAGE, message is deleted")
-		return false, 0, nil
-	}
-
-	msg, err := b.getMessageByID(sess, msgId)
+	msg, err := getMessageByID(sess, msgId)
 	if err != nil {
-		b.lock.Unlock()
 		log.Debug().Err(err).Msg("[POP] -> LIST-MESSAGE failed to locate message")
+		return false, 0, nil
 	}
 
 	size := easyecc.GetPlainTextLength(len(msg.GetContent()))
@@ -366,16 +355,12 @@ func (b *Backend) Retr(user string, msgId int) (message string, err error) {
 		return "", fmt.Errorf("invalid session")
 	}
 
-	if msgId > len(sess.Messages) {
-		log.Debug().Msg("[POP] -> RETR, no such message")
+	msg, err := getMessageByID(sess, msgId)
+	if err != nil {
+		log.Debug().Err(err).Msg("[POP] -> RETR failed to locate message")
 		return "", fmt.Errorf("no such message")
 	}
-	if sess.Deleted[msgId] {
-		log.Debug().Msg("[POP] -> RETR, message is deleted")
-		return "", fmt.Errorf("message is deleted")
-	}
 
-	msg := sess.Messages[msgId]
 	content, err := b.decryptMessage(context.TODO(), sess.PrivateKey, msg)
 	if err != nil {
 		log.Error().Err(err).Msg("error decrypting message")
@@ -395,11 +380,18 @@ func (b *Backend) Dele(user string, msgId int) error {
 		return fmt.Errorf("invalid session")
 	}
 
-	if msgId > len(sess.Messages) {
-		log.Debug().Msg("[POP] -> DELE, no such message")
+	err := checkMessageID(sess, msgId)
+	if err != nil {
+		log.Debug().Err(err).Msg("[POP] -> DELE, failed to locate message")
 		return fmt.Errorf("no such message")
+
 	}
-	sess.Deleted[msgId] = true
+	if sess.Deleted[msgId-1] {
+		log.Debug().Msg("[POP] -> DELE, message already marked as deleted")
+		return fmt.Errorf("already deleted")
+	}
+
+	sess.Deleted[msgId-1] = true
 	log.Debug().Msg("[POP] -> DELE, message marked as deleted")
 	return nil
 }
@@ -453,17 +445,12 @@ func (b *Backend) UidlMessage(user string, msgId int) (exists bool, uid string, 
 		return false, "", fmt.Errorf("invalid session")
 	}
 
-	// Although it's not quite clear from RFC 1939, msgId ranges from 1 to len(sess.Messages).
-
-	if msgId <= 0 || msgId > len(sess.Messages) {
-		log.Error().Msg("[POP] -> UIDL-MESSAGE, no such message")
+	msg, err := getMessageByID(sess, msgId)
+	if err != nil {
+		log.Error().Err(err).Msg("[POP] -> UIDL-MESSAGE, failed to locate message")
 		return false, "", nil
 	}
-	if sess.Deleted[msgId-1] {
-		log.Error().Msg("[POP] -> UIDL-MESSAGE, message is deleted")
-		return false, "", nil
-	}
-	id, err := getMessageID(sess.Messages[msgId-1])
+	id, err := getMessageID(msg)
 	if err != nil {
 		log.Error().Err(err).Msg("error computing message id")
 		return false, "", fmt.Errorf("error computing message id")
@@ -506,16 +493,12 @@ func (b *Backend) Top(user string, msgId int, n int) (lines []string, err error)
 		return nil, fmt.Errorf("invalid session")
 	}
 
-	if msgId > len(sess.Messages) {
-		log.Debug().Msg("[POP] -> TOP, no such message")
+	msg, err := getMessageByID(sess, msgId)
+
+	if err != nil {
+		log.Debug().Err(err).Msg("[POP] -> TOP, failed to locate message")
 		return nil, fmt.Errorf("no such message")
 	}
-	if sess.Deleted[msgId] {
-		log.Debug().Msg("[POP] -> TOP, message is deleted")
-		return nil, fmt.Errorf("message is deleted")
-	}
-
-	msg := sess.Messages[msgId]
 	content, err := b.decryptMessage(context.TODO(), sess.PrivateKey, msg)
 	if err != nil {
 		log.Error().Err(err).Msg("error decrypting message")
@@ -612,13 +595,21 @@ func getMessageID(msg *pb.DMSMessage) (string, error) {
 	return fmt.Sprintf("%x", sha256.Sum256(b)), nil
 }
 
-func (b *Backend) getMessageByID(sess *Session, id int) (*pb.DMSMessage, error) {
+func checkMessageID(sess *Session, id int) error {
 	// Message id ranges from 1 to len(sess.Messages).
 	if id <= 0 || id > len(sess.Messages) {
-		return nil, fmt.Errorf("invalid message id")
+		return fmt.Errorf("invalid message id")
 	}
 	if sess.Deleted[id-1] {
-		return nil, fmt.Errorf("message is deleted")
+		return fmt.Errorf("message is deleted")
+	}
+	return nil
+}
+
+func getMessageByID(sess *Session, id int) (*pb.DMSMessage, error) {
+	err := checkMessageID(sess, id)
+	if err != nil {
+		return nil, err
 	}
 	return sess.Messages[id-1], nil
 }
