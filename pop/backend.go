@@ -18,6 +18,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// https://datatracker.ietf.org/doc/html/rfc1939
+
 /*
 Example session
 
@@ -163,6 +165,58 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 	return nil
 }
 
+/* message-number (or message ID)
+
+   After the POP3 server has opened the maildrop, it assigns a message-
+   number to each message, and notes the size of each message in octets.
+   The first message in the maildrop is assigned a message-number of
+   "1", the second is assigned "2", and so on, so that the nth message
+   in a maildrop is assigned a message-number of "n".  In POP3 commands
+   and responses, all message-numbers and message sizes are expressed in
+   base-10 (i.e., decimal).
+
+*/
+
+/*
+STAT
+
+Arguments: none
+
+Restrictions:
+	may only be given in the TRANSACTION state
+
+Discussion:
+	The POP3 server issues a positive response with a line
+	containing information for the maildrop.  This line is
+	called a "drop listing" for that maildrop.
+
+	In order to simplify parsing, all POP3 servers are
+	required to use a certain format for drop listings.  The
+	positive response consists of "+OK" followed by a single
+	space, the number of messages in the maildrop, a single
+	space, and the size of the maildrop in octets.  This memo
+	makes no requirement on what follows the maildrop size.
+	Minimal implementations should just end that line of the
+	response with a CRLF pair.  More advanced implementations
+	may include other information.
+
+	   NOTE: This memo STRONGLY discourages implementations
+	   from supplying additional information in the drop
+	   listing.  Other, optional, facilities are discussed
+	   later on which permit the client to parse the messages
+	   in the maildrop.
+
+	Note that messages marked as deleted are not counted in
+	either total.
+
+Possible Responses:
+	+OK nn mm
+
+Examples:
+	C: STAT
+	S: +OK 2 320
+*/
+
 // Returns total message count and total mailbox size in bytes (octets).
 // Deleted messages are ignored.
 func (b *Backend) Stat(user string) (messages, octets int, err error) {
@@ -184,6 +238,71 @@ func (b *Backend) Stat(user string) (messages, octets int, err error) {
 	log.Debug().Int("count", count).Int("octets", totalSize).Msg("[POP] -> STAT")
 	return count, totalSize, nil
 }
+
+/*
+      LIST [msg]
+
+         Arguments:
+             a message-number (optional), which, if present, may NOT
+             refer to a message marked as deleted
+
+		 Restrictions:
+             may only be given in the TRANSACTION state
+
+         Discussion:
+             If an argument was given and the POP3 server issues a
+             positive response with a line containing information for
+             that message.  This line is called a "scan listing" for
+             that message.
+
+             If no argument was given and the POP3 server issues a
+             positive response, then the response given is multi-line.
+             After the initial +OK, for each message in the maildrop,
+             the POP3 server responds with a line containing
+             information for that message.  This line is also called a
+             "scan listing" for that message.  If there are no
+             messages in the maildrop, then the POP3 server responds
+             with no scan listings--it issues a positive response
+             followed by a line containing a termination octet and a
+             CRLF pair.
+
+             In order to simplify parsing, all POP3 servers are
+             required to use a certain format for scan listings.  A
+             scan listing consists of the message-number of the
+             message, followed by a single space and the exact size of
+             the message in octets.  Methods for calculating the exact
+             size of the message are described in the "Message Format"
+             section below.  This memo makes no requirement on what
+             follows the message size in the scan listing.  Minimal
+             implementations should just end that line of the response
+             with a CRLF pair.  More advanced implementations may
+             include other information, as parsed from the message.
+
+                NOTE: This memo STRONGLY discourages implementations
+                from supplying additional information in the scan
+                listing.  Other, optional, facilities are discussed
+                later on which permit the client to parse the messages
+                in the maildrop.
+
+             Note that messages marked as deleted are not listed.
+
+         Possible Responses:
+             +OK scan listing follows
+             -ERR no such message
+
+         Examples:
+             C: LIST
+             S: +OK 2 messages (320 octets)
+             S: 1 120
+             S: 2 200
+             S: .
+               ...
+             C: LIST 2
+             S: +OK 2 200
+               ...
+             C: LIST 3
+             S: -ERR no such message, only 2 messages in maildrop
+*/
 
 // List of sizes of all messages in bytes (octets)
 func (b *Backend) List(user string) (octets []int, err error) {
@@ -214,17 +333,17 @@ func (b *Backend) ListMessage(user string, msgId int) (exists bool, octets int, 
 	}
 
 	var size int
-	if msgId > len(sess.Messages) {
+	if msgId <= 0 || msgId > len(sess.Messages) {
 		b.lock.Unlock()
 		log.Debug().Msg("[POP] -> LIST-MESSAGE, no such message")
 		return false, 0, nil
 	}
-	if sess.Deleted[msgId] {
+	if sess.Deleted[msgId-1] {
 		b.lock.Unlock()
 		log.Debug().Msg("[POP] -> LIST-MESSAGE, message is deleted")
 		return false, 0, nil
 	}
-	size = easyecc.GetPlainTextLength(len(sess.Messages[msgId].GetContent()))
+	size = easyecc.GetPlainTextLength(len(sess.Messages[msgId-1].GetContent()))
 
 	log.Debug().Int("size", size).Msg("[POP] -> LIST-MESSAGE")
 	return true, size, nil
