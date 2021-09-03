@@ -332,7 +332,6 @@ func (b *Backend) ListMessage(user string, msgId int) (exists bool, octets int, 
 		return false, 0, fmt.Errorf("invalid session")
 	}
 
-	var size int
 	if msgId <= 0 || msgId > len(sess.Messages) {
 		b.lock.Unlock()
 		log.Debug().Msg("[POP] -> LIST-MESSAGE, no such message")
@@ -343,7 +342,14 @@ func (b *Backend) ListMessage(user string, msgId int) (exists bool, octets int, 
 		log.Debug().Msg("[POP] -> LIST-MESSAGE, message is deleted")
 		return false, 0, nil
 	}
-	size = easyecc.GetPlainTextLength(len(sess.Messages[msgId-1].GetContent()))
+
+	msg, err := b.getMessageByID(sess, msgId)
+	if err != nil {
+		b.lock.Unlock()
+		log.Debug().Err(err).Msg("[POP] -> LIST-MESSAGE failed to locate message")
+	}
+
+	size := easyecc.GetPlainTextLength(len(msg.GetContent()))
 
 	log.Debug().Int("size", size).Msg("[POP] -> LIST-MESSAGE")
 	return true, size, nil
@@ -604,4 +610,15 @@ func getMessageID(msg *pb.DMSMessage) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%x", sha256.Sum256(b)), nil
+}
+
+func (b *Backend) getMessageByID(sess *Session, id int) (*pb.DMSMessage, error) {
+	// Message id ranges from 1 to len(sess.Messages).
+	if id <= 0 || id > len(sess.Messages) {
+		return nil, fmt.Errorf("invalid message id")
+	}
+	if sess.Deleted[id-1] {
+		return nil, fmt.Errorf("message is deleted")
+	}
+	return sess.Messages[id-1], nil
 }
