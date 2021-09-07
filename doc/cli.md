@@ -138,3 +138,18 @@ If the name is already registered, you will an error:
 
 This error means that your key is not authorized to operate on this name, since it's already
 associated with a different key.
+
+### Registering messaging address
+
+Registering a messaging address allows other users to send mail to you. By registering an address,
+you are saying "if you want to contact me using this protocol, you need to connect to an
+endpoint here". As of this writing, only one protocol exists - PL_DMS.
+
+With this in mind, the command to register an address will look like this:
+
+```
+$ ubikom-cli register address bob alpha.ubikom.cc:8826 --key=secret.key
+19:23:04 DBG generating POW...
+19:23:14 DBG POW found pow=0716958a2af0f4d5
+19:23:14 INF address registered successfully
+```
