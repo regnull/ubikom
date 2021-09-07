@@ -114,3 +114,27 @@ $ ubikom-cli register key --key=secret.key
 
 When you register a key, you must generate some minimal proof-of-work (POW). This is done to 
 reduce name squatting and spamming. Normally, generating POW will only take a few seconds.
+
+### Registering name
+
+Having a key is all nice and well, people normally prefer short pronounceable names to 
+public keys and addresses. You can link your key to a name by using register name command.
+
+The name must be unique, you will receive an error if you try to use a name that is already
+registered.
+
+```
+$ ubikom-cli register name bob --key=secret.key
+19:13:15 DBG generating POW...
+19:13:29 DBG POW found pow=44f5d4a7d57f1514
+19:13:29 INF name registered successfully
+```
+
+If the name is already registered, you will an error:
+
+```
+19:13:05 FTL failed to register key error="rpc error: code = PermissionDenied desc = key is not authorized"
+```
+
+This error means that your key is not authorized to operate on this name, since it's already
+associated with a different key.
