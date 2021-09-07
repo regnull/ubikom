@@ -93,3 +93,24 @@ $ ubikom-cli get mnemonic --key=secret.key
 5:  ....
 ```
 
+## Registering keys, names, and addresses
+
+### Registering your public key
+
+Before using your private key, you must register it. When a key is registered, its information
+is stored in a public registry where it can be accessed by other users. For example, some
+other user might want to access your public key to encrypt mail addressed to you. Having public
+registry solves other problems as well. If your key is compromised, you can permanently 
+disable it in the public registry, rendering it useless.
+
+To register the key, execute the following command:
+
+```
+$ ubikom-cli register key --key=secret.key
+8:50:38 DBG generating POW...
+18:50:38 DBG POW found pow=5f5bf752ad129813
+18:50:38 INF key registered successfully
+```
+
+When you register a key, you must generate some minimal proof-of-work (POW). This is done to 
+reduce name squatting and spamming. Normally, generating POW will only take a few seconds.
