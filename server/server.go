@@ -234,7 +234,10 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 
 	if err != nil {
 		log.Error().Str("name", addressRegistrationReq.GetName()).
-			Str("address", addressRegistrationReq.GetAddress()).Msg("error registering address")
+			Str("address", addressRegistrationReq.GetAddress()).Err(err).Msg("error registering address")
+		if err == db.ErrNotAuthorized {
+			return nil, status.Error(codes.PermissionDenied, "permission denied")
+		}
 		return nil, status.Error(codes.Internal, "db error")
 	}
 
