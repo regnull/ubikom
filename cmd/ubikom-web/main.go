@@ -22,6 +22,20 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
+var notificationMessage = `To: %s@x
+From: Ubikom Web <%s@x>
+Subject: New registration
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Content-Language: en-US
+
+Rejoice! For a new user just registered via the Ubikom Web!
+
+The newly registered name is %s.
+
+That is all. Have a nice day!
+`
+
 const (
 	powStrength       = 23
 	dumpAddress       = "alpha.ubikom.cc:8826"
@@ -36,19 +50,29 @@ type CmdArgs struct {
 	Timeout            time.Duration
 	CertFile           string
 	KeyFile            string
+	UbikomKeyFile      string
+	UbikomName         string
+	NotificationName   string
 }
 
 type Server struct {
-	lookupClient   pb.LookupServiceClient
-	identityClient pb.IdentityServiceClient
-	keys           map[string][]byte
+	lookupClient     pb.LookupServiceClient
+	identityClient   pb.IdentityServiceClient
+	keys             map[string][]byte
+	privateKey       *easyecc.PrivateKey
+	name             string
+	notificationName string
 }
 
-func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentityServiceClient) *Server {
+func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentityServiceClient,
+	privateKey *easyecc.PrivateKey, name string, notificationName string) *Server {
 	return &Server{
-		lookupClient:   lookupClient,
-		identityClient: identityClient,
-		keys:           make(map[string][]byte),
+		lookupClient:     lookupClient,
+		identityClient:   identityClient,
+		keys:             make(map[string][]byte),
+		privateKey:       privateKey,
+		name:             name,
+		notificationName: notificationName,
 	}
 }
 
@@ -190,6 +214,14 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		mnemonicQuoted[i] = "\"" + mnemonicList[i] + "\""
 	}
 
+	if s.privateKey != nil && s.name != "" && s.notificationName != "" {
+		body := fmt.Sprintf(notificationMessage, s.notificationName, s.name, name)
+		err = protoutil.SendMessage(r.Context(), s.privateKey, []byte(body), s.name, s.notificationName, s.lookupClient)
+		if err != nil {
+			log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending notification message")
+		}
+	}
+
 	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprintf(w, `{
@@ -228,6 +260,9 @@ func main() {
 	flag.DurationVar(&args.Timeout, "timeout", 5*time.Second, "timeout when connecting to the lookup service")
 	flag.StringVar(&args.CertFile, "cert-file", "", "certificate file")
 	flag.StringVar(&args.KeyFile, "key-file", "", "key file")
+	flag.StringVar(&args.UbikomKeyFile, "ubikom-key-file", "", "ubikom key file")
+	flag.StringVar(&args.UbikomName, "ubikom-name", "", "ubikom name")
+	flag.StringVar(&args.NotificationName, "notification-name", "", "where to send notifications")
 	flag.Parse()
 
 	opts := []grpc.DialOption{
@@ -254,7 +289,15 @@ func main() {
 
 	identityClient := pb.NewIdentityServiceClient(identityConn)
 
-	server := NewServer(lookupClient, identityClient)
+	var privateKey *easyecc.PrivateKey
+	if args.UbikomKeyFile != "" {
+		privateKey, err = easyecc.NewPrivateKeyFromFile(args.UbikomKeyFile, "")
+		if err != nil {
+			log.Fatal().Err(err).Str("location", args.UbikomKeyFile).Msg("cannot load private key")
+		}
+	}
+
+	server := NewServer(lookupClient, identityClient, privateKey, args.UbikomName, args.NotificationName)
 
 	http.HandleFunc("/lookupName", server.HandleNameLookup)
 	http.HandleFunc("/easySetup", server.HandleEasySetup)
