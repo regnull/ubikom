@@ -93,3 +93,63 @@ $ ubikom-cli get mnemonic --key=secret.key
 5:  ....
 ```
 
+## Registering keys, names, and addresses
+
+### Registering your public key
+
+Before using your private key, you must register it. When a key is registered, its information
+is stored in a public registry where it can be accessed by other users. For example, some
+other user might want to access your public key to encrypt mail addressed to you. Having public
+registry solves other problems as well. If your key is compromised, you can permanently 
+disable it in the public registry, rendering it useless.
+
+To register the key, execute the following command:
+
+```
+$ ubikom-cli register key --key=secret.key
+8:50:38 DBG generating POW...
+18:50:38 DBG POW found pow=5f5bf752ad129813
+18:50:38 INF key registered successfully
+```
+
+When you register a key, you must generate some minimal proof-of-work (POW). This is done to 
+reduce name squatting and spamming. Normally, generating POW will only take a few seconds.
+
+### Registering name
+
+Having a key is all nice and well, people normally prefer short pronounceable names to 
+public keys and addresses. You can link your key to a name by using register name command.
+
+The name must be unique, you will receive an error if you try to use a name that is already
+registered.
+
+```
+$ ubikom-cli register name bob --key=secret.key
+19:13:15 DBG generating POW...
+19:13:29 DBG POW found pow=44f5d4a7d57f1514
+19:13:29 INF name registered successfully
+```
+
+If the name is already registered, you will an error:
+
+```
+19:13:05 FTL failed to register key error="rpc error: code = PermissionDenied desc = key is not authorized"
+```
+
+This error means that your key is not authorized to operate on this name, since it's already
+associated with a different key.
+
+### Registering messaging address
+
+Registering a messaging address allows other users to send mail to you. By registering an address,
+you are saying "if you want to contact me using this protocol, you need to connect to an
+endpoint here". As of this writing, only one protocol exists - PL_DMS.
+
+With this in mind, the command to register an address will look like this:
+
+```
+$ ubikom-cli register address bob alpha.ubikom.cc:8826 --key=secret.key
+19:23:04 DBG generating POW...
+19:23:14 DBG POW found pow=0716958a2af0f4d5
+19:23:14 INF address registered successfully
+```
