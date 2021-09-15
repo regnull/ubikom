@@ -93,6 +93,19 @@ $ ubikom-cli get mnemonic --key=secret.key
 5:  ....
 ```
 
+### Disable Key
+
+WARNING: Disabling a key will render it forever unusable. Anything related to this key (name, address, 
+etc.) will also become permanently disabled. This is a last resort option, in case your key becomes 
+compromised. Once you do it, there is no way back.
+
+```
+$ ubikom-cli disable key --key=secret.key
+```
+
+You will see a warning when running this command, and you will need to confirm your intentions. To do
+so, re-issue the command with --confirm flag.
+
 ## Registering keys, names, and addresses
 
 ### Registering your public key
