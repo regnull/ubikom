@@ -54,6 +54,38 @@ Confirm passphrase (enter for none):
 It is recommended that you use a passphrase when you create a key. If you don't, anyone who can access this file
 will be able to impersonate you.
 
+### Create Key Using Password
+
+It is possible to construct a private key given two pieces of data: password and salt. This makes it possible,
+for example, to transmit a private key over as a "user name" and "password", where salt plays the role of
+"user name". Email clients use it to send the email key over to Ubikom proxy using POP3 or SMTP protocol.
+
+If you don't specify salt flag it will be randomly generated for you, like so:
+
+```
+$ ubikom-cli create key --from-password=supersecretpassword123 --out=secret.key
+salt: bqzPsQDh9YK
+Passphrase (enter for none):
+Confirm passphrase (enter for none):
+14:37:01 WRN saving private key without passphrase
+14:37:01 INF private key saved location=secret111.key
+```
+
+If you later use this command with --salt flag and specify the same salt, you will end up with the same key.
+
+### Create Key from Mnemonic
+
+Another way to create a private key is from mnemonic. A popular way to store a private key is to use a list
+of 24 words, as specified in (BIP 39)[https://en.bitcoin.it/wiki/BIP_0039].
+
+To re-create private key from mnemonic, use --from-mnemonic flag:
+
+```
+$ ubikom-cli create key --from-mnemonic --out=secret.key
+```
+
+You will need to enter 24 words one by one, so that the key can be created.
+
 ## Getting Key Information
 
 Now that you have your key, you can get various details about it.
@@ -93,7 +125,7 @@ $ ubikom-cli get mnemonic --key=secret.key
 5:  ....
 ```
 
-### Disable Key
+## Disable Key
 
 WARNING: Disabling a key will render it forever unusable. Anything related to this key (name, address, 
 etc.) will also become permanently disabled. This is a last resort option, in case your key becomes 
