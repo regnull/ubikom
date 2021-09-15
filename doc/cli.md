@@ -76,7 +76,7 @@ If you later use this command with --salt flag and specify the same salt, you wi
 ### Create Key from Mnemonic
 
 Another way to create a private key is from mnemonic. A popular way to store a private key is to use a list
-of 24 words, as specified in (BIP 39)[https://en.bitcoin.it/wiki/BIP_0039].
+of 24 words, as specified in [BIP 39](https://en.bitcoin.it/wiki/BIP_0039).
 
 To re-create private key from mnemonic, use --from-mnemonic flag:
 
