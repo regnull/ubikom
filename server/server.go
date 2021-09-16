@@ -29,15 +29,16 @@ type Server struct {
 	pb.UnimplementedIdentityServiceServer
 	pb.UnimplementedLookupServiceServer
 
-	dbi *db.BadgerDB
+	dbi         *db.BadgerDB
+	powStrength int
 }
 
-func NewServer(d *badger.DB) *Server {
-	return &Server{dbi: db.NewBadgerDB(d)}
+func NewServer(d *badger.DB, powStrength int) *Server {
+	return &Server{dbi: db.NewBadgerDB(d), powStrength: powStrength}
 }
 
 func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.KeyRegistrationResponse, error) {
-	if !verifyPowAndSignature(req) {
+	if !verifyPowAndSignature(req, s.powStrength) {
 		log.Warn().Msg("insufficient POW or invalid signature")
 		return nil, status.Error(codes.InvalidArgument, "invalid pow or signature")
 	}
@@ -49,7 +50,7 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Ke
 		return nil, status.Error(codes.InvalidArgument, "failed to marshal request")
 	}
 
-	if bytes.Compare(keyRegistrationReq.GetKey(), req.GetKey()) != 0 {
+	if !bytes.Equal(keyRegistrationReq.GetKey(), req.GetKey()) {
 		log.Warn().Hex("content", req.GetContent()).Hex("key", req.GetKey()).Msg("key and content do not match (key registration request)")
 		return nil, status.Error(codes.InvalidArgument, "keys do not match")
 	}
@@ -76,7 +77,7 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Ke
 }
 
 func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWithPow) (*pb.KeyRelationshipRegistrationResponse, error) {
-	if !verifyPowAndSignature(req) {
+	if !verifyPowAndSignature(req, s.powStrength) {
 		log.Warn().Msg("insufficient POW or invalid signature")
 		return nil, status.Error(codes.InvalidArgument, "invalid pow or signature")
 	}
@@ -114,7 +115,7 @@ func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWith
 }
 
 func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.KeyDisableResponse, error) {
-	if !verifyPowAndSignature(req) {
+	if !verifyPowAndSignature(req, s.powStrength) {
 		log.Warn().Msg("insufficient POW or invalid signature")
 		return nil, status.Error(codes.InvalidArgument, "invalid pow or signature")
 	}
@@ -154,7 +155,7 @@ func (s *Server) DisableKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Key
 }
 
 func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.NameRegistrationResponse, error) {
-	if !verifyPowAndSignature(req) {
+	if !verifyPowAndSignature(req, s.powStrength) {
 		log.Warn().Msg("insufficient POW or invalid signature")
 		return nil, status.Error(codes.InvalidArgument, "invalid pow or signature")
 	}
@@ -202,7 +203,7 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.N
 }
 
 func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*pb.AddressRegistrationResponse, error) {
-	if !verifyPowAndSignature(req) {
+	if !verifyPowAndSignature(req, s.powStrength) {
 		log.Warn().Msg("insufficient POW or invalid signature")
 		return nil, status.Error(codes.InvalidArgument, "invalid pow or signature")
 	}
@@ -248,6 +249,11 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 
 func (s *Server) LookupKey(ctx context.Context, req *pb.LookupKeyRequest) (*pb.LookupKeyResponse, error) {
 	key, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
+	if err != nil {
+		log.Warn().Msg("invalid key")
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
+
+	}
 	publicKeyBase58 := base58.Encode(req.GetKey())
 	log.Info().Str("key", publicKeyBase58).Msg("key lookup request")
 
@@ -317,14 +323,14 @@ func Int64ToBytes(i int64) []byte {
 	return buf
 }
 
-func verifyPow(req *pb.SignedWithPow) bool {
+func verifyPow(req *pb.SignedWithPow, powStrength int) bool {
 	if len(req.Pow) > 16 {
 		// POW is too long.
 		log.Printf("invalid POW")
 		return false
 	}
 
-	if !pow.Verify(req.GetContent(), req.Pow, 10) {
+	if !pow.Verify(req.GetContent(), req.Pow, powStrength) {
 		// POW does not check out.
 		log.Printf("POW verification failed")
 		return false
@@ -333,8 +339,8 @@ func verifyPow(req *pb.SignedWithPow) bool {
 	return true
 }
 
-func verifyPowAndSignature(req *pb.SignedWithPow) bool {
-	if !verifyPow(req) {
+func verifyPowAndSignature(req *pb.SignedWithPow, powStrength int) bool {
+	if !verifyPow(req, powStrength) {
 		return false
 	}
 

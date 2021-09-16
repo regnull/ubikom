@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	defaultPort       = 8825
-	defaultHomeSubDir = ".ubikom"
-	defaultDBSubDir   = "db"
+	defaultPort        = 8825
+	defaultHomeSubDir  = ".ubikom"
+	defaultDBSubDir    = "db"
+	defaultPowStrength = 10
 )
 
 type HealthChecker struct{}
@@ -43,8 +44,9 @@ func (h *HealthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, srv grpc_h
 }
 
 type CmdArgs struct {
-	BaseDir string
-	Port    int
+	BaseDir     string
+	Port        int
+	PowStrength int
 }
 
 func main() {
@@ -54,6 +56,7 @@ func main() {
 	var args CmdArgs
 	flag.IntVar(&args.Port, "port", defaultPort, "port to listen to")
 	flag.StringVar(&args.BaseDir, "base-dir", "", "base directory")
+	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength required")
 	flag.Parse()
 
 	dbDir, err := getDBDir(args.BaseDir)
@@ -76,7 +79,7 @@ func main() {
 	healthService := &HealthChecker{}
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthService)
 
-	srv := server.NewServer(db)
+	srv := server.NewServer(db, args.PowStrength)
 	pb.RegisterIdentityServiceServer(grpcServer, srv)
 	pb.RegisterLookupServiceServer(grpcServer, srv)
 	log.Info().Int("port", args.Port).Msg("server is up and running")
