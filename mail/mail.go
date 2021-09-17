@@ -74,10 +74,10 @@ func ExtractReceiverInternalNames(content string) ([]string, error) {
 			receivers = append(receivers, strings.Split(addressStr, ",")...)
 		}
 
+		addressStr = mailMsg.Header.Get("Cc")
 		if addressStr != "" {
-			addressStr = mailMsg.Header.Get("Cc")
+			receivers = append(receivers, strings.Split(addressStr, ",")...)
 		}
-		receivers = append(receivers, strings.Split(addressStr, ",")...)
 
 		addressStr = mailMsg.Header.Get("Bcc")
 		if addressStr != "" {
