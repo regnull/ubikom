@@ -32,11 +32,11 @@ type CmdArgs struct {
 	PollInterval           time.Duration
 	Receive                bool
 	SenderName             string
+	LogFile                string
 }
 
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
 	var args CmdArgs
 	flag.StringVar(&args.KeyLocation, "key", defaultKeyLocation, "key location")
@@ -47,7 +47,19 @@ func main() {
 	flag.DurationVar(&args.PollInterval, "poll-interval", time.Minute, "poll interval")
 	flag.BoolVar(&args.Receive, "receive", false, "receive mail (if false, will monitor and send mail)")
 	flag.StringVar(&args.SenderName, "sender-name", defaultSenderName, "sender name (must correspond to the key)")
+	flag.StringVar(&args.LogFile, "log-file", "", "log file")
 	flag.Parse()
+
+	if args.LogFile != "" {
+		f, err := os.OpenFile(args.LogFile, os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to open log file")
+		}
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: f, TimeFormat: "15:04:05", NoColor: true})
+	} else {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
+	}
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
 	if args.KeyLocation == "" {
 		log.Fatal().Msg("--key argument must be specified")
