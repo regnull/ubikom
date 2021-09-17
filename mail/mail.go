@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/mail"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -59,8 +61,31 @@ func ExtractReceiverInternalNames(content string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	addressStr := mailMsg.Header.Get("To")
-	receivers := strings.Split(addressStr, ",")
+	// Check for forwarded email first.
+	var receivers []string
+	addressStr := mailMsg.Header.Get("X-Forwarded-To")
+	if addressStr != "" {
+		// This email was forwarded.
+		receivers = append(receivers, strings.Split(addressStr, ",")...)
+		log.Debug().Msg("this message was forwarded")
+	} else {
+		addressStr = mailMsg.Header.Get("To")
+		if addressStr != "" {
+			receivers = append(receivers, strings.Split(addressStr, ",")...)
+		}
+
+		if addressStr != "" {
+			addressStr = mailMsg.Header.Get("Cc")
+		}
+		receivers = append(receivers, strings.Split(addressStr, ",")...)
+
+		addressStr = mailMsg.Header.Get("Bcc")
+		if addressStr != "" {
+			receivers = append(receivers, strings.Split(addressStr, ",")...)
+		}
+	}
+	log.Debug().Interface("receivers", receivers).Msg("got receivers")
+
 	var receiver []string
 	for _, r := range receivers {
 		var address *mail.Address
