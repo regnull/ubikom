@@ -51,7 +51,7 @@ func main() {
 	flag.Parse()
 
 	if args.LogFile != "" {
-		f, err := os.OpenFile(args.LogFile, os.O_WRONLY|os.O_CREATE, 0644)
+		f, err := os.OpenFile(args.LogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to open log file")
 		}
