@@ -53,7 +53,7 @@ func ExtractReceiverInternalName(content string) (receiver string, err error) {
 	return
 }
 
-func ExtractReceiverInternalNames(content string) (receiver []string, err error) {
+func ExtractReceiverInternalNames(content string) ([]string, error) {
 	contentReader := strings.NewReader(content)
 	mailMsg, err := mail.ReadMessage(contentReader)
 	if err != nil {
@@ -61,6 +61,7 @@ func ExtractReceiverInternalNames(content string) (receiver []string, err error)
 	}
 	addressStr := mailMsg.Header.Get("To")
 	receivers := strings.Split(addressStr, ",")
+	var receiver []string
 	for _, r := range receivers {
 		var address *mail.Address
 		address, err = mail.ParseAddress(r)
