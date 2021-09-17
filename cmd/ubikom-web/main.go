@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"flag"
 	"fmt"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/google/uuid"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/globals"
@@ -153,14 +151,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Create the email key.
 
-	var saltArr [8]byte
-	_, err = rand.Read(saltArr[:])
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to generate salt")
-	}
-	salt := saltArr[:]
-	userName := base58.Encode(salt[:])
-	emailKey := easyecc.NewPrivateKeyFromPassword([]byte(password), salt)
+	emailKey := easyecc.NewPrivateKeyFromPassword([]byte(password), []byte(name))
 
 	// Register the email key.
 
@@ -234,7 +225,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		"key_mnemonic": [%s],
 		"key_id": "%s",
 		"password": "%s"
-}`, name, userName, strings.Join(mnemonicQuoted, ", "), keyID, password)
+}`, name, name, strings.Join(mnemonicQuoted, ", "), keyID, password)
 }
 
 func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
