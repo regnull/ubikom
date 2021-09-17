@@ -57,7 +57,7 @@ func ExtractReceiverInternalNames(content string) (receiver []string, err error)
 	contentReader := strings.NewReader(content)
 	mailMsg, err := mail.ReadMessage(contentReader)
 	if err != nil {
-		return
+		return nil, err
 	}
 	addressStr := mailMsg.Header.Get("To")
 	receivers := strings.Split(addressStr, ",")
@@ -65,7 +65,7 @@ func ExtractReceiverInternalNames(content string) (receiver []string, err error)
 		var address *mail.Address
 		address, err = mail.ParseAddress(r)
 		if err != nil {
-			return
+			return nil, err
 		}
 		if !strings.HasSuffix(address.Address, ubikomLongSuffix) {
 			// This is not a message for us.
@@ -73,7 +73,7 @@ func ExtractReceiverInternalNames(content string) (receiver []string, err error)
 		}
 		receiver = append(receiver, strings.Replace(address.Address, ubikomLongSuffix, "", 1))
 	}
-	return
+	return receivers, nil
 }
 
 // RewriteFromHeader rewrites the message to change sender from internal to external format.

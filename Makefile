@@ -39,7 +39,6 @@ upload:
 
 mail-upload:
 	scp -i $(MAIL_SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-gateway ubuntu@$(MAIL_SERVER_ADR):~/ubikom/ubikom-gateway
-	scp -i $(MAIL_SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-receiver ubuntu@$(MAIL_SERVER_ADR):~/ubikom/ubikom-receiver
 
 server-start:
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-server

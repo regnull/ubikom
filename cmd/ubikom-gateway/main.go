@@ -106,6 +106,10 @@ func receive(ctx context.Context, privateKey *easyecc.PrivateKey, lookupClient p
 		log.Fatal().Err(err).Msg("failed to get receiver name")
 	}
 
+	if len(receivers) == 0 {
+		log.Error().Msg("failed to extract any valid receivers from the message")
+	}
+
 	for _, r := range receivers {
 		// Send the message.
 		log.Debug().Str("receiver", r).Msg("sending mail")
