@@ -76,7 +76,14 @@ func (b *Backend) Authorize(user, pass string) bool {
 		b.sessions[user] = &Session{PrivateKey: b.privateKey}
 		b.lock.Unlock()
 	} else {
+		// We used to use random user names for POP3 login, and now we use
+		// salt derived from user identifier. Random names were 8 bytes long.
+		// More robust way would be to lookup new style user name and then
+		// try legacy. TODO.
 		salt := base58.Decode(user)
+		if len(salt) != 8 {
+			salt = util.Hash256([]byte(user))
+		}
 		privateKey := easyecc.NewPrivateKeyFromPassword([]byte(pass), salt)
 
 		// Confirm that this key is registered.

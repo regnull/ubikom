@@ -151,7 +151,8 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Create the email key.
 
-	emailKey := easyecc.NewPrivateKeyFromPassword([]byte(password), []byte(name))
+	salt := util.Hash256([]byte(name))
+	emailKey := easyecc.NewPrivateKeyFromPassword([]byte(password), salt)
 
 	// Register the email key.
 

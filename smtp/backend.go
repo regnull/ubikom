@@ -13,6 +13,7 @@ import (
 	umail "github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
+	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 )
 
@@ -42,8 +43,12 @@ func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string
 		ok = username == b.user && password == b.password
 		privateKey = b.privateKey
 	} else {
-		// TODO: Validate username/password (make sure this key is registered).
+		// We used to use random user names for SMTP login, and now we use
+		// salt derived from user identifier. Random names were 8 bytes long.
 		salt := base58.Decode(username)
+		if len(salt) != 8 {
+			salt = util.Hash256([]byte(username))
+		}
 		ok = len(salt) >= 4 && len(password) >= 8
 		privateKey = easyecc.NewPrivateKeyFromPassword([]byte(password), salt)
 	}
