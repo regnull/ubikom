@@ -73,7 +73,7 @@ func ExtractReceiverInternalNames(content string) (receiver []string, err error)
 		}
 		receiver = append(receiver, strings.Replace(address.Address, ubikomLongSuffix, "", 1))
 	}
-	return receivers, nil
+	return receiver, nil
 }
 
 // RewriteFromHeader rewrites the message to change sender from internal to external format.
