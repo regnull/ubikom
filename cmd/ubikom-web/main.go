@@ -37,10 +37,10 @@ That is all. Have a nice day!
 `
 
 const (
-	powStrength       = 23
-	dumpAddress       = "alpha.ubikom.cc:8826"
-	minNameLength     = 3
-	minPasswordLength = 6
+	defaultPowStrength = 23
+	dumpAddress        = "alpha.ubikom.cc:8826"
+	minNameLength      = 3
+	minPasswordLength  = 6
 )
 
 type CmdArgs struct {
@@ -53,6 +53,7 @@ type CmdArgs struct {
 	UbikomKeyFile      string
 	UbikomName         string
 	NotificationName   string
+	PowStrength        int
 }
 
 type Server struct {
@@ -62,10 +63,11 @@ type Server struct {
 	privateKey       *easyecc.PrivateKey
 	name             string
 	notificationName string
+	powStrength      int
 }
 
 func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentityServiceClient,
-	privateKey *easyecc.PrivateKey, name string, notificationName string) *Server {
+	privateKey *easyecc.PrivateKey, name string, notificationName string, powStrength int) *Server {
 	return &Server{
 		lookupClient:     lookupClient,
 		identityClient:   identityClient,
@@ -73,6 +75,7 @@ func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentitySe
 		privateKey:       privateKey,
 		name:             name,
 		notificationName: notificationName,
+		powStrength:      powStrength,
 	}
 }
 
@@ -140,7 +143,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Register the main key.
 
-	err = protoutil.RegisterKey(r.Context(), s.identityClient, mainKey, powStrength)
+	err = protoutil.RegisterKey(r.Context(), s.identityClient, mainKey, s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register the main key")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -161,7 +164,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Register the email key.
 
-	err = protoutil.RegisterKey(r.Context(), s.identityClient, emailKey, powStrength)
+	err = protoutil.RegisterKey(r.Context(), s.identityClient, emailKey, s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register the email key")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -171,7 +174,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Register email key as a child of main key.
 
-	err = protoutil.RegisterChildKey(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), powStrength)
+	err = protoutil.RegisterChildKey(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register email key as a child of main key")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -181,7 +184,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Register name.
 
-	err = protoutil.RegisterName(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, powStrength)
+	err = protoutil.RegisterName(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register name")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -191,7 +194,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Register address.
 
-	err = protoutil.RegisterAddress(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, dumpAddress, powStrength)
+	err = protoutil.RegisterAddress(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, dumpAddress, s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register address")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -263,6 +266,7 @@ func main() {
 	flag.StringVar(&args.UbikomKeyFile, "ubikom-key-file", "", "ubikom key file")
 	flag.StringVar(&args.UbikomName, "ubikom-name", "", "ubikom name")
 	flag.StringVar(&args.NotificationName, "notification-name", "", "where to send notifications")
+	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength")
 	flag.Parse()
 
 	opts := []grpc.DialOption{
@@ -297,7 +301,7 @@ func main() {
 		}
 	}
 
-	server := NewServer(lookupClient, identityClient, privateKey, args.UbikomName, args.NotificationName)
+	server := NewServer(lookupClient, identityClient, privateKey, args.UbikomName, args.NotificationName, args.PowStrength)
 
 	http.HandleFunc("/lookupName", server.HandleNameLookup)
 	http.HandleFunc("/easySetup", server.HandleEasySetup)
