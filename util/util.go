@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"hash"
@@ -12,7 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/pb"
 	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/term"
 	"google.golang.org/grpc/codes"
@@ -230,4 +233,46 @@ func IsKeyEncrypted(filePath string) (bool, error) {
 	// get the size
 	size := fi.Size()
 	return size > 32, nil
+}
+
+// GetKeyFromNameAndPassword attempts to construct a private key from name and password and verify it with
+// key lookup service.
+func GetKeyFromNamePassword(ctx context.Context, name string, pass string,
+	lookupClient pb.LookupServiceClient) (*easyecc.PrivateKey, error) {
+	n := strings.Trim(name, " ")
+
+	// Strip @domain from the string, if any.
+	if i := strings.Index(n, "@"); i != -1 {
+		n = n[:i]
+	}
+
+	// Try hash of the user name as salt first.
+	privateKey := easyecc.NewPrivateKeyFromPassword([]byte(pass), Hash256([]byte(n)))
+	res, err := lookupClient.LookupKey(ctx, &pb.LookupKeyRequest{
+		Key: privateKey.PublicKey().SerializeCompressed()})
+	if err == nil {
+		if res.Disabled {
+			return nil, fmt.Errorf("the key is disabled")
+		}
+		return privateKey, nil
+	}
+
+	// We used to have user name as Base 58 representation of a random 8 byte number,
+	// try that.
+	salt := base58.Decode(name)
+	if len(salt) != 8 {
+		return nil, fmt.Errorf("invalid user name or password")
+	}
+	privateKey = easyecc.NewPrivateKeyFromPassword([]byte(pass), salt)
+
+	// Confirm that this key is registered.
+	res, err = lookupClient.LookupKey(ctx, &pb.LookupKeyRequest{
+		Key: privateKey.PublicKey().SerializeCompressed()})
+	if err != nil {
+		return nil, err
+	}
+	if res.Disabled {
+		return nil, fmt.Errorf("the key is disabled")
+	}
+	return privateKey, nil
 }

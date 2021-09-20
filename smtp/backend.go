@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"time"
 
-	"github.com/btcsuite/btcutil/base58"
 	gosmtp "github.com/emersion/go-smtp"
 	"github.com/regnull/easyecc"
 	umail "github.com/regnull/ubikom/mail"
@@ -43,18 +43,15 @@ func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string
 		ok = username == b.user && password == b.password
 		privateKey = b.privateKey
 	} else {
-		// We used to use random user names for SMTP login, and now we use
-		// salt derived from user identifier. Random names were 8 bytes long.
-		salt := base58.Decode(username)
-		if len(salt) != 8 {
-			salt = util.Hash256([]byte(username))
-		}
-		ok = len(salt) >= 4 && len(password) >= 8
-		privateKey = easyecc.NewPrivateKeyFromPassword([]byte(password), salt)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		var err error
+		privateKey, err = util.GetKeyFromNamePassword(ctx, username, password, b.lookupClient)
+		ok = err == nil
 	}
 	log.Debug().Bool("authorized", ok).Msg("[SMTP] -> LOGIN")
 	if !ok {
-		return nil, errors.New("Invalid username or password")
+		return nil, errors.New("invalid username or password")
 	}
 	return &Session{
 		lookupClient: b.lookupClient,
@@ -66,7 +63,7 @@ func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string
 // AnonymousLogin requires clients to authenticate using SMTP AUTH before sending emails
 func (bkd *Backend) AnonymousLogin(state *gosmtp.ConnectionState) (gosmtp.Session, error) {
 	log.Debug().Msg("[SMTP] <- ANON-LOGIN")
-	log.Debug().Msg("[SMTP] -> ANON-LOGIN authorizatoin required")
+	log.Debug().Msg("[SMTP] -> ANON-LOGIN authorization required")
 	return nil, gosmtp.ErrAuthRequired
 }
 
