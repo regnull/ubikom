@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoio"
 	"github.com/rs/zerolog"
@@ -43,6 +45,14 @@ func main() {
 			if err != nil {
 				break
 			}
+			// Change parent keys to Base58 representation.
+			keyMsg := msg.(*pb.DBRecord)
+			parentKeys := keyMsg.GetKey().GetParentKey()
+			var newParentKeys []string
+			for _, key := range parentKeys {
+				publicKey, _ := easyecc.NewPublicFromSerializedCompressed(key)
+				newParentKeys = append(newParentKeys, base58.Encode(publicKey.SerializeCompressed()))
+			}
 			opts := protojson.MarshalOptions{
 				Multiline: true,
 				Indent:    "  ",
@@ -51,7 +61,7 @@ func main() {
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to marshal to JSON")
 			}
-			fmt.Printf("%s\n", json)
+			fmt.Printf("%s\n%v\n", json, newParentKeys)
 		}
 		f.Close()
 	}

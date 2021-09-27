@@ -512,6 +512,7 @@ func (b *BadgerDB) WriteKeys(w protoio.Writer, cutoffTime uint64) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 		prefix := []byte(keyPrefix)
+		keys := make(map[string]*pb.KeyRecord)
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			name := string(item.Key())
@@ -527,18 +528,39 @@ func (b *BadgerDB) WriteKeys(w protoio.Writer, cutoffTime uint64) error {
 			if err != nil {
 				return err
 			}
-			// if keyRec.RegistrationTimestamp > int64(cutoffTime) {
-			// 	continue
-			// }
+
+			keys[publicKeyBase58] = keyRec
+		}
+
+		// Invert parent-child relationship.
+		for name, key := range keys {
+			if len(key.GetParentKey()) > 0 {
+				if len(key.GetParentKey()) != 1 {
+					return fmt.Errorf("invalid key")
+				}
+
+				childPublicKeyBase58 := base58.Encode(key.GetParentKey()[0])
+				childKey := keys[childPublicKeyBase58]
+				if childKey == nil {
+					return fmt.Errorf("invalid child key")
+				}
+				childKey.ParentKey = [][]byte{base58.Decode(name)}
+				key.ParentKey = nil
+			}
+		}
+
+		// Write the final keys.
+		for name, key := range keys {
 			rec := &pb.DBRecord{
-				Name: publicKeyBase58,
+				Name: name,
 				Payload: &pb.DBRecord_Key{
-					Key: keyRec}}
-			err = w.Write(rec)
+					Key: key}}
+			err := w.Write(rec)
 			if err != nil {
 				return err
 			}
 		}
+
 		return nil
 	})
 	return err
