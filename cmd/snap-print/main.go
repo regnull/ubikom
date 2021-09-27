@@ -30,93 +30,67 @@ func main() {
 	flag.Parse()
 
 	if args.KeysFile != "" {
-		f, err := os.OpenFile(args.KeysFile, os.O_RDONLY, 0)
+		err := printProtos(args.KeysFile, func(b []byte) (proto.Message, error) {
+			var key pb.ExportKeyRecord
+			err := proto.Unmarshal(b, &key)
+			if err != nil {
+				return nil, err
+			}
+			return &key, nil
+		})
 		if err != nil {
-			log.Error().Err(err).Msg("failed to open file")
+			log.Fatal().Err(err).Msg("failed to print protos")
 		}
-		reader := protoio.NewReader(f)
-		for {
-			msg, err := reader.Read(func(b []byte) (proto.Message, error) {
-				var key pb.ExportKeyRecord
-				err := proto.Unmarshal(b, &key)
-				if err != nil {
-					return nil, err
-				}
-				return &key, nil
-			})
-			if err != nil {
-				break
-			}
-			opts := protojson.MarshalOptions{
-				Multiline: true,
-				Indent:    "  ",
-			}
-			json, err := opts.Marshal(msg)
-			if err != nil {
-				log.Fatal().Err(err).Msg("failed to marshal to JSON")
-			}
-			fmt.Printf("%s\n\n", json)
-		}
-		f.Close()
 	}
 	if args.NamesFile != "" {
-		f, err := os.OpenFile(args.NamesFile, os.O_RDONLY, 0)
+		err := printProtos(args.NamesFile, func(b []byte) (proto.Message, error) {
+			var key pb.ExportNameRecord
+			err := proto.Unmarshal(b, &key)
+			if err != nil {
+				return nil, err
+			}
+			return &key, nil
+		})
 		if err != nil {
-			log.Error().Err(err).Msg("failed to open file")
+			log.Fatal().Err(err).Msg("failed to print protos")
 		}
-		reader := protoio.NewReader(f)
-		for {
-			msg, err := reader.Read(func(b []byte) (proto.Message, error) {
-				var key pb.ExportNameRecord
-				err := proto.Unmarshal(b, &key)
-				if err != nil {
-					return nil, err
-				}
-				return &key, nil
-			})
-			if err != nil {
-				break
-			}
-			opts := protojson.MarshalOptions{
-				Multiline: true,
-				Indent:    "  ",
-			}
-			json, err := opts.Marshal(msg)
-			if err != nil {
-				log.Fatal().Err(err).Msg("failed to marshal to JSON")
-			}
-			fmt.Printf("%s\n\n", json)
-		}
-		f.Close()
 	}
 	if args.AddressesFile != "" {
-		f, err := os.OpenFile(args.AddressesFile, os.O_RDONLY, 0)
+		err := printProtos(args.AddressesFile, func(b []byte) (proto.Message, error) {
+			var key pb.ExportAddressRecord
+			err := proto.Unmarshal(b, &key)
+			if err != nil {
+				return nil, err
+			}
+			return &key, nil
+		})
 		if err != nil {
-			log.Error().Err(err).Msg("failed to open file")
+			log.Fatal().Err(err).Msg("failed to print protos")
 		}
-		reader := protoio.NewReader(f)
-		for {
-			msg, err := reader.Read(func(b []byte) (proto.Message, error) {
-				var key pb.ExportAddressRecord
-				err := proto.Unmarshal(b, &key)
-				if err != nil {
-					return nil, err
-				}
-				return &key, nil
-			})
-			if err != nil {
-				break
-			}
-			opts := protojson.MarshalOptions{
-				Multiline: true,
-				Indent:    "  ",
-			}
-			json, err := opts.Marshal(msg)
-			if err != nil {
-				log.Fatal().Err(err).Msg("failed to marshal to JSON")
-			}
-			fmt.Printf("%s\n\n", json)
-		}
-		f.Close()
 	}
+}
+
+func printProtos(filePath string, parseFunc protoio.ParseFunc) error {
+	f, err := os.OpenFile(filePath, os.O_RDONLY, 0)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to open file")
+	}
+	reader := protoio.NewReader(f)
+	for {
+		msg, err := reader.Read(parseFunc)
+		if err != nil {
+			break
+		}
+		opts := protojson.MarshalOptions{
+			Multiline: true,
+			Indent:    "  ",
+		}
+		json, err := opts.Marshal(msg)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to marshal to JSON")
+		}
+		fmt.Printf("%s\n\n", json)
+	}
+	f.Close()
+	return nil
 }
