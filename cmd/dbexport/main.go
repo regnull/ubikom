@@ -108,7 +108,7 @@ func main() {
 
 	// The header will include hashes of all files, one line per file, in "name hash\n" format.
 	header := fmt.Sprintf("keys %x\nnames %x\naddresses %x\n", keysHash, namesHash, addressesHash)
-	err = os.WriteFile("snapshot", []byte(header), 0440)
+	err = os.WriteFile("snapshot", []byte(header), 0444)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to write snapshot header")
 	}
@@ -121,7 +121,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to marshal signature")
 	}
-	err = ioutil.WriteFile("snapshot_sig", b, 0440)
+	err = ioutil.WriteFile("snapshot_sig", b, 0444)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to write snapshot signature")
 	}
