@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 func init() {
 	getAddressCmd.Flags().String("key", "", "Location for the private key file")
 	getPublicKeyCmd.Flags().String("key", "", "Location for the private key file")
+	getPublicKeyCmd.Flags().Bool("as-base64", false, "use base 64 instead of base 58")
 	getMnemonicCmd.Flags().String("key", "", "Location for the private key file")
 	getCmd.AddCommand(getAddressCmd)
 	getCmd.AddCommand(getPublicKeyCmd)
@@ -85,6 +87,11 @@ var getPublicKeyCmd = &cobra.Command{
 			}
 		}
 
+		asBase64, err := cmd.Flags().GetBool("as-base64")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get as-base64 flag")
+		}
+
 		encrypted, err := util.IsKeyEncrypted(keyFile)
 		if err != nil {
 			log.Fatal().Err(err).Msg("cannot find key file")
@@ -103,7 +110,11 @@ var getPublicKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
 
-		fmt.Printf("%s\n", base58.Encode(privateKey.PublicKey().SerializeCompressed()))
+		if asBase64 {
+			fmt.Printf("%s\n", base64.StdEncoding.EncodeToString(privateKey.PublicKey().SerializeCompressed()))
+		} else {
+			fmt.Printf("%s\n", base58.Encode(privateKey.PublicKey().SerializeCompressed()))
+		}
 	},
 }
 

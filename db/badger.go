@@ -551,10 +551,14 @@ func (b *BadgerDB) WriteKeys(w protoio.Writer, cutoffTime uint64) error {
 
 		// Write the final keys.
 		for name, key := range keys {
-			rec := &pb.DBRecord{
-				Name: name,
-				Payload: &pb.DBRecord_Key{
-					Key: key}}
+			rec := &pb.ExportKeyRecord{
+				Key:                   base58.Decode(name),
+				RegistrationTimestamp: key.GetRegistrationTimestamp(),
+				Disabled:              key.GetDisabled(),
+				DisabledTimestamp:     key.GetDisabledTimestamp(),
+				DisabledBy:            key.GetDisabledBy(),
+				ParentKey:             key.GetParentKey(),
+			}
 			err := w.Write(rec)
 			if err != nil {
 				return err
