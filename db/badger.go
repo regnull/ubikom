@@ -74,6 +74,7 @@ func (b *BadgerDB) RegisterKeyParent(childKey *easyecc.PublicKey, parentKey *eas
 	childBase58 := base58.Encode(childKey.SerializeCompressed())
 	childDbKey := keyPrefix + childBase58
 	err := b.db.Update(func(txn *badger.Txn) error {
+		log.Debug().Str("parent", parentKey.Address()).Str("child", childKey.Address()).Msg("registering child key")
 
 		// Retrieve the key.
 

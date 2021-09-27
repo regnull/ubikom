@@ -21,6 +21,7 @@ import (
 
 type CmdArgs struct {
 	KeyLocation string
+	DbDir       string
 }
 
 func main() {
@@ -29,7 +30,12 @@ func main() {
 
 	var args CmdArgs
 	flag.StringVar(&args.KeyLocation, "key", "", "key location")
+	flag.StringVar(&args.DbDir, "db", "", "database directory")
 	flag.Parse()
+
+	if args.DbDir == "" {
+		log.Fatal().Msg("database directory must be specified")
+	}
 
 	keyFile := args.KeyLocation
 	var err error
@@ -45,15 +51,15 @@ func main() {
 	}
 	log.Info().Str("file", keyFile).Msg("private key loaded")
 
-	badger, err := badger.Open(badger.DefaultOptions("db"))
+	badger, err := badger.Open(badger.DefaultOptions(args.DbDir))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize the database")
 	}
 	db := db.NewBadgerDB(badger)
-	for i := 0; i < 100; i++ {
-		k, _ := easyecc.NewRandomPrivateKey()
-		db.RegisterKey(k.PublicKey())
-	}
+	// for i := 0; i < 100; i++ {
+	// 	k, _ := easyecc.NewRandomPrivateKey()
+	// 	db.RegisterKey(k.PublicKey())
+	// }
 	f, err := os.Create("keys")
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create file")
