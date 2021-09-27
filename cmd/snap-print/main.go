@@ -14,8 +14,9 @@ import (
 )
 
 type CmdArgs struct {
-	KeysFile  string
-	NamesFile string
+	KeysFile      string
+	NamesFile     string
+	AddressesFile string
 }
 
 func main() {
@@ -25,6 +26,7 @@ func main() {
 	var args CmdArgs
 	flag.StringVar(&args.KeysFile, "keys-file", "", "keys file location")
 	flag.StringVar(&args.NamesFile, "names-file", "", "names file location")
+	flag.StringVar(&args.AddressesFile, "addresses-file", "", "addresses file location")
 	flag.Parse()
 
 	if args.KeysFile != "" {
@@ -66,6 +68,36 @@ func main() {
 		for {
 			msg, err := reader.Read(func(b []byte) (proto.Message, error) {
 				var key pb.ExportNameRecord
+				err := proto.Unmarshal(b, &key)
+				if err != nil {
+					return nil, err
+				}
+				return &key, nil
+			})
+			if err != nil {
+				break
+			}
+			opts := protojson.MarshalOptions{
+				Multiline: true,
+				Indent:    "  ",
+			}
+			json, err := opts.Marshal(msg)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to marshal to JSON")
+			}
+			fmt.Printf("%s\n\n", json)
+		}
+		f.Close()
+	}
+	if args.AddressesFile != "" {
+		f, err := os.OpenFile(args.AddressesFile, os.O_RDONLY, 0)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to open file")
+		}
+		reader := protoio.NewReader(f)
+		for {
+			msg, err := reader.Read(func(b []byte) (proto.Message, error) {
+				var key pb.ExportAddressRecord
 				err := proto.Unmarshal(b, &key)
 				if err != nil {
 					return nil, err

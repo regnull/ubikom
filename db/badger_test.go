@@ -201,3 +201,17 @@ func Test_Badger(t *testing.T) {
 	// Tear down.
 	os.RemoveAll(dir)
 }
+
+func TestParseAddressKey(t *testing.T) {
+	assert := assert.New(t)
+
+	n, p, err := parseAddressKey("address_foo_PL_DMS")
+	assert.NoError(err)
+	assert.EqualValues("foo", n)
+	assert.EqualValues(pb.Protocol_PL_DMS, p)
+
+	n, p, err = parseAddressKey("address_foo_with_underscores_PL_DMS")
+	assert.NoError(err)
+	assert.EqualValues("foo_with_underscores", n)
+	assert.EqualValues(pb.Protocol_PL_DMS, p)
+}

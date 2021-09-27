@@ -601,3 +601,57 @@ func (b *BadgerDB) WriteNames(w protoio.Writer, cutoffTime uint64) error {
 	})
 	return err
 }
+
+func (b *BadgerDB) WriteAddresses(w protoio.Writer, cutoffTime uint64) error {
+	err := b.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		prefix := []byte(addressPrefix)
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			itemName := string(item.Key())
+			name, protocol, err := parseAddressKey(itemName)
+			if err != nil {
+				log.Warn().Err(err).Msg("failed to parse address key")
+			}
+			var address string
+			err = item.Value(func(val []byte) error {
+				address = string(val)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+
+			rec := &pb.ExportAddressRecord{
+				Name:     name,
+				Protocol: protocol,
+				Address:  address,
+			}
+			err = w.Write(rec)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}
+
+func parseAddressKey(s string) (name string, protocol pb.Protocol, err error) {
+	s = s[len(addressPrefix):]
+	parts := strings.Split(s, "_")
+	// We must have at least two underscores (one in the protocol, one separates
+	// name and protocol), so at least three parts.
+	if len(parts) < 3 {
+		return "", pb.Protocol_PL_UNKNOWN, fmt.Errorf("invalid address key")
+	}
+	protocolStr := strings.Join(parts[len(parts)-2:], "_")
+	prot, ok := pb.Protocol_value[protocolStr]
+	if !ok {
+		return "", pb.Protocol_PL_UNKNOWN, fmt.Errorf("invalid protocol")
+	}
+	protocol = pb.Protocol(prot)
+	name = strings.Join(parts[:len(parts)-2], "_")
+	return
+}

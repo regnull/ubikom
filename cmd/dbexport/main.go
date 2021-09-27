@@ -90,8 +90,24 @@ func main() {
 	f.Close()
 	namesHash := hashWriter.Hash()
 
+	// Export addresses.
+	f, err = os.Create("addresses")
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create file")
+	}
+	w = bufio.NewWriter(f)
+	hashWriter = protoio.NewSha256Writer(w)
+	protoWriter = protoio.NewWriter(hashWriter)
+	err = db.WriteAddresses(protoWriter, math.MaxUint64)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to write name")
+	}
+	w.Flush()
+	f.Close()
+	addressesHash := hashWriter.Hash()
+
 	// The header will include hashes of all files, one line per file, in "name hash\n" format.
-	header := fmt.Sprintf("keys %x\nnames %x\n", keysHash, namesHash)
+	header := fmt.Sprintf("keys %x\nnames %x\naddresses %x\n", keysHash, namesHash, addressesHash)
 	err = os.WriteFile("snapshot", []byte(header), 0440)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to write snapshot header")
