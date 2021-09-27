@@ -569,3 +569,35 @@ func (b *BadgerDB) WriteKeys(w protoio.Writer, cutoffTime uint64) error {
 	})
 	return err
 }
+
+func (b *BadgerDB) WriteNames(w protoio.Writer, cutoffTime uint64) error {
+	err := b.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		prefix := []byte(namePrefix)
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			itemName := string(item.Key())
+			name := itemName[len(namePrefix):]
+			var key []byte
+			err := item.Value(func(val []byte) error {
+				key = val
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+
+			rec := &pb.ExportNameRecord{
+				Name: name,
+				Key:  key,
+			}
+			err = w.Write(rec)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}

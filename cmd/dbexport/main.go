@@ -55,11 +55,10 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize the database")
 	}
+
 	db := db.NewBadgerDB(badger)
-	// for i := 0; i < 100; i++ {
-	// 	k, _ := easyecc.NewRandomPrivateKey()
-	// 	db.RegisterKey(k.PublicKey())
-	// }
+
+	// Export keys.
 	f, err := os.Create("keys")
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create file")
@@ -73,9 +72,30 @@ func main() {
 	}
 	w.Flush()
 	f.Close()
+	keysHash := hashWriter.Hash()
+
+	// Export names.
+	f, err = os.Create("names")
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create file")
+	}
+	w = bufio.NewWriter(f)
+	hashWriter = protoio.NewSha256Writer(w)
+	protoWriter = protoio.NewWriter(hashWriter)
+	err = db.WriteNames(protoWriter, math.MaxUint64)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to write name")
+	}
+	w.Flush()
+	f.Close()
+	namesHash := hashWriter.Hash()
 
 	// The header will include hashes of all files, one line per file, in "name hash\n" format.
-	header := fmt.Sprintf("keys %x\n", hashWriter.Hash())
+	header := fmt.Sprintf("keys %x\nnames %x\n", keysHash, namesHash)
+	err = os.WriteFile("snapshot", []byte(header), 0440)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to write snapshot header")
+	}
 
 	signed, err := protoutil.CreateSigned(key, []byte(header))
 	if err != nil {
