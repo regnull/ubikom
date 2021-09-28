@@ -85,9 +85,13 @@ func (r *readerImpl) Read(f ParseFunc) (proto.Message, error) {
 		return nil, err
 	}
 	buf := make([]byte, l)
-	n, err := r.src.Read(buf)
-	if err != nil {
-		return nil, err
+	n := 0
+	for uint64(n) < l {
+		n1, err := r.src.Read(buf[n:])
+		if err != nil {
+			return nil, err
+		}
+		n += n1
 	}
 	if uint64(n) != l {
 		return nil, fmt.Errorf("failed to read proto")

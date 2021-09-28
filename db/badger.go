@@ -38,6 +38,9 @@ func (b *BadgerDB) RegisterKey(publicKey *easyecc.PublicKey) error {
 
 	err := b.db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(dbKey))
+		if err != nil {
+			return err
+		}
 		if item != nil {
 			return ErrRecordExists
 		}
@@ -94,6 +97,9 @@ func (b *BadgerDB) RegisterKeyParent(childKey *easyecc.PublicKey, parentKey *eas
 			}
 			return nil
 		})
+		if err != nil {
+			return fmt.Errorf("failed to get key value")
+		}
 
 		// Add parent to the key record.
 
@@ -131,6 +137,9 @@ func (b *BadgerDB) RegisterName(originator, target *easyecc.PublicKey, name stri
 	dbKey := namePrefix + name
 	err := b.db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(dbKey))
+		if err != nil {
+			return err
+		}
 		var prev *easyecc.PublicKey
 		if item != nil {
 			// If the name is already registered, we can change the registration,
@@ -247,6 +256,9 @@ func (b *BadgerDB) DisableKey(originator *easyecc.PublicKey, key *easyecc.Public
 			}
 			return nil
 		})
+		if err != nil {
+			return fmt.Errorf("failed to get key record: %w", err)
+		}
 
 		// Key if the originator key is authorized to make changes.
 		// For this operation to be authorized, the originator must be the key itself,
@@ -310,6 +322,9 @@ func (b *BadgerDB) GetKey(key *easyecc.PublicKey) (*pb.KeyRecord, error) {
 			}
 			return nil
 		})
+		if err != nil {
+			return fmt.Errorf("failed to get key value: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
@@ -634,6 +649,56 @@ func (b *BadgerDB) WriteAddresses(w protoio.Writer, cutoffTime uint64) error {
 			}
 		}
 		return nil
+	})
+	return err
+}
+
+func (b *BadgerDB) ImportKey(key *pb.ExportKeyRecord) error {
+	publicKeyBase58 := base58.Encode(key.GetKey())
+	dbKey := keyPrefix + publicKeyBase58
+	err := b.db.Update(func(txn *badger.Txn) error {
+		rec := &pb.KeyRecord{
+			RegistrationTimestamp: key.GetRegistrationTimestamp(),
+			Disabled:              key.GetDisabled(),
+			DisabledTimestamp:     key.GetDisabledTimestamp(),
+			DisabledBy:            key.GetDisabledBy(),
+			ParentKey:             key.GetParentKey(),
+		}
+		recBytes, err := proto.Marshal(rec)
+		if err != nil {
+			return fmt.Errorf("error marshaling key record: %w", err)
+		}
+
+		err = txn.Set([]byte(dbKey), recBytes)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error importing the key: %w", err)
+	}
+
+	return nil
+}
+
+func (b *BadgerDB) ImportName(nameRec *pb.ExportNameRecord) error {
+	name := strings.ToLower(nameRec.GetName())
+	dbKey := namePrefix + name
+	err := b.db.Update(func(txn *badger.Txn) error {
+		err := txn.Set([]byte(dbKey), nameRec.GetKey())
+		return err
+	})
+	return err
+}
+
+func (b *BadgerDB) ImportAddress(address *pb.ExportAddressRecord) error {
+	name := strings.ToLower(address.GetName())
+	err := b.db.Update(func(txn *badger.Txn) error {
+		addressKey := addressPrefix + name + "_" + address.GetProtocol().String()
+		err := txn.Set([]byte(addressKey), []byte(address.GetAddress()))
+		return err
 	})
 	return err
 }
