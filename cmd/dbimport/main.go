@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -45,35 +46,82 @@ func main() {
 
 	db := db.NewBadgerDB(badger)
 
+	// Import keys.
 	keysPath := path.Join(args.SnapDir, "keys")
-	f, err := os.Open(keysPath)
+	keysCount, err := importItems(keysPath, func(b []byte) (proto.Message, error) {
+		var key pb.ExportKeyRecord
+		err := proto.Unmarshal(b, &key)
+		if err != nil {
+			log.Error().Err(err).Msg("unmarshal error")
+			return nil, err
+		}
+		return &key, nil
+	}, func(p proto.Message) error {
+		return db.ImportKey(p.(*pb.ExportKeyRecord))
+	})
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to open keys file")
+		log.Fatal().Err(err).Msg("failed to import keys")
+	}
+	log.Info().Int("count", keysCount).Msg("keys imported")
+
+	// Import names.
+	namesPath := path.Join(args.SnapDir, "names")
+	namesCount, err := importItems(namesPath, func(b []byte) (proto.Message, error) {
+		var rec pb.ExportNameRecord
+		err := proto.Unmarshal(b, &rec)
+		if err != nil {
+			log.Error().Err(err).Msg("unmarshal error")
+			return nil, err
+		}
+		return &rec, nil
+	}, func(p proto.Message) error {
+		return db.ImportName(p.(*pb.ExportNameRecord))
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to import names")
+	}
+	log.Info().Int("count", namesCount).Msg("names imported")
+
+	// Import addresses.
+	addressesPath := path.Join(args.SnapDir, "addresses")
+	addressesCount, err := importItems(addressesPath, func(b []byte) (proto.Message, error) {
+		var rec pb.ExportAddressRecord
+		err := proto.Unmarshal(b, &rec)
+		if err != nil {
+			log.Error().Err(err).Msg("unmarshal error")
+			return nil, err
+		}
+		return &rec, nil
+	}, func(p proto.Message) error {
+		return db.ImportAddress(p.(*pb.ExportAddressRecord))
+	})
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to import names")
+	}
+	log.Info().Int("count", addressesCount).Msg("addresses imported")
+}
+
+func importItems(filePath string, parseFunc func([]byte) (proto.Message, error), applyFunc func(proto.Message) error) (int, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open file: %w", err)
 	}
 	reader := bufio.NewReader(f)
+	count := 0
 	protoReader := protoio.NewReader(reader)
-	keysCount := 0
 	for {
-		key, err := protoReader.Read(func(b []byte) (proto.Message, error) {
-			var key pb.ExportKeyRecord
-			err := proto.Unmarshal(b, &key)
-			if err != nil {
-				log.Error().Err(err).Msg("unmarshal error")
-				return nil, err
-			}
-			return &key, nil
-		})
+		p, err := protoReader.Read(parseFunc)
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
-			log.Fatal().Err(err).Msg("failed to read proto")
+			return count, fmt.Errorf("failed to read proto: %w", err)
 		}
-		err = db.ImportKey(key.(*pb.ExportKeyRecord))
+		err = applyFunc(p)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to import key record")
+			return count, fmt.Errorf("failed to process proto: %w", err)
 		}
-		keysCount++
+		count++
 	}
-	log.Info().Int("count", keysCount).Msg("keys imported")
+	return count, nil
 }

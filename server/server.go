@@ -93,13 +93,13 @@ func (s *Server) RegisterKeyRelationship(ctx context.Context, req *pb.SignedWith
 		return nil, status.Error(codes.InvalidArgument, "invalid relationship")
 	}
 
-	childKey, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
+	parentKey, err := easyecc.NewPublicFromSerializedCompressed(req.GetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return nil, status.Error(codes.InvalidArgument, "invalid key")
 	}
 
-	parentKey, err := easyecc.NewPublicFromSerializedCompressed(keyRelReq.GetTargetKey())
+	childKey, err := easyecc.NewPublicFromSerializedCompressed(keyRelReq.GetTargetKey())
 	if err != nil {
 		log.Warn().Err(err).Msg("invalid key")
 		return nil, status.Error(codes.InvalidArgument, "invalid key")

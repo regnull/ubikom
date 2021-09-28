@@ -45,6 +45,7 @@ func (h *HealthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, srv grpc_h
 
 type CmdArgs struct {
 	BaseDir     string
+	DbDir       string
 	Port        int
 	PowStrength int
 }
@@ -56,12 +57,17 @@ func main() {
 	var args CmdArgs
 	flag.IntVar(&args.Port, "port", defaultPort, "port to listen to")
 	flag.StringVar(&args.BaseDir, "base-dir", "", "base directory")
+	flag.StringVar(&args.DbDir, "db", "", "db directory")
 	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength required")
 	flag.Parse()
 
-	dbDir, err := getDBDir(args.BaseDir)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get database directory")
+	dbDir := args.DbDir
+	var err error
+	if dbDir == "" {
+		dbDir, err = getDBDir(args.BaseDir)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get database directory")
+		}
 	}
 	db, err := badger.Open(badger.DefaultOptions(dbDir))
 	if err != nil {
