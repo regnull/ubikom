@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"path"
+	"time"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/regnull/easyecc"
@@ -22,6 +24,7 @@ import (
 type CmdArgs struct {
 	KeyLocation string
 	DbDir       string
+	SnapDir     string
 }
 
 func main() {
@@ -31,10 +34,15 @@ func main() {
 	var args CmdArgs
 	flag.StringVar(&args.KeyLocation, "key", "", "key location")
 	flag.StringVar(&args.DbDir, "db", "", "database directory")
+	flag.StringVar(&args.SnapDir, "snap-dir", "", "snapshot directory")
 	flag.Parse()
 
 	if args.DbDir == "" {
 		log.Fatal().Msg("database directory must be specified")
+	}
+
+	if args.SnapDir == "" {
+		log.Fatal().Msg("snapshot directory must be specified")
 	}
 
 	keyFile := args.KeyLocation
@@ -58,8 +66,16 @@ func main() {
 
 	db := db.NewBadgerDB(badger)
 
+	newSnapDir := path.Join(args.SnapDir, fmt.Sprintf("%d", time.Now().Unix()))
+	log.Debug().Str("dir", newSnapDir).Msg("creating snapshot directory")
+	err = os.MkdirAll(newSnapDir, 0777)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create snapshot directory")
+	}
+
 	// Export keys.
-	f, err := os.Create("keys")
+	keysPath := path.Join(newSnapDir, "keys")
+	f, err := os.Create(keysPath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create file")
 	}
@@ -75,7 +91,8 @@ func main() {
 	keysHash := hashWriter.Hash()
 
 	// Export names.
-	f, err = os.Create("names")
+	namesPath := path.Join(newSnapDir, "names")
+	f, err = os.Create(namesPath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create file")
 	}
@@ -91,7 +108,8 @@ func main() {
 	namesHash := hashWriter.Hash()
 
 	// Export addresses.
-	f, err = os.Create("addresses")
+	addressesPath := path.Join(newSnapDir, "addresses")
+	f, err = os.Create(addressesPath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create file")
 	}
@@ -108,7 +126,8 @@ func main() {
 
 	// The header will include hashes of all files, one line per file, in "name hash\n" format.
 	header := fmt.Sprintf("keys %x\nnames %x\naddresses %x\n", keysHash, namesHash, addressesHash)
-	err = os.WriteFile("snapshot", []byte(header), 0444)
+	snapshotPath := path.Join(newSnapDir, "snapshot")
+	err = os.WriteFile(snapshotPath, []byte(header), 0444)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to write snapshot header")
 	}
@@ -121,7 +140,8 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to marshal signature")
 	}
-	err = ioutil.WriteFile("snapshot_sig", b, 0444)
+	snapshotSigPath := path.Join(newSnapDir, "snapshot_sig")
+	err = ioutil.WriteFile(snapshotSigPath, b, 0444)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to write snapshot signature")
 	}
