@@ -38,7 +38,7 @@ func (b *BadgerDB) RegisterKey(publicKey *easyecc.PublicKey) error {
 
 	err := b.db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(dbKey))
-		if err != nil {
+		if err != nil && err != badger.ErrKeyNotFound {
 			return err
 		}
 		if item != nil {
@@ -137,7 +137,7 @@ func (b *BadgerDB) RegisterName(originator, target *easyecc.PublicKey, name stri
 	dbKey := namePrefix + name
 	err := b.db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(dbKey))
-		if err != nil {
+		if err != nil && err != badger.ErrKeyNotFound {
 			return err
 		}
 		var prev *easyecc.PublicKey
