@@ -1,8 +1,8 @@
+<?xml version="1.0"?>
 <!--
     See https://www.ullright.org/ullWiki/show/providing-email-client-autoconfiguration-information-from-moens-ch
     and https://wiki.mozilla.org/Thunderbird:Autoconfiguration:ConfigFileFormat
 -->
-<?xml version="1.0"?>
 <clientConfig version="1.1">
     <emailProvider id="ubikom.cc">
       <domain>ubikom.cc</domain>
@@ -25,10 +25,10 @@
 
       <outgoingServer type="smtp">
         <hostname>alpha.ubikom.cc</hostname>
-        <port>495</port>
+        <port>465</port>
         <socketType>SSL</socketType>
         <username>%EMAILLOCALPART%</username>
         <authentication>password-cleartext</authentication>
       </outgoingServer>
-    </emailProvider
+    </emailProvider>
 </clientConfig>

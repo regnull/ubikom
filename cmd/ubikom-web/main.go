@@ -301,8 +301,14 @@ func main() {
 	log.Info().Int("port", args.Port).Msg("listening...")
 
 	if args.CertFile != "" && args.KeyFile != "" {
-		log.Fatal().Err(http.ListenAndServeTLS(fmt.Sprintf(":%d", args.Port), args.CertFile, args.KeyFile, nil))
+		err := http.ListenAndServeTLS(fmt.Sprintf(":%d", args.Port), args.CertFile, args.KeyFile, nil)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+		}
 	} else {
-		log.Fatal().Err(http.ListenAndServe(fmt.Sprintf(":%d", args.Port), nil))
+		err := http.ListenAndServe(fmt.Sprintf(":%d", args.Port), nil)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+		}
 	}
 }
