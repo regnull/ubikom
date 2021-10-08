@@ -20,7 +20,8 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-var notificationMessage = `To: %s@x
+var notificationMessage = `From - %s
+To: %s@x
 From: Ubikom Web <%s@x>
 Subject: New registration
 Content-Type: text/plain; charset=utf-8; format=flowed
@@ -210,7 +211,8 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.privateKey != nil && s.name != "" && s.notificationName != "" {
-		body := fmt.Sprintf(notificationMessage, s.notificationName, s.name, name)
+		timeStr := time.Now().Format(time.ANSIC)
+		body := fmt.Sprintf(notificationMessage, timeStr, s.notificationName, s.name, name)
 		err = protoutil.SendMessage(r.Context(), s.privateKey, []byte(body), s.name, s.notificationName, s.lookupClient)
 		if err != nil {
 			log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending notification message")
