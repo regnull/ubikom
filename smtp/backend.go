@@ -141,10 +141,10 @@ func (s *Session) Data(r io.Reader) error {
 }
 
 func (s *Session) Reset() {
-	log.Debug().Msg("reset")
+	log.Debug().Msg("[SMTP] reset")
 }
 
 func (s *Session) Logout() error {
-	log.Debug().Msg("logout")
+	log.Debug().Msg("[SMTP] logout")
 	return nil
 }
