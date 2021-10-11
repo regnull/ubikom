@@ -104,6 +104,10 @@ func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	password := r.URL.Query().Get("password")
+	useMainKey := true
+	if r.URL.Query().Get("email_key_only") != "" {
+		useMainKey = false
+	}
 
 	log.Info().Str("password", password).Msg("got password")
 
@@ -133,22 +137,25 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mainKey, err := easyecc.NewRandomPrivateKey()
-	if err != nil {
-		log.Error().Err(err).Msg("failed to generate private key")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	var mainKey *easyecc.PrivateKey
+	if useMainKey {
+		mainKey, err = easyecc.NewRandomPrivateKey()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to generate private key")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-	// Register the main key.
+		// Register the main key.
 
-	err = protoutil.RegisterKey(r.Context(), s.identityClient, mainKey, s.powStrength)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to register the main key")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		err = protoutil.RegisterKey(r.Context(), s.identityClient, mainKey, s.powStrength)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to register the main key")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		log.Info().Msg("main key is registered")
 	}
-	log.Info().Msg("main key is registered")
 
 	// Create the email key.
 
@@ -165,15 +172,19 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info().Msg("email key is registered")
 
-	// Register email key as a child of main key.
+	if useMainKey {
+		// Register email key as a child of main key.
 
-	err = protoutil.RegisterChildKey(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), s.powStrength)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to register email key as a child of main key")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		err = protoutil.RegisterChildKey(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), s.powStrength)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to register email key as a child of main key")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		log.Info().Msg("key relationship is updated")
+	} else {
+		mainKey = emailKey
 	}
-	log.Info().Msg("key relationship is updated")
 
 	// Register name.
 
@@ -195,19 +206,23 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info().Msg("address is registered")
 
-	keyID := uuid.New().String()
-	s.keys[keyID] = mainKey.Secret().Bytes()
+	var mnemonicQuoted []string
+	var keyID string
+	if useMainKey {
+		keyID = uuid.New().String()
+		s.keys[keyID] = mainKey.Secret().Bytes()
 
-	mnemonic, err := mainKey.Mnemonic()
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get key mnemonic")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	mnemonicList := strings.Split(mnemonic, " ")
-	mnemonicQuoted := make([]string, len(mnemonicList))
-	for i := range mnemonicList {
-		mnemonicQuoted[i] = "\"" + mnemonicList[i] + "\""
+		mnemonic, err := mainKey.Mnemonic()
+		if err != nil {
+			log.Error().Err(err).Msg("failed to get key mnemonic")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		mnemonicList := strings.Split(mnemonic, " ")
+		mnemonicQuoted = make([]string, len(mnemonicList))
+		for i := range mnemonicList {
+			mnemonicQuoted[i] = "\"" + mnemonicList[i] + "\""
+		}
 	}
 
 	if s.privateKey != nil && s.name != "" && s.notificationName != "" {
@@ -221,7 +236,8 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Content-Type", "application/json")
-	fmt.Fprintf(w, `{
+	if useMainKey {
+		fmt.Fprintf(w, `{
 		"name": "%s",
 		"user_name": "%s", 
 		"server_url": "alpha.ubikom.cc",
@@ -229,6 +245,14 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		"key_id": "%s",
 		"password": "%s"
 }`, name, name, strings.Join(mnemonicQuoted, ", "), keyID, password)
+	} else {
+		fmt.Fprintf(w, `{
+			"name": "%s",
+			"user_name": "%s", 
+			"server_url": "alpha.ubikom.cc",
+			"password": "%s"
+	}`, name, name, password)
+	}
 }
 
 func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
