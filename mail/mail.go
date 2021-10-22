@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/mail"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 )
@@ -148,6 +149,48 @@ func RewriteFromHeader(message string) (rewrittenMessage string, fromAddr string
 	io.Copy(&buf, mailMsg.Body)
 	rewrittenMessage = string(buf.Bytes())
 	return
+}
+
+func AddReceivedHeader(message string, header []string) (string, error) {
+	if len(header) == 0 {
+		return "", fmt.Errorf("invalid header")
+	}
+
+	contentReader := strings.NewReader(message)
+	mailMsg, err := mail.ReadMessage(contentReader)
+	if err != nil {
+		return "", err
+	}
+
+	var lines []string
+	for i, h := range header {
+		line := ""
+		if i == 0 {
+			line = "Received: "
+		} else {
+			line = "    "
+		}
+		line += h
+		if i != len(header)-1 {
+			line += "\n"
+		}
+		lines = append(lines, line)
+	}
+	lines[len(lines)-1] += fmt.Sprintf("; %s", time.Now().Format("02 Jan 06 15:04:05 -0700\n"))
+
+	var buf bytes.Buffer
+	for _, line := range lines {
+		buf.Write([]byte(line))
+	}
+	for name, values := range mailMsg.Header {
+		for _, value := range values {
+			buf.Write([]byte(fmt.Sprintf("%s: %s\n", name, value)))
+		}
+	}
+	buf.Write([]byte("\n"))
+	io.Copy(&buf, mailMsg.Body)
+	return buf.String(), nil
+
 }
 
 // StripDomain removes the domain name from name.

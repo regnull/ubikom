@@ -138,3 +138,12 @@ func Test_ExtractReceiverInternalNames(t *testing.T) {
 	assert.Contains(recipients, "lgx")
 	assert.Contains(recipients, "glx")
 }
+
+func Test_AddReceivedHeader(t *testing.T) {
+	assert := assert.New(t)
+
+	modified, err := AddReceivedHeader(testMessage, []string{"from foo.bar", "by bar.foo"})
+	assert.NoError(err)
+	assert.True(strings.Contains(modified, "Received: from foo.bar\n"))
+	assert.True(strings.Contains(modified, "by bar.foo;"))
+}

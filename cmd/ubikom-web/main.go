@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/globals"
+	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
@@ -20,8 +21,7 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-var notificationMessage = `From - %s
-To: %s@x
+var notificationMessage = `To: %s@x
 From: Ubikom Web <%s@x>
 Subject: New registration
 Content-Type: text/plain; charset=utf-8; format=flowed
@@ -108,8 +108,6 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("email_key_only") != "" {
 		useMainKey = false
 	}
-
-	log.Info().Str("password", password).Msg("got password")
 
 	if len(name) < minNameLength {
 		log.Warn().Str("name", name).Msg("name is too short")
@@ -226,8 +224,13 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.privateKey != nil && s.name != "" && s.notificationName != "" {
-		timeStr := time.Now().Format(time.ANSIC)
-		body := fmt.Sprintf(notificationMessage, timeStr, s.notificationName, s.name, name)
+		body := fmt.Sprintf(notificationMessage, s.notificationName, s.name, name)
+		body, err = mail.AddReceivedHeader(body, []string{"by Ubikom client"})
+		if err != nil {
+			log.Error().Err(err).Msg("error adding received header")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		err = protoutil.SendMessage(r.Context(), s.privateKey, []byte(body), s.name, s.notificationName, s.lookupClient)
 		if err != nil {
 			log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending notification message")

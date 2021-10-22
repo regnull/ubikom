@@ -239,7 +239,7 @@ func (b *Backend) Retr(user string, msgId int) (message string, err error) {
 		log.Error().Err(err).Msg("error decrypting message")
 		return "", fmt.Errorf("error decrypting message")
 	}
-	log.Debug().Str("message", getFirst(content, 16)).Msg("[POP] -> RETR")
+	log.Debug().Msg("[POP] -> RETR")
 	return content, nil
 }
 
@@ -446,7 +446,7 @@ func (b *Backend) decryptMessage(ctx context.Context, privateKey *easyecc.Privat
 		return "", fmt.Errorf("signature verification failed")
 	}
 
-	content, err := privateKey.Decrypt(msg.Content, senderKey)
+	content, err := privateKey.Decrypt(msg.GetContent(), senderKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to decrypt message")
 	}
