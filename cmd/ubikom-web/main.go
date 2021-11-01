@@ -24,6 +24,7 @@ import (
 var notificationMessage = `To: %s@x
 From: Ubikom Web <%s@x>
 Subject: New registration
+Date: %s
 Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 7bit
 Content-Language: en-US
@@ -224,7 +225,8 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.privateKey != nil && s.name != "" && s.notificationName != "" {
-		body := fmt.Sprintf(notificationMessage, s.notificationName, s.name, name)
+		body := fmt.Sprintf(notificationMessage, s.notificationName, s.name,
+			time.Now().Format("02 Jan 06 15:04:05 -0700"), name)
 		body, err = mail.AddReceivedHeader(body, []string{"by Ubikom client"})
 		if err != nil {
 			log.Error().Err(err).Msg("error adding received header")

@@ -190,7 +190,6 @@ func AddReceivedHeader(message string, header []string) (string, error) {
 	buf.Write([]byte("\n"))
 	io.Copy(&buf, mailMsg.Body)
 	return buf.String(), nil
-
 }
 
 // StripDomain removes the domain name from name.
