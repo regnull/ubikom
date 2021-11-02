@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -102,12 +104,48 @@ func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
 }`, name, !found)
 }
 
+type EasySetupRequest struct {
+	Name         string `json:"name"`
+	Password     string `json:"password"`
+	EmailKeyOnly bool   `json:"email_key_only"`
+}
+
 func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
-	password := r.URL.Query().Get("password")
+	name := ""
+	password := ""
 	useMainKey := true
-	if r.URL.Query().Get("email_key_only") != "" {
-		useMainKey = false
+	log.Debug().Str("method", r.Method).Msg("got method")
+	if r.Method == "POST" {
+		defer r.Body.Close()
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to read request body")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		var req EasySetupRequest
+		err = json.Unmarshal(body, &req)
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to parse request json")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		name = req.Name
+		password = req.Password
+		useMainKey = !req.EmailKeyOnly
+	} else if r.Method == "OPTIONS" {
+		// This is a "pre-flight" request, see https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.Header().Add("Access-Control-Allow-Methods", "POST, GET")
+		w.Header().Add("Access-Control-Allow-Headers", "*")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	} else {
+		name = r.URL.Query().Get("name")
+		password = r.URL.Query().Get("password")
+		if r.URL.Query().Get("email_key_only") != "" {
+			useMainKey = false
+		}
 	}
 
 	if len(name) < minNameLength {
