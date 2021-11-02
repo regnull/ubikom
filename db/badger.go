@@ -544,40 +544,19 @@ func (b *BadgerDB) WriteKeys(w protoio.Writer, cutoffTime uint64) error {
 				return err
 			}
 
-			keys[publicKeyBase58] = keyRec
-		}
-
-		// Invert parent-child relationship.
-		for name, key := range keys {
-			if len(key.GetParentKey()) > 0 {
-				if len(key.GetParentKey()) != 1 {
-					return fmt.Errorf("invalid key")
-				}
-
-				childPublicKeyBase58 := base58.Encode(key.GetParentKey()[0])
-				childKey := keys[childPublicKeyBase58]
-				if childKey == nil {
-					return fmt.Errorf("invalid child key")
-				}
-				childKey.ParentKey = [][]byte{base58.Decode(name)}
-				key.ParentKey = nil
-			}
-		}
-
-		// Write the final keys.
-		for name, key := range keys {
 			rec := &pb.ExportKeyRecord{
 				Key:                   base58.Decode(name),
-				RegistrationTimestamp: key.GetRegistrationTimestamp(),
-				Disabled:              key.GetDisabled(),
-				DisabledTimestamp:     key.GetDisabledTimestamp(),
-				DisabledBy:            key.GetDisabledBy(),
-				ParentKey:             key.GetParentKey(),
+				RegistrationTimestamp: keyRec.GetRegistrationTimestamp(),
+				Disabled:              keyRec.GetDisabled(),
+				DisabledTimestamp:     keyRec.GetDisabledTimestamp(),
+				DisabledBy:            keyRec.GetDisabledBy(),
+				ParentKey:             keyRec.GetParentKey(),
 			}
-			err := w.Write(rec)
+			err = w.Write(rec)
 			if err != nil {
 				return err
 			}
+			keys[publicKeyBase58] = keyRec
 		}
 
 		return nil
