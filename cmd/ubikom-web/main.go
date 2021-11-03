@@ -298,6 +298,68 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type ChangePasswordRequest struct {
+	Name        string `json:"name"`
+	Password    string `json:"password"`
+	NewPassword string `json:"new_password"`
+}
+
+func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		// This is a "pre-flight" request, see https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.Header().Add("Access-Control-Allow-Methods", "POST, GET")
+		w.Header().Add("Access-Control-Allow-Headers", "*")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if r.Method != "POST" {
+		log.Warn().Str("method", r.Method).Msg("invalid HTTP method")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to read request body")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	var req ChangePasswordRequest
+	err = json.Unmarshal(body, &req)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to parse request json")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	salt := util.Hash256([]byte(req.Name))
+	key := easyecc.NewPrivateKeyFromPassword([]byte(req.Password), salt)
+
+	newKey := easyecc.NewPrivateKeyFromPassword([]byte(req.NewPassword), salt)
+
+	err = protoutil.RegisterKey(r.Context(), s.identityClient, newKey, s.powStrength)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to register new key")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	log.Info().Msg("new key is registered")
+
+	err = protoutil.RegisterName(r.Context(), s.identityClient, key, newKey.PublicKey(), req.Name, s.powStrength)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to register name")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: Disable old key, maybe.
+
+	log.Info().Msg("name is registered")
+}
+
 func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
 	keyID := r.URL.Query().Get("key_id")
 	key, ok := s.keys[keyID]
@@ -367,6 +429,7 @@ func main() {
 	http.HandleFunc("/lookupName", server.HandleNameLookup)
 	http.HandleFunc("/easySetup", server.HandleEasySetup)
 	http.HandleFunc("/getKey", server.HandleGetKey)
+	http.HandleFunc("/changePassword", server.HandleChangePassword)
 	log.Info().Int("port", args.Port).Msg("listening...")
 
 	if args.CertFile != "" && args.KeyFile != "" {

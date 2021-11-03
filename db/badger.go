@@ -472,53 +472,36 @@ func CheckRegisterNameAuthorization(txn *badger.Txn, originator, target, prev *e
 		}
 	}
 
-	targetParent, err := GetParent(txn, target)
+	// targetParent, err := GetParent(txn, target)
+	// if err != nil {
+	// 	return false, err
+	// }
+
+	originatorParent, err := GetParent(txn, originator)
 	if err != nil {
 		return false, err
 	}
 
-	// 1. Check if the originator has the authority.
-
-	// If the target has a parent, only the parent can request the change.
-	if targetParent != nil && !originator.Equal(targetParent) {
+	// If the originator has a parent, it must be a parent who requests the change.
+	if originatorParent != nil {
 		return false, nil
 	}
 
-	// The request must be for the same key, or for the child key.
-	if prev != nil {
-		if !originator.Equal(prev) && !originator.Equal(prevParent) {
-			return false, nil
-		}
-	}
-
-	// 2. Check if the change can be done.
-
-	// Can assign to a new key.
+	// If the name was not registered before, we are good to go.
 	if prev == nil {
 		return true, nil
 	}
 
-	// Can re-assign name to the same key (noop).
-	if prev.Equal(target) {
+	// If the originator does not have a parent, and it's the originator who owns
+	// the name, we are good.
+	if prev.Equal(originator) {
 		return true, nil
 	}
 
-	// Can assign from child to  parent.
-	if prevParent != nil && prevParent.Equal(target) {
+	// We still can be good, if it's our child who owns the name.
+	if prevParent != nil && prevParent.Equal(originator) {
 		return true, nil
 	}
-
-	// Can assign from parent to child.
-	if targetParent != nil && targetParent.Equal(prev) {
-		return true, nil
-	}
-
-	// Can assign to another child.
-	if targetParent != nil && targetParent.Equal(prevParent) {
-		return true, nil
-	}
-
-	// Nothing else can be done.
 	return false, nil
 }
 
