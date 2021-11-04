@@ -148,6 +148,8 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+
 	if len(name) < minNameLength {
 		log.Warn().Str("name", name).Msg("name is too short")
 		w.WriteHeader(http.StatusBadRequest)
@@ -277,7 +279,6 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Content-Type", "application/json")
 	if useMainKey {
 		fmt.Fprintf(w, `{
@@ -313,6 +314,8 @@ func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	if r.Method != "POST" {
 		log.Warn().Str("method", r.Method).Msg("invalid HTTP method")
@@ -361,13 +364,14 @@ func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+
 	keyID := r.URL.Query().Get("key_id")
 	key, ok := s.keys[keyID]
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Content-Type", "application/octet-stream")
 	w.Header().Add("Content-Disposition", "attachment; filename=\"ubikom.private_key\"")
 	w.Write(key)
