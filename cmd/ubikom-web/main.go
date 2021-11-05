@@ -163,6 +163,12 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !util.ValidateName(name) {
+		log.Warn().Str("name", name).Msg("invalid name")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	if len(password) < minPasswordLength {
 		log.Warn().Str("name", name).Msg("password is too short")
 		w.WriteHeader(http.StatusBadRequest)
