@@ -86,7 +86,14 @@ func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
 	_, err := s.lookupClient.LookupName(r.Context(), &pb.LookupNameRequest{
 		Name: name,
 	})
+
 	w.Header().Add("Content-Type", "application/json")
+	if !util.ValidateName(name) {
+		log.Warn().Str("name", name).Msg("invalid name")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	if err != nil && util.StatusCodeFromError(err) != codes.NotFound {
 		log.Error().Err(err).Msg("name lookup request failed")
 		w.WriteHeader(http.StatusInternalServerError)
