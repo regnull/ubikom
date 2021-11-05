@@ -87,7 +87,8 @@ func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
 		Name: name,
 	})
 
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+
 	if !util.ValidateName(name) {
 		log.Warn().Str("name", name).Msg("invalid name")
 		w.WriteHeader(http.StatusBadRequest)
@@ -102,7 +103,7 @@ func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
 
 	found := err == nil
 
-	w.Header().Add("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Content-Type", "application/json")
 
 	// If we got here, the name record was found.
 	fmt.Fprintf(w, `{
