@@ -52,6 +52,7 @@ func (b *Badger) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
 		defer it.Close()
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			err := it.Item().Value(func(v []byte) error {
+				// TODO: How can this possibly work?
 				msg = &pb.DMSMessage{}
 				return proto.Unmarshal(v, msg)
 			})

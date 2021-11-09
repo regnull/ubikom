@@ -17,6 +17,11 @@ func Test_CreateGetMailbox(t *testing.T) {
 	mb, err := b.GetMailbox("foo", "bar")
 	assert.Nil(mb)
 	assert.EqualValues(ErrNotFound, err)
+
+	assert.NoError(b.CreateMailbox("foo", "bar"))
+	mb, err = b.GetMailbox("foo", "bar")
+	assert.NotNil(mb)
+	assert.NoError(err)
 }
 
 func createTestBadgerStore() (*Badger, func(), error) {

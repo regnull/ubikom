@@ -23,7 +23,27 @@ func NewBadger(dir string) (*Badger, error) {
 }
 
 func (b *Badger) GetMailboxes(user string) ([]*pb.ImapMailbox, error) {
-	return nil, fmt.Errorf("not implemented")
+	prefix := []byte(mailboxPrefix(user))
+	var mbs []*pb.ImapMailbox
+	err := b.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			mb := &pb.ImapMailbox{}
+			err := it.Item().Value(func(v []byte) error {
+				return proto.Unmarshal(v, mb)
+			})
+			if err != nil {
+				return err
+			}
+			mbs = append(mbs, mb)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mbs, nil
 }
 
 func (b *Badger) GetMailbox(user string, name string) (*pb.ImapMailbox, error) {
@@ -89,4 +109,8 @@ func (b *Badger) RenameMailbox(user string, existingName, newName string) error 
 
 func mailboxKey(user, name string) string {
 	return "mailbox_" + user + "_" + name
+}
+
+func mailboxPrefix(user string) string {
+	return "mailbox_" + user + "_"
 }
