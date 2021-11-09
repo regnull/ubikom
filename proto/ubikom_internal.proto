@@ -47,3 +47,10 @@ message DBValue {
 message DBEntry {
     repeated DBValue value = 1;
 }
+
+message ImapMailbox {
+    string name = 1;
+    repeated string attribute = 2;
+    string delimiter = 3;
+    bool subscribed = 4;
+}

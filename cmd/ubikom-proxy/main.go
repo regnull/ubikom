@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/imap"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/pop"
 	"github.com/regnull/ubikom/smtp"
@@ -30,6 +31,8 @@ type Args struct {
 	PopPassword           string `yaml:"pop-password"`
 	PopDomain             string `yaml:"pop-domain"`
 	PopPort               int    `yaml:"pop-port"`
+	ImapDomain            string `yaml:"imap-domain"`
+	ImapPort              int    `yaml:"imap-port"`
 	SmtpDomain            string `yaml:"smtp-domain"`
 	SmtpPort              int    `yaml:"smtp-port"`
 	SmtpUser              string `yaml:"smtp-user"`
@@ -65,6 +68,8 @@ func main() {
 	flag.StringVar(&args.PopPassword, "pop-password", configArgs.PopPassword, "password to be used by POP server")
 	flag.StringVar(&args.PopDomain, "pop-domain", configArgs.PopDomain, "domain to be used by POP server")
 	flag.IntVar(&args.PopPort, "pop-port", configArgs.PopPort, "port to be used by POP server")
+	flag.StringVar(&args.ImapDomain, "imap-domain", configArgs.ImapDomain, "domain to be used by IMAP server")
+	flag.IntVar(&args.ImapPort, "imap-port", configArgs.ImapPort, "port to be used by IMAP server")
 	flag.StringVar(&args.SmtpDomain, "smtp-domain", configArgs.SmtpDomain, "domain for SMTP server")
 	flag.IntVar(&args.SmtpPort, "smtp-port", configArgs.SmtpPort, "port used by SMTP server")
 	flag.StringVar(&args.SmtpUser, "smtp-user", configArgs.SmtpUser, "user to be used by SMTP server")
@@ -151,7 +156,7 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
 	popServer := pop.NewServer(popOpts)
 	go func() {
@@ -181,6 +186,21 @@ func main() {
 		err := smtpServer.ListenAndServe()
 		if err != nil {
 			log.Error().Err(err).Msg("SMTP server failed to initialize")
+		}
+		wg.Done()
+	}()
+
+	imapOpts := &imap.ServerOptions{
+		Domain:   args.ImapDomain,
+		Port:     args.ImapPort,
+		CertFile: args.TLSCertFile,
+		KeyFile:  args.TLSKeyFile,
+	}
+	imapServer := imap.NewServer(imapOpts)
+	go func() {
+		err := imapServer.ListenAndServe()
+		if err != nil {
+			log.Error().Err(err).Msg("IMAP server failed to initialize")
 		}
 		wg.Done()
 	}()
