@@ -54,6 +54,22 @@ func Test_GetMailboxes(t *testing.T) {
 	}
 }
 
+func Test_RenameMailbox(t *testing.T) {
+	assert := assert.New(t)
+
+	b, cleanup, err := createTestBadgerStore()
+	assert.NoError(err)
+	defer cleanup()
+
+	assert.NoError(b.CreateMailbox("foo", "bar"))
+	assert.NoError(b.RenameMailbox("foo", "bar", "baz"))
+
+	mb, err := b.GetMailbox("foo", "baz")
+	assert.NoError(err)
+	assert.NotNil(mb)
+	assert.EqualValues("baz", mb.GetName())
+}
+
 func createTestBadgerStore() (*Badger, func(), error) {
 	dir, err := os.MkdirTemp("", "ubikom_badgerstore_test")
 	if err != nil {

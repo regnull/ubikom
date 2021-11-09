@@ -100,11 +100,51 @@ func (b *Badger) CreateMailbox(user string, name string) error {
 }
 
 func (b *Badger) DeleteMailbox(user string, name string) error {
-	return fmt.Errorf("not implemented")
+	key := []byte(mailboxKey(user, name))
+	err := b.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete(key)
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *Badger) RenameMailbox(user string, existingName, newName string) error {
-	return fmt.Errorf("not implemented")
+	oldKey := []byte(mailboxKey(user, existingName))
+	newKey := []byte(mailboxKey(user, newName))
+
+	err := b.db.Update(func(txn *badger.Txn) error {
+		item, err := txn.Get(oldKey)
+		if err != nil {
+			return err
+		}
+		mb := &pb.ImapMailbox{}
+		err = item.Value(func(val []byte) error {
+			return proto.Unmarshal(val, mb)
+		})
+		if err != nil {
+			return err
+		}
+		mb.Name = newName
+		bb, err := proto.Marshal(mb)
+		if err != nil {
+			return err
+		}
+		err = txn.SetEntry(badger.NewEntry(newKey, bb))
+		if err != nil {
+			return err
+		}
+		err = txn.Delete(oldKey)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func mailboxKey(user, name string) string {
