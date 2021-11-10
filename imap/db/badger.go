@@ -194,6 +194,100 @@ func (b *Badger) RenameMailbox(user string, existingName, newName string) error 
 	return nil
 }
 
+func (b *Badger) Subscribe(user string, name string) error {
+	err := b.db.Update(func(txn *badger.Txn) error {
+		mailboxes, err := getMailboxes(txn, user, b.privateKey)
+		if err != nil {
+			return fmt.Errorf("failed to get mailboxes: %w", err)
+		}
+		found := false
+		for _, s := range mailboxes.GetSubscribed() {
+			if s == name {
+				found = true
+				break
+			}
+		}
+		if found {
+			return fmt.Errorf("already subscribed")
+		}
+		mailboxes.Subscribed = append(mailboxes.Subscribed, name)
+		bb, err := proto.Marshal(mailboxes)
+		if err != nil {
+			return fmt.Errorf("failed to marshal mailboxes: %w", err)
+		}
+		bbe, err := b.privateKey.EncryptSymmetric(bb)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+		}
+		err = txn.Set(mailboxKey(user), bbe)
+		if err != nil {
+			return fmt.Errorf("failed to save mailboxes: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Badger) Unsubscribe(user string, name string) error {
+	err := b.db.Update(func(txn *badger.Txn) error {
+		mailboxes, err := getMailboxes(txn, user, b.privateKey)
+		if err != nil {
+			return fmt.Errorf("failed to get mailboxes: %w", err)
+		}
+		var newSubscribed []string
+		for _, s := range mailboxes.GetSubscribed() {
+			if s == name {
+				continue
+			}
+			newSubscribed = append(newSubscribed, s)
+		}
+		if len(newSubscribed) == len(mailboxes.GetSubscribed()) {
+			return fmt.Errorf("not subscribed")
+		}
+		mailboxes.Subscribed = newSubscribed
+		bb, err := proto.Marshal(mailboxes)
+		if err != nil {
+			return fmt.Errorf("failed to marshal mailboxes: %w", err)
+		}
+		bbe, err := b.privateKey.EncryptSymmetric(bb)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+		}
+		err = txn.Set(mailboxKey(user), bbe)
+		if err != nil {
+			return fmt.Errorf("failed to save mailboxes: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Badger) Subscribed(user string, name string) (bool, error) {
+	subscribed := false
+	err := b.db.Update(func(txn *badger.Txn) error {
+		mailboxes, err := getMailboxes(txn, user, b.privateKey)
+		if err != nil {
+			return fmt.Errorf("failed to get mailboxes: %w", err)
+		}
+		for _, s := range mailboxes.GetSubscribed() {
+			if s == name {
+				subscribed = true
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return subscribed, nil
+}
+
 func mailboxKey(user string) []byte {
 	return []byte("mailbox_" + user)
 }

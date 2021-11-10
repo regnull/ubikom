@@ -86,6 +86,28 @@ func Test_DeleteMailbox(t *testing.T) {
 	assert.Nil(mb)
 }
 
+func Test_SubscribeUnsubscribe(t *testing.T) {
+	assert := assert.New(t)
+
+	b, cleanup, err := createTestBadgerStore()
+	assert.NoError(err)
+	defer cleanup()
+
+	s, err := b.Subscribed("foo", "bar")
+	assert.NoError(err)
+	assert.False(s)
+
+	assert.NoError(b.Subscribe("foo", "bar"))
+	s, err = b.Subscribed("foo", "bar")
+	assert.NoError(err)
+	assert.True(s)
+
+	assert.NoError(b.Unsubscribe("foo", "bar"))
+	s, err = b.Subscribed("foo", "bar")
+	assert.NoError(err)
+	assert.False(s)
+}
+
 func createTestBadgerStore() (*Badger, func(), error) {
 	dir, err := os.MkdirTemp("", "ubikom_badgerstore_test")
 	if err != nil {
