@@ -51,6 +51,9 @@ message DBEntry {
 message ImapMailbox {
     string name = 1;
     repeated string attribute = 2;
-    string delimiter = 3;
-    bool subscribed = 4;
+}
+
+message ImapMailboxes {
+    repeated ImapMailbox mailbox = 1;
+    repeated string subscribed = 2;
 }

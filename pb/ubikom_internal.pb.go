@@ -415,10 +415,8 @@ type ImapMailbox struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name       string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Attribute  []string `protobuf:"bytes,2,rep,name=attribute,proto3" json:"attribute,omitempty"`
-	Delimiter  string   `protobuf:"bytes,3,opt,name=delimiter,proto3" json:"delimiter,omitempty"`
-	Subscribed bool     `protobuf:"varint,4,opt,name=subscribed,proto3" json:"subscribed,omitempty"`
+	Name      string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Attribute []string `protobuf:"bytes,2,rep,name=attribute,proto3" json:"attribute,omitempty"`
 }
 
 func (x *ImapMailbox) Reset() {
@@ -467,18 +465,59 @@ func (x *ImapMailbox) GetAttribute() []string {
 	return nil
 }
 
-func (x *ImapMailbox) GetDelimiter() string {
-	if x != nil {
-		return x.Delimiter
-	}
-	return ""
+type ImapMailboxes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Mailbox    []*ImapMailbox `protobuf:"bytes,1,rep,name=mailbox,proto3" json:"mailbox,omitempty"`
+	Subscribed []string       `protobuf:"bytes,2,rep,name=subscribed,proto3" json:"subscribed,omitempty"`
 }
 
-func (x *ImapMailbox) GetSubscribed() bool {
+func (x *ImapMailboxes) Reset() {
+	*x = ImapMailboxes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ubikom_internal_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ImapMailboxes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImapMailboxes) ProtoMessage() {}
+
+func (x *ImapMailboxes) ProtoReflect() protoreflect.Message {
+	mi := &file_ubikom_internal_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImapMailboxes.ProtoReflect.Descriptor instead.
+func (*ImapMailboxes) Descriptor() ([]byte, []int) {
+	return file_ubikom_internal_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ImapMailboxes) GetMailbox() []*ImapMailbox {
+	if x != nil {
+		return x.Mailbox
+	}
+	return nil
+}
+
+func (x *ImapMailboxes) GetSubscribed() []string {
 	if x != nil {
 		return x.Subscribed
 	}
-	return false
+	return nil
 }
 
 var File_ubikom_internal_proto protoreflect.FileDescriptor
@@ -535,16 +574,18 @@ var file_ubikom_internal_proto_rawDesc = []byte{
 	0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x22, 0x30, 0x0a, 0x07, 0x44, 0x42, 0x45, 0x6e, 0x74, 0x72,
 	0x79, 0x12, 0x25, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b,
 	0x32, 0x0f, 0x2e, 0x55, 0x62, 0x69, 0x6b, 0x6f, 0x6d, 0x2e, 0x44, 0x42, 0x56, 0x61, 0x6c, 0x75,
-	0x65, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x7d, 0x0a, 0x0b, 0x49, 0x6d, 0x61, 0x70,
+	0x65, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x3f, 0x0a, 0x0b, 0x49, 0x6d, 0x61, 0x70,
 	0x4d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x61,
 	0x74, 0x74, 0x72, 0x69, 0x62, 0x75, 0x74, 0x65, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09,
-	0x61, 0x74, 0x74, 0x72, 0x69, 0x62, 0x75, 0x74, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x64, 0x65, 0x6c,
-	0x69, 0x6d, 0x69, 0x74, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x64, 0x65,
-	0x6c, 0x69, 0x6d, 0x69, 0x74, 0x65, 0x72, 0x12, 0x1e, 0x0a, 0x0a, 0x73, 0x75, 0x62, 0x73, 0x63,
-	0x72, 0x69, 0x62, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0a, 0x73, 0x75, 0x62,
-	0x73, 0x63, 0x72, 0x69, 0x62, 0x65, 0x64, 0x42, 0x07, 0x5a, 0x05, 0x2e, 0x2f, 0x3b, 0x70, 0x62,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x61, 0x74, 0x74, 0x72, 0x69, 0x62, 0x75, 0x74, 0x65, 0x22, 0x5e, 0x0a, 0x0d, 0x49, 0x6d, 0x61,
+	0x70, 0x4d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x65, 0x73, 0x12, 0x2d, 0x0a, 0x07, 0x6d, 0x61,
+	0x69, 0x6c, 0x62, 0x6f, 0x78, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x55, 0x62,
+	0x69, 0x6b, 0x6f, 0x6d, 0x2e, 0x49, 0x6d, 0x61, 0x70, 0x4d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78,
+	0x52, 0x07, 0x6d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x12, 0x1e, 0x0a, 0x0a, 0x73, 0x75, 0x62,
+	0x73, 0x63, 0x72, 0x69, 0x62, 0x65, 0x64, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x0a, 0x73,
+	0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x62, 0x65, 0x64, 0x42, 0x07, 0x5a, 0x05, 0x2e, 0x2f, 0x3b,
+	0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -559,7 +600,7 @@ func file_ubikom_internal_proto_rawDescGZIP() []byte {
 	return file_ubikom_internal_proto_rawDescData
 }
 
-var file_ubikom_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_ubikom_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_ubikom_internal_proto_goTypes = []interface{}{
 	(*KeyRecord)(nil),           // 0: Ubikom.KeyRecord
 	(*ExportKeyRecord)(nil),     // 1: Ubikom.ExportKeyRecord
@@ -568,18 +609,20 @@ var file_ubikom_internal_proto_goTypes = []interface{}{
 	(*DBValue)(nil),             // 4: Ubikom.DBValue
 	(*DBEntry)(nil),             // 5: Ubikom.DBEntry
 	(*ImapMailbox)(nil),         // 6: Ubikom.ImapMailbox
-	(Protocol)(0),               // 7: Ubikom.Protocol
-	(*anypb.Any)(nil),           // 8: google.protobuf.Any
+	(*ImapMailboxes)(nil),       // 7: Ubikom.ImapMailboxes
+	(Protocol)(0),               // 8: Ubikom.Protocol
+	(*anypb.Any)(nil),           // 9: google.protobuf.Any
 }
 var file_ubikom_internal_proto_depIdxs = []int32{
-	7, // 0: Ubikom.ExportAddressRecord.protocol:type_name -> Ubikom.Protocol
-	8, // 1: Ubikom.DBValue.payload:type_name -> google.protobuf.Any
+	8, // 0: Ubikom.ExportAddressRecord.protocol:type_name -> Ubikom.Protocol
+	9, // 1: Ubikom.DBValue.payload:type_name -> google.protobuf.Any
 	4, // 2: Ubikom.DBEntry.value:type_name -> Ubikom.DBValue
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	6, // 3: Ubikom.ImapMailboxes.mailbox:type_name -> Ubikom.ImapMailbox
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_ubikom_internal_proto_init() }
@@ -673,6 +716,18 @@ func file_ubikom_internal_proto_init() {
 				return nil
 			}
 		}
+		file_ubikom_internal_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ImapMailboxes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -680,7 +735,7 @@ func file_ubikom_internal_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_ubikom_internal_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

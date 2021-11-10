@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/golang/protobuf/proto"
@@ -22,22 +23,37 @@ func NewBadger(dir string) (*Badger, error) {
 	return &Badger{db: db}, nil
 }
 
+func getMailboxes(txn *badger.Txn, user string) (*pb.ImapMailboxes, error) {
+	item, err := txn.Get(mailboxKey(user))
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return &pb.ImapMailboxes{}, nil
+		}
+		return nil, fmt.Errorf("error getting mailbox: %w", err)
+	}
+
+	mailboxes := &pb.ImapMailboxes{}
+	err = item.Value(func(val []byte) error {
+		err := proto.Unmarshal(val, mailboxes)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal mailboxes record: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get mailbox: %w", err)
+	}
+	return mailboxes, nil
+}
+
 func (b *Badger) GetMailboxes(user string) ([]*pb.ImapMailbox, error) {
-	prefix := []byte(mailboxPrefix(user))
 	var mbs []*pb.ImapMailbox
 	err := b.db.View(func(txn *badger.Txn) error {
-		it := txn.NewIterator(badger.DefaultIteratorOptions)
-		defer it.Close()
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			mb := &pb.ImapMailbox{}
-			err := it.Item().Value(func(v []byte) error {
-				return proto.Unmarshal(v, mb)
-			})
-			if err != nil {
-				return err
-			}
-			mbs = append(mbs, mb)
+		mailboxes, err := getMailboxes(txn, user)
+		if err != nil {
+			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
+		mbs = mailboxes.GetMailbox()
 		return nil
 	})
 	if err != nil {
@@ -47,48 +63,48 @@ func (b *Badger) GetMailboxes(user string) ([]*pb.ImapMailbox, error) {
 }
 
 func (b *Badger) GetMailbox(user string, name string) (*pb.ImapMailbox, error) {
-	key := mailboxKey(user, name)
-	var mb pb.ImapMailbox
+	var mailboxes *pb.ImapMailboxes
 	err := b.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(key))
+		var err error
+		mailboxes, err = getMailboxes(txn, user)
 		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return ErrNotFound
-			}
-			return fmt.Errorf("error getting mailbox: %w", err)
-		}
-		err = item.Value(func(val []byte) error {
-			err := proto.Unmarshal(val, &mb)
-			if err != nil {
-				return fmt.Errorf("failed to unmarshal mailbox record: %w", err)
-			}
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("failed to get mailbox: %w", err)
+			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &mb, nil
+	for _, mb := range mailboxes.GetMailbox() {
+		if mb.GetName() == name {
+			return mb, nil
+		}
+	}
+	return nil, ErrNotFound
 }
 
 func (b *Badger) CreateMailbox(user string, name string) error {
-	key := mailboxKey(user, name)
 	mb := &pb.ImapMailbox{
 		Name: name}
-	bb, err := proto.Marshal(mb)
-	if err != nil {
-		return err
-	}
 
-	err = b.db.Update(func(txn *badger.Txn) error {
-		e := badger.NewEntry([]byte(key), bb)
-		err := txn.SetEntry(e)
+	err := b.db.Update(func(txn *badger.Txn) error {
+		mailboxes, err := getMailboxes(txn, user)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get mailboxes: %w", err)
+		}
+		for _, mb := range mailboxes.GetMailbox() {
+			if mb.GetName() == name {
+				return fmt.Errorf("mailbox already exists")
+			}
+		}
+		mailboxes.Mailbox = append(mailboxes.Mailbox, mb)
+		bb, err := proto.Marshal(mailboxes)
+		if err != nil {
+			return fmt.Errorf("failed to marshal mailboxes: %w", err)
+		}
+		err = txn.Set(mailboxKey(user), bb)
+		if err != nil {
+			return fmt.Errorf("failed to save mailboxes: %w", err)
 		}
 		return nil
 	})
@@ -100,44 +116,29 @@ func (b *Badger) CreateMailbox(user string, name string) error {
 }
 
 func (b *Badger) DeleteMailbox(user string, name string) error {
-	key := []byte(mailboxKey(user, name))
 	err := b.db.Update(func(txn *badger.Txn) error {
-		return txn.Delete(key)
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (b *Badger) RenameMailbox(user string, existingName, newName string) error {
-	oldKey := []byte(mailboxKey(user, existingName))
-	newKey := []byte(mailboxKey(user, newName))
-
-	err := b.db.Update(func(txn *badger.Txn) error {
-		item, err := txn.Get(oldKey)
+		mailboxes, err := getMailboxes(txn, user)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
-		mb := &pb.ImapMailbox{}
-		err = item.Value(func(val []byte) error {
-			return proto.Unmarshal(val, mb)
-		})
-		if err != nil {
-			return err
+		var newMailboxes []*pb.ImapMailbox
+		for _, mb := range mailboxes.GetMailbox() {
+			if mb.GetName() == name {
+				continue
+			}
+			newMailboxes = append(newMailboxes, mb)
 		}
-		mb.Name = newName
-		bb, err := proto.Marshal(mb)
-		if err != nil {
-			return err
+		if len(newMailboxes) == len(mailboxes.GetMailbox()) {
+			return fmt.Errorf("mailbox not found")
 		}
-		err = txn.SetEntry(badger.NewEntry(newKey, bb))
+		mailboxes.Mailbox = newMailboxes
+		bb, err := proto.Marshal(mailboxes)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal mailboxes: %w", err)
 		}
-		err = txn.Delete(oldKey)
+		err = txn.Set(mailboxKey(user), bb)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to save mailboxes: %w", err)
 		}
 		return nil
 	})
@@ -147,10 +148,34 @@ func (b *Badger) RenameMailbox(user string, existingName, newName string) error 
 	return nil
 }
 
-func mailboxKey(user, name string) string {
-	return "mailbox_" + user + "_" + name
+func (b *Badger) RenameMailbox(user string, existingName, newName string) error {
+	err := b.db.Update(func(txn *badger.Txn) error {
+		mailboxes, err := getMailboxes(txn, user)
+		if err != nil {
+			return fmt.Errorf("failed to get mailboxes: %w", err)
+		}
+		for _, mb := range mailboxes.GetMailbox() {
+			if strings.HasPrefix(mb.GetName(), existingName) {
+				n := newName + mb.GetName()[len(existingName):]
+				mb.Name = n
+			}
+		}
+		bb, err := proto.Marshal(mailboxes)
+		if err != nil {
+			return fmt.Errorf("failed to marshal mailboxes: %w", err)
+		}
+		err = txn.Set(mailboxKey(user), bb)
+		if err != nil {
+			return fmt.Errorf("failed to save mailboxes: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func mailboxPrefix(user string) string {
-	return "mailbox_" + user + "_"
+func mailboxKey(user string) []byte {
+	return []byte("mailbox_" + user)
 }
