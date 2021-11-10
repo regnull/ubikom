@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/regnull/easyecc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -91,7 +92,11 @@ func createTestBadgerStore() (*Badger, func(), error) {
 		return nil, func() {}, err
 	}
 
-	store, err := NewBadger(dir)
+	privateKey, err := easyecc.NewRandomPrivateKey()
+	if err != nil {
+		return nil, func() {}, err
+	}
+	store, err := NewBadger(dir, privateKey)
 	if err != nil {
 		return nil, func() {}, err
 	}

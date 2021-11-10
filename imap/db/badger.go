@@ -6,24 +6,26 @@ import (
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/golang/protobuf/proto"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 )
 
 var ErrNotFound = fmt.Errorf("not found")
 
 type Badger struct {
-	db *badger.DB
+	db         *badger.DB
+	privateKey *easyecc.PrivateKey
 }
 
-func NewBadger(dir string) (*Badger, error) {
+func NewBadger(dir string, privateKey *easyecc.PrivateKey) (*Badger, error) {
 	db, err := badger.Open(badger.DefaultOptions(dir))
 	if err != nil {
 		return nil, err
 	}
-	return &Badger{db: db}, nil
+	return &Badger{db: db, privateKey: privateKey}, nil
 }
 
-func getMailboxes(txn *badger.Txn, user string) (*pb.ImapMailboxes, error) {
+func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) (*pb.ImapMailboxes, error) {
 	item, err := txn.Get(mailboxKey(user))
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
@@ -34,7 +36,11 @@ func getMailboxes(txn *badger.Txn, user string) (*pb.ImapMailboxes, error) {
 
 	mailboxes := &pb.ImapMailboxes{}
 	err = item.Value(func(val []byte) error {
-		err := proto.Unmarshal(val, mailboxes)
+		bb, err := privateKey.DecryptSymmetric(val)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt mailboxes: %w", err)
+		}
+		err = proto.Unmarshal(bb, mailboxes)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal mailboxes record: %w", err)
 		}
@@ -49,7 +55,7 @@ func getMailboxes(txn *badger.Txn, user string) (*pb.ImapMailboxes, error) {
 func (b *Badger) GetMailboxes(user string) ([]*pb.ImapMailbox, error) {
 	var mbs []*pb.ImapMailbox
 	err := b.db.View(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user)
+		mailboxes, err := getMailboxes(txn, user, b.privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -66,7 +72,7 @@ func (b *Badger) GetMailbox(user string, name string) (*pb.ImapMailbox, error) {
 	var mailboxes *pb.ImapMailboxes
 	err := b.db.View(func(txn *badger.Txn) error {
 		var err error
-		mailboxes, err = getMailboxes(txn, user)
+		mailboxes, err = getMailboxes(txn, user, b.privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -88,7 +94,7 @@ func (b *Badger) CreateMailbox(user string, name string) error {
 		Name: name}
 
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user)
+		mailboxes, err := getMailboxes(txn, user, b.privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -102,7 +108,11 @@ func (b *Badger) CreateMailbox(user string, name string) error {
 		if err != nil {
 			return fmt.Errorf("failed to marshal mailboxes: %w", err)
 		}
-		err = txn.Set(mailboxKey(user), bb)
+		bbe, err := b.privateKey.EncryptSymmetric(bb)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+		}
+		err = txn.Set(mailboxKey(user), bbe)
 		if err != nil {
 			return fmt.Errorf("failed to save mailboxes: %w", err)
 		}
@@ -117,7 +127,7 @@ func (b *Badger) CreateMailbox(user string, name string) error {
 
 func (b *Badger) DeleteMailbox(user string, name string) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user)
+		mailboxes, err := getMailboxes(txn, user, b.privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -136,7 +146,11 @@ func (b *Badger) DeleteMailbox(user string, name string) error {
 		if err != nil {
 			return fmt.Errorf("failed to marshal mailboxes: %w", err)
 		}
-		err = txn.Set(mailboxKey(user), bb)
+		bbe, err := b.privateKey.EncryptSymmetric(bb)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+		}
+		err = txn.Set(mailboxKey(user), bbe)
 		if err != nil {
 			return fmt.Errorf("failed to save mailboxes: %w", err)
 		}
@@ -150,7 +164,7 @@ func (b *Badger) DeleteMailbox(user string, name string) error {
 
 func (b *Badger) RenameMailbox(user string, existingName, newName string) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user)
+		mailboxes, err := getMailboxes(txn, user, b.privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -164,7 +178,11 @@ func (b *Badger) RenameMailbox(user string, existingName, newName string) error 
 		if err != nil {
 			return fmt.Errorf("failed to marshal mailboxes: %w", err)
 		}
-		err = txn.Set(mailboxKey(user), bb)
+		bbe, err := b.privateKey.EncryptSymmetric(bb)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+		}
+		err = txn.Set(mailboxKey(user), bbe)
 		if err != nil {
 			return fmt.Errorf("failed to save mailboxes: %w", err)
 		}
