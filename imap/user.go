@@ -2,16 +2,18 @@ package imap
 
 import (
 	"github.com/emersion/go-imap/backend"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/imap/db"
 )
 
 type User struct {
-	name string
-	db   *db.Badger
+	name       string
+	db         *db.Badger
+	privateKey *easyecc.PrivateKey
 }
 
-func NewUser(name string, db *db.Badger) *User {
-	return &User{name: name, db: db}
+func NewUser(name string, db *db.Badger, privateKey *easyecc.PrivateKey) *User {
+	return &User{name: name, db: db, privateKey: privateKey}
 }
 
 func (u *User) Username() string {
