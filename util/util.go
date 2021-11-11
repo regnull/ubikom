@@ -276,3 +276,7 @@ func GetKeyFromNamePassword(ctx context.Context, name string, pass string,
 	}
 	return privateKey, nil
 }
+
+func NowUint32() uint32 {
+	return uint32(time.Now().UnixNano() / 1000000000)
+}

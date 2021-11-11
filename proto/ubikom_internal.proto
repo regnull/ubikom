@@ -51,6 +51,8 @@ message DBEntry {
 message ImapMailbox {
     string name = 1;
     repeated string attribute = 2;
+    string id = 3; // Unique ID for this mailbox. It never changes, even when mailbox is renamed.
+    uint32 uid_validity = 4;
 }
 
 message ImapMailboxes {

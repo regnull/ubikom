@@ -88,3 +88,10 @@ func Test_GetKeyFromNamePassword(t *testing.T) {
 	assert.NotNil(actualKey)
 	assert.Equal(expectedKey, actualKey)
 }
+
+func Test_NowUint32(t *testing.T) {
+	assert := assert.New(t)
+
+	now := NowUint32()
+	assert.True(now > 1636658188)
+}
