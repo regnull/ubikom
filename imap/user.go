@@ -56,7 +56,11 @@ func (u *User) GetMailbox(name string) (backend.Mailbox, error) {
 }
 
 func (u *User) CreateMailbox(name string) error {
-	return u.db.CreateMailbox(u.name, name)
+	mb, err := NewMailbox(u.name, name, u.db)
+	if err != nil {
+		return err
+	}
+	return u.db.CreateMailbox(u.name, mb.ToProto())
 }
 
 func (u *User) DeleteMailbox(name string) error {

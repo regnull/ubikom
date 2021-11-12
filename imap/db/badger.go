@@ -80,17 +80,14 @@ func (b *Badger) GetMailbox(user string, name string) (*pb.ImapMailbox, error) {
 	return nil, ErrNotFound
 }
 
-func (b *Badger) CreateMailbox(user string, name string) error {
-	mb := &pb.ImapMailbox{
-		Name: name}
-
+func (b *Badger) CreateMailbox(user string, mb *pb.ImapMailbox) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
 		mailboxes, err := getMailboxes(txn, user, b.privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
-		for _, mb := range mailboxes.GetMailbox() {
-			if mb.GetName() == name {
+		for _, m := range mailboxes.GetMailbox() {
+			if mb.GetName() == m.GetName() {
 				return fmt.Errorf("mailbox already exists")
 			}
 		}

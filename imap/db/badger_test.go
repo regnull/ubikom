@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/pb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +21,7 @@ func Test_CreateGetMailbox(t *testing.T) {
 	assert.Nil(mb)
 	assert.EqualValues(ErrNotFound, err)
 
-	assert.NoError(b.CreateMailbox("foo", "bar"))
+	assert.NoError(b.CreateMailbox("foo", &pb.ImapMailbox{Name: "bar"}))
 	mb, err = b.GetMailbox("foo", "bar")
 	assert.NotNil(mb)
 	assert.NoError(err)
@@ -34,9 +35,9 @@ func Test_GetMailboxes(t *testing.T) {
 	assert.NoError(err)
 	defer cleanup()
 
-	assert.NoError(b.CreateMailbox("foo", "mb1"))
-	assert.NoError(b.CreateMailbox("foo", "mb2"))
-	assert.NoError(b.CreateMailbox("foo", "mb3"))
+	assert.NoError(b.CreateMailbox("foo", &pb.ImapMailbox{Name: "mb1"}))
+	assert.NoError(b.CreateMailbox("foo", &pb.ImapMailbox{Name: "mb2"}))
+	assert.NoError(b.CreateMailbox("foo", &pb.ImapMailbox{Name: "mb3"}))
 
 	mbs, err := b.GetMailboxes("foo")
 	assert.NoError(err)
@@ -62,7 +63,7 @@ func Test_RenameMailbox(t *testing.T) {
 	assert.NoError(err)
 	defer cleanup()
 
-	assert.NoError(b.CreateMailbox("foo", "bar"))
+	assert.NoError(b.CreateMailbox("foo", &pb.ImapMailbox{Name: "bar"}))
 	assert.NoError(b.RenameMailbox("foo", "bar", "baz"))
 
 	mb, err := b.GetMailbox("foo", "baz")
@@ -78,7 +79,7 @@ func Test_DeleteMailbox(t *testing.T) {
 	assert.NoError(err)
 	defer cleanup()
 
-	assert.NoError(b.CreateMailbox("foo", "bar"))
+	assert.NoError(b.CreateMailbox("foo", &pb.ImapMailbox{Name: "bar"}))
 	assert.NoError(b.DeleteMailbox("foo", "bar"))
 
 	mb, err := b.GetMailbox("foo", "bar")

@@ -43,6 +43,12 @@ func NewFromProto(protoMailbox pb.ImapMailbox, user string, db *db.Badger) *Mail
 	return mb
 }
 
+func (m *Mailbox) ToProto() *pb.ImapMailbox {
+	return &pb.ImapMailbox{
+		Name: m.status.Name,
+		Uid:  m.status.UidValidity}
+}
+
 func (m *Mailbox) User() string {
 	return m.user
 }
