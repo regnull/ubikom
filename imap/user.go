@@ -27,7 +27,10 @@ func (u *User) ListMailboxes(subscribed bool) ([]backend.Mailbox, error) {
 	}
 	var ret []backend.Mailbox
 	for _, mb := range mailboxes {
-		m := NewMailbox(u.name, mb.Name, u.db)
+		m, err := NewMailbox(u.name, mb.Name, u.db)
+		if err != nil {
+			return nil, err
+		}
 		ret = append(ret, m)
 	}
 	return ret, nil
@@ -41,7 +44,11 @@ func (u *User) GetMailbox(name string) (backend.Mailbox, error) {
 
 	for _, mb := range mailboxes {
 		if mb.Name == name {
-			return NewMailbox(u.name, name, u.db), nil
+			mb, err := NewMailbox(u.name, name, u.db)
+			if err != nil {
+				return nil, err
+			}
+			return mb, nil
 		}
 	}
 

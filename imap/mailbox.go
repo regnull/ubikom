@@ -7,7 +7,6 @@ import (
 	"github.com/emersion/go-imap"
 	"github.com/regnull/ubikom/imap/db"
 	"github.com/regnull/ubikom/pb"
-	"github.com/regnull/ubikom/util"
 )
 
 const (
@@ -18,15 +17,20 @@ type Mailbox struct {
 	status imap.MailboxStatus
 	user   string
 	db     *db.Badger
-	uid    uint32
 }
 
 // NewMailbox creates a brand new mailbox.
-func NewMailbox(user string, name string, db *db.Badger) *Mailbox {
+func NewMailbox(user string, name string, db *db.Badger) (*Mailbox, error) {
 	mb := &Mailbox{user: user, db: db}
 	mb.status.Name = name
-	mb.status.UidValidity = util.NowUint32()
-	return mb
+
+	uid, err := db.GetNextMailboxID(user)
+	if err != nil {
+		return nil, err
+	}
+
+	mb.status.UidValidity = uid
+	return mb, nil
 }
 
 // NewFromProto creates a mailbox from the database data.
@@ -44,7 +48,7 @@ func (m *Mailbox) User() string {
 }
 
 func (m *Mailbox) ID() uint32 {
-	return m.uid
+	return m.status.UidValidity
 }
 
 func (m *Mailbox) Name() string {
