@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/dgraph-io/badger/v3"
@@ -35,17 +36,7 @@ func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) 
 	}
 
 	mailboxes := &pb.ImapMailboxes{}
-	err = item.Value(func(val []byte) error {
-		bb, err := privateKey.DecryptSymmetric(val)
-		if err != nil {
-			return fmt.Errorf("failed to decrypt mailboxes: %w", err)
-		}
-		err = proto.Unmarshal(bb, mailboxes)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal mailboxes record: %w", err)
-		}
-		return nil
-	})
+	err = unmarhalItemAndDecrypt(item, mailboxes, privateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get mailbox: %w", err)
 	}
@@ -104,13 +95,9 @@ func (b *Badger) CreateMailbox(user string, name string) error {
 			}
 		}
 		mailboxes.Mailbox = append(mailboxes.Mailbox, mb)
-		bb, err := proto.Marshal(mailboxes)
+		bbe, err := marshalAndEncrypt(mailboxes, b.privateKey)
 		if err != nil {
-			return fmt.Errorf("failed to marshal mailboxes: %w", err)
-		}
-		bbe, err := b.privateKey.EncryptSymmetric(bb)
-		if err != nil {
-			return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+			return err
 		}
 		err = txn.Set(mailboxKey(user), bbe)
 		if err != nil {
@@ -142,13 +129,9 @@ func (b *Badger) DeleteMailbox(user string, name string) error {
 			return fmt.Errorf("mailbox not found")
 		}
 		mailboxes.Mailbox = newMailboxes
-		bb, err := proto.Marshal(mailboxes)
+		bbe, err := marshalAndEncrypt(mailboxes, b.privateKey)
 		if err != nil {
-			return fmt.Errorf("failed to marshal mailboxes: %w", err)
-		}
-		bbe, err := b.privateKey.EncryptSymmetric(bb)
-		if err != nil {
-			return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+			return err
 		}
 		err = txn.Set(mailboxKey(user), bbe)
 		if err != nil {
@@ -174,13 +157,9 @@ func (b *Badger) RenameMailbox(user string, existingName, newName string) error 
 				mb.Name = n
 			}
 		}
-		bb, err := proto.Marshal(mailboxes)
+		bbe, err := marshalAndEncrypt(mailboxes, b.privateKey)
 		if err != nil {
-			return fmt.Errorf("failed to marshal mailboxes: %w", err)
-		}
-		bbe, err := b.privateKey.EncryptSymmetric(bb)
-		if err != nil {
-			return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+			return err
 		}
 		err = txn.Set(mailboxKey(user), bbe)
 		if err != nil {
@@ -211,13 +190,9 @@ func (b *Badger) Subscribe(user string, name string) error {
 			return fmt.Errorf("already subscribed")
 		}
 		mailboxes.Subscribed = append(mailboxes.Subscribed, name)
-		bb, err := proto.Marshal(mailboxes)
+		bbe, err := marshalAndEncrypt(mailboxes, b.privateKey)
 		if err != nil {
-			return fmt.Errorf("failed to marshal mailboxes: %w", err)
-		}
-		bbe, err := b.privateKey.EncryptSymmetric(bb)
-		if err != nil {
-			return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+			return err
 		}
 		err = txn.Set(mailboxKey(user), bbe)
 		if err != nil {
@@ -248,14 +223,7 @@ func (b *Badger) Unsubscribe(user string, name string) error {
 			return fmt.Errorf("not subscribed")
 		}
 		mailboxes.Subscribed = newSubscribed
-		bb, err := proto.Marshal(mailboxes)
-		if err != nil {
-			return fmt.Errorf("failed to marshal mailboxes: %w", err)
-		}
-		bbe, err := b.privateKey.EncryptSymmetric(bb)
-		if err != nil {
-			return fmt.Errorf("failed to encrypt mailboxes: %w", err)
-		}
+		bbe, err := marshalAndEncrypt(mailboxes, b.privateKey)
 		err = txn.Set(mailboxKey(user), bbe)
 		if err != nil {
 			return fmt.Errorf("failed to save mailboxes: %w", err)
@@ -290,4 +258,125 @@ func (b *Badger) Subscribed(user string, name string) (bool, error) {
 
 func mailboxKey(user string) []byte {
 	return []byte("mailbox_" + user)
+}
+
+func (b *Badger) SaveMessage(user string, mbid uint32, msg *pb.ImapMessage) error {
+	bb, err := proto.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("error marshaling message: %w", err)
+	}
+	bbe, err := b.privateKey.EncryptSymmetric(bb)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+	}
+	err = b.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(messageKey(user, mbid, msg.GetUid()), bbe)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to save message: %w", err)
+	}
+	return fmt.Errorf("not implemented")
+}
+
+func (b *Badger) GetMessages(user string, mailbox string) ([]*pb.ImapMessage, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (b *Badger) mutateInfo(user string, f func(info *pb.ImapInfo)) error {
+	err := b.db.Update(func(txn *badger.Txn) error {
+		info := &pb.ImapInfo{
+			NextMailboxUid: 1000,
+			NextMessageUid: 1000}
+		item, err := txn.Get(infoKey(user))
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		}
+		if err == nil {
+			err = unmarhalItemAndDecrypt(item, info, b.privateKey)
+			if err != nil {
+				return err
+			}
+		}
+		f(info)
+		bbe, err := marshalAndEncrypt(info, b.privateKey)
+		if err != nil {
+			return err
+		}
+		err = txn.Set(infoKey(user), bbe)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Badger) GetNextMailboxID(user string) (uint32, error) {
+	var mbid uint32
+	err := b.mutateInfo(user, func(info *pb.ImapInfo) {
+		mbid = info.GetNextMailboxUid()
+		info.NextMailboxUid++
+	})
+	if err != nil {
+		return 0, err
+	}
+	return mbid, nil
+}
+
+func (b *Badger) GetNextMessageID(user string) (uint32, error) {
+	var msgid uint32
+	err := b.mutateInfo(user, func(info *pb.ImapInfo) {
+		msgid = info.GetNextMessageUid()
+		info.NextMessageUid++
+	})
+	if err != nil {
+		return 0, err
+	}
+	return msgid, nil
+}
+
+func messageKey(user string, mbid uint32, msgid uint32) []byte {
+	return []byte("message_" + user + "_" + strconv.FormatInt(int64(mbid), 10) +
+		"_" + strconv.FormatInt(int64(msgid), 10))
+}
+
+func mailboxMessagePrefix(user string, mbid uint32) []byte {
+	return []byte("message_" + user + "_" + strconv.FormatInt(int64(mbid), 10) + "_")
+}
+
+func infoKey(user string) []byte {
+	return []byte("info_" + user)
+}
+
+func marshalAndEncrypt(msg proto.Message, privateKey *easyecc.PrivateKey) ([]byte, error) {
+	bb, err := proto.Marshal(msg)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling message: %w", err)
+	}
+	bbe, err := privateKey.EncryptSymmetric(bb)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt mailboxes: %w", err)
+	}
+	return bbe, nil
+}
+
+func unmarshalAndDecrypt(data []byte, msg proto.Message, privateKey *easyecc.PrivateKey) error {
+	bb, err := privateKey.DecryptSymmetric(data)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt data: %w", err)
+	}
+	err = proto.Unmarshal(bb, msg)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal message: %w", err)
+	}
+	return nil
+}
+
+func unmarhalItemAndDecrypt(item *badger.Item, msg proto.Message, privateKey *easyecc.PrivateKey) error {
+	return item.Value(func(val []byte) error {
+		return unmarshalAndDecrypt(val, msg, privateKey)
+	})
 }

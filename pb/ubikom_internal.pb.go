@@ -410,21 +410,75 @@ func (x *DBEntry) GetValue() []*DBValue {
 	return nil
 }
 
+type ImapInfo struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	NextMailboxUid uint32 `protobuf:"varint,1,opt,name=nextMailboxUid,proto3" json:"nextMailboxUid,omitempty"`
+	NextMessageUid uint32 `protobuf:"varint,2,opt,name=nextMessageUid,proto3" json:"nextMessageUid,omitempty"`
+}
+
+func (x *ImapInfo) Reset() {
+	*x = ImapInfo{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ubikom_internal_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ImapInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImapInfo) ProtoMessage() {}
+
+func (x *ImapInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_ubikom_internal_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImapInfo.ProtoReflect.Descriptor instead.
+func (*ImapInfo) Descriptor() ([]byte, []int) {
+	return file_ubikom_internal_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ImapInfo) GetNextMailboxUid() uint32 {
+	if x != nil {
+		return x.NextMailboxUid
+	}
+	return 0
+}
+
+func (x *ImapInfo) GetNextMessageUid() uint32 {
+	if x != nil {
+		return x.NextMessageUid
+	}
+	return 0
+}
+
 type ImapMailbox struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name        string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Attribute   []string `protobuf:"bytes,2,rep,name=attribute,proto3" json:"attribute,omitempty"`
-	Id          string   `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"` // Unique ID for this mailbox. It never changes, even when mailbox is renamed.
-	UidValidity uint32   `protobuf:"varint,4,opt,name=uid_validity,json=uidValidity,proto3" json:"uid_validity,omitempty"`
+	Name      string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Attribute []string `protobuf:"bytes,2,rep,name=attribute,proto3" json:"attribute,omitempty"`
+	Uid       uint32   `protobuf:"varint,3,opt,name=uid,proto3" json:"uid,omitempty"` // Unique ID for this mailbox. It never changes, even when mailbox is renamed.
 }
 
 func (x *ImapMailbox) Reset() {
 	*x = ImapMailbox{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ubikom_internal_proto_msgTypes[6]
+		mi := &file_ubikom_internal_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -437,7 +491,7 @@ func (x *ImapMailbox) String() string {
 func (*ImapMailbox) ProtoMessage() {}
 
 func (x *ImapMailbox) ProtoReflect() protoreflect.Message {
-	mi := &file_ubikom_internal_proto_msgTypes[6]
+	mi := &file_ubikom_internal_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -450,7 +504,7 @@ func (x *ImapMailbox) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImapMailbox.ProtoReflect.Descriptor instead.
 func (*ImapMailbox) Descriptor() ([]byte, []int) {
-	return file_ubikom_internal_proto_rawDescGZIP(), []int{6}
+	return file_ubikom_internal_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ImapMailbox) GetName() string {
@@ -467,16 +521,9 @@ func (x *ImapMailbox) GetAttribute() []string {
 	return nil
 }
 
-func (x *ImapMailbox) GetId() string {
+func (x *ImapMailbox) GetUid() uint32 {
 	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *ImapMailbox) GetUidValidity() uint32 {
-	if x != nil {
-		return x.UidValidity
+		return x.Uid
 	}
 	return 0
 }
@@ -493,7 +540,7 @@ type ImapMailboxes struct {
 func (x *ImapMailboxes) Reset() {
 	*x = ImapMailboxes{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_ubikom_internal_proto_msgTypes[7]
+		mi := &file_ubikom_internal_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -506,7 +553,7 @@ func (x *ImapMailboxes) String() string {
 func (*ImapMailboxes) ProtoMessage() {}
 
 func (x *ImapMailboxes) ProtoReflect() protoreflect.Message {
-	mi := &file_ubikom_internal_proto_msgTypes[7]
+	mi := &file_ubikom_internal_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -519,7 +566,7 @@ func (x *ImapMailboxes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImapMailboxes.ProtoReflect.Descriptor instead.
 func (*ImapMailboxes) Descriptor() ([]byte, []int) {
-	return file_ubikom_internal_proto_rawDescGZIP(), []int{7}
+	return file_ubikom_internal_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ImapMailboxes) GetMailbox() []*ImapMailbox {
@@ -534,6 +581,85 @@ func (x *ImapMailboxes) GetSubscribed() []string {
 		return x.Subscribed
 	}
 	return nil
+}
+
+type ImapMessage struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Content           []byte   `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
+	Flag              []string `protobuf:"bytes,2,rep,name=flag,proto3" json:"flag,omitempty"`
+	ReceivedTimestamp uint64   `protobuf:"varint,3,opt,name=received_timestamp,json=receivedTimestamp,proto3" json:"received_timestamp,omitempty"`
+	Size              uint64   `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
+	Uid               uint32   `protobuf:"varint,5,opt,name=uid,proto3" json:"uid,omitempty"`
+}
+
+func (x *ImapMessage) Reset() {
+	*x = ImapMessage{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ubikom_internal_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ImapMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImapMessage) ProtoMessage() {}
+
+func (x *ImapMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_ubikom_internal_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImapMessage.ProtoReflect.Descriptor instead.
+func (*ImapMessage) Descriptor() ([]byte, []int) {
+	return file_ubikom_internal_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ImapMessage) GetContent() []byte {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
+func (x *ImapMessage) GetFlag() []string {
+	if x != nil {
+		return x.Flag
+	}
+	return nil
+}
+
+func (x *ImapMessage) GetReceivedTimestamp() uint64 {
+	if x != nil {
+		return x.ReceivedTimestamp
+	}
+	return 0
+}
+
+func (x *ImapMessage) GetSize() uint64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *ImapMessage) GetUid() uint32 {
+	if x != nil {
+		return x.Uid
+	}
+	return 0
 }
 
 var File_ubikom_internal_proto protoreflect.FileDescriptor
@@ -590,21 +716,34 @@ var file_ubikom_internal_proto_rawDesc = []byte{
 	0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x22, 0x30, 0x0a, 0x07, 0x44, 0x42, 0x45, 0x6e, 0x74, 0x72,
 	0x79, 0x12, 0x25, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b,
 	0x32, 0x0f, 0x2e, 0x55, 0x62, 0x69, 0x6b, 0x6f, 0x6d, 0x2e, 0x44, 0x42, 0x56, 0x61, 0x6c, 0x75,
-	0x65, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x72, 0x0a, 0x0b, 0x49, 0x6d, 0x61, 0x70,
-	0x4d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x61,
-	0x74, 0x74, 0x72, 0x69, 0x62, 0x75, 0x74, 0x65, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09,
-	0x61, 0x74, 0x74, 0x72, 0x69, 0x62, 0x75, 0x74, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18,
-	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x75, 0x69, 0x64,
-	0x5f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x69, 0x74, 0x79, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0d, 0x52,
-	0x0b, 0x75, 0x69, 0x64, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x69, 0x74, 0x79, 0x22, 0x5e, 0x0a, 0x0d,
-	0x49, 0x6d, 0x61, 0x70, 0x4d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x65, 0x73, 0x12, 0x2d, 0x0a,
-	0x07, 0x6d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x13,
-	0x2e, 0x55, 0x62, 0x69, 0x6b, 0x6f, 0x6d, 0x2e, 0x49, 0x6d, 0x61, 0x70, 0x4d, 0x61, 0x69, 0x6c,
-	0x62, 0x6f, 0x78, 0x52, 0x07, 0x6d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x12, 0x1e, 0x0a, 0x0a,
-	0x73, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x62, 0x65, 0x64, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09,
-	0x52, 0x0a, 0x73, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x62, 0x65, 0x64, 0x42, 0x07, 0x5a, 0x05,
-	0x2e, 0x2f, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x65, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x5a, 0x0a, 0x08, 0x49, 0x6d, 0x61, 0x70,
+	0x49, 0x6e, 0x66, 0x6f, 0x12, 0x26, 0x0a, 0x0e, 0x6e, 0x65, 0x78, 0x74, 0x4d, 0x61, 0x69, 0x6c,
+	0x62, 0x6f, 0x78, 0x55, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x0e, 0x6e, 0x65,
+	0x78, 0x74, 0x4d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x55, 0x69, 0x64, 0x12, 0x26, 0x0a, 0x0e,
+	0x6e, 0x65, 0x78, 0x74, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x55, 0x69, 0x64, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0d, 0x52, 0x0e, 0x6e, 0x65, 0x78, 0x74, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67,
+	0x65, 0x55, 0x69, 0x64, 0x22, 0x51, 0x0a, 0x0b, 0x49, 0x6d, 0x61, 0x70, 0x4d, 0x61, 0x69, 0x6c,
+	0x62, 0x6f, 0x78, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x61, 0x74, 0x74, 0x72, 0x69,
+	0x62, 0x75, 0x74, 0x65, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09, 0x61, 0x74, 0x74, 0x72,
+	0x69, 0x62, 0x75, 0x74, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x69, 0x64, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x0d, 0x52, 0x03, 0x75, 0x69, 0x64, 0x22, 0x5e, 0x0a, 0x0d, 0x49, 0x6d, 0x61, 0x70, 0x4d,
+	0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x65, 0x73, 0x12, 0x2d, 0x0a, 0x07, 0x6d, 0x61, 0x69, 0x6c,
+	0x62, 0x6f, 0x78, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x55, 0x62, 0x69, 0x6b,
+	0x6f, 0x6d, 0x2e, 0x49, 0x6d, 0x61, 0x70, 0x4d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x52, 0x07,
+	0x6d, 0x61, 0x69, 0x6c, 0x62, 0x6f, 0x78, 0x12, 0x1e, 0x0a, 0x0a, 0x73, 0x75, 0x62, 0x73, 0x63,
+	0x72, 0x69, 0x62, 0x65, 0x64, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x0a, 0x73, 0x75, 0x62,
+	0x73, 0x63, 0x72, 0x69, 0x62, 0x65, 0x64, 0x22, 0x90, 0x01, 0x0a, 0x0b, 0x49, 0x6d, 0x61, 0x70,
+	0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65,
+	0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e,
+	0x74, 0x12, 0x12, 0x0a, 0x04, 0x66, 0x6c, 0x61, 0x67, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52,
+	0x04, 0x66, 0x6c, 0x61, 0x67, 0x12, 0x2d, 0x0a, 0x12, 0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65,
+	0x64, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x04, 0x52, 0x11, 0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x64, 0x54, 0x69, 0x6d, 0x65, 0x73,
+	0x74, 0x61, 0x6d, 0x70, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x04, 0x52, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x69, 0x64, 0x18,
+	0x05, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x03, 0x75, 0x69, 0x64, 0x42, 0x07, 0x5a, 0x05, 0x2e, 0x2f,
+	0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -619,7 +758,7 @@ func file_ubikom_internal_proto_rawDescGZIP() []byte {
 	return file_ubikom_internal_proto_rawDescData
 }
 
-var file_ubikom_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_ubikom_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_ubikom_internal_proto_goTypes = []interface{}{
 	(*KeyRecord)(nil),           // 0: Ubikom.KeyRecord
 	(*ExportKeyRecord)(nil),     // 1: Ubikom.ExportKeyRecord
@@ -627,21 +766,23 @@ var file_ubikom_internal_proto_goTypes = []interface{}{
 	(*ExportAddressRecord)(nil), // 3: Ubikom.ExportAddressRecord
 	(*DBValue)(nil),             // 4: Ubikom.DBValue
 	(*DBEntry)(nil),             // 5: Ubikom.DBEntry
-	(*ImapMailbox)(nil),         // 6: Ubikom.ImapMailbox
-	(*ImapMailboxes)(nil),       // 7: Ubikom.ImapMailboxes
-	(Protocol)(0),               // 8: Ubikom.Protocol
-	(*anypb.Any)(nil),           // 9: google.protobuf.Any
+	(*ImapInfo)(nil),            // 6: Ubikom.ImapInfo
+	(*ImapMailbox)(nil),         // 7: Ubikom.ImapMailbox
+	(*ImapMailboxes)(nil),       // 8: Ubikom.ImapMailboxes
+	(*ImapMessage)(nil),         // 9: Ubikom.ImapMessage
+	(Protocol)(0),               // 10: Ubikom.Protocol
+	(*anypb.Any)(nil),           // 11: google.protobuf.Any
 }
 var file_ubikom_internal_proto_depIdxs = []int32{
-	8, // 0: Ubikom.ExportAddressRecord.protocol:type_name -> Ubikom.Protocol
-	9, // 1: Ubikom.DBValue.payload:type_name -> google.protobuf.Any
-	4, // 2: Ubikom.DBEntry.value:type_name -> Ubikom.DBValue
-	6, // 3: Ubikom.ImapMailboxes.mailbox:type_name -> Ubikom.ImapMailbox
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	10, // 0: Ubikom.ExportAddressRecord.protocol:type_name -> Ubikom.Protocol
+	11, // 1: Ubikom.DBValue.payload:type_name -> google.protobuf.Any
+	4,  // 2: Ubikom.DBEntry.value:type_name -> Ubikom.DBValue
+	7,  // 3: Ubikom.ImapMailboxes.mailbox:type_name -> Ubikom.ImapMailbox
+	4,  // [4:4] is the sub-list for method output_type
+	4,  // [4:4] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_ubikom_internal_proto_init() }
@@ -724,7 +865,7 @@ func file_ubikom_internal_proto_init() {
 			}
 		}
 		file_ubikom_internal_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ImapMailbox); i {
+			switch v := v.(*ImapInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -736,7 +877,31 @@ func file_ubikom_internal_proto_init() {
 			}
 		}
 		file_ubikom_internal_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ImapMailbox); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ubikom_internal_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ImapMailboxes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_ubikom_internal_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ImapMessage); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -754,7 +919,7 @@ func file_ubikom_internal_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_ubikom_internal_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

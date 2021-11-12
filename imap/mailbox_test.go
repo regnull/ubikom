@@ -15,5 +15,4 @@ func Test_NewMailbox(t *testing.T) {
 	status, err := mb.Status(nil)
 	assert.NoError(err)
 	assert.True(status.UidValidity > 1000000000)
-	assert.EqualValues(36, len(mb.ID()))
 }

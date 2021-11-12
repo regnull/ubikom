@@ -108,6 +108,30 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 	assert.False(s)
 }
 
+func Test_Info(t *testing.T) {
+	assert := assert.New(t)
+
+	b, cleanup, err := createTestBadgerStore()
+	assert.NoError(err)
+	defer cleanup()
+
+	mbid, err := b.GetNextMailboxID("foo")
+	assert.NoError(err)
+	assert.EqualValues(1000, mbid)
+
+	mbid, err = b.GetNextMailboxID("foo")
+	assert.NoError(err)
+	assert.EqualValues(1001, mbid)
+
+	msgid, err := b.GetNextMessageID("foo")
+	assert.NoError(err)
+	assert.EqualValues(1000, msgid)
+
+	msgid, err = b.GetNextMessageID("foo")
+	assert.NoError(err)
+	assert.EqualValues(1001, msgid)
+}
+
 func createTestBadgerStore() (*Badger, func(), error) {
 	dir, err := os.MkdirTemp("", "ubikom_badgerstore_test")
 	if err != nil {
