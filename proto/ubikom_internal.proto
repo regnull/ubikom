@@ -67,7 +67,7 @@ message ImapMailboxes {
 message ImapMessage {
     bytes content = 1;
     repeated string flag = 2;
-    uint64 received_timestamp = 3;
+    uint64 received = 3;
     uint64 size = 4;
     uint32 uid = 5;
 }

@@ -5,7 +5,8 @@ go 1.14
 require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/dgraph-io/badger/v3 v3.2011.1
-	github.com/emersion/go-imap v1.2.0 // indirect
+	github.com/emersion/go-imap v1.2.0
+	github.com/emersion/go-message v0.15.0
 	github.com/emersion/go-smtp v0.15.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0

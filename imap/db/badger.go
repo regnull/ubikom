@@ -258,13 +258,9 @@ func mailboxKey(user string) []byte {
 }
 
 func (b *Badger) SaveMessage(user string, mbid uint32, msg *pb.ImapMessage) error {
-	bb, err := proto.Marshal(msg)
+	bbe, err := marshalAndEncrypt(msg, b.privateKey)
 	if err != nil {
-		return fmt.Errorf("error marshaling message: %w", err)
-	}
-	bbe, err := b.privateKey.EncryptSymmetric(bb)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt mailboxes: %w", err)
+		return err
 	}
 	err = b.db.Update(func(txn *badger.Txn) error {
 		return txn.Set(messageKey(user, mbid, msg.GetUid()), bbe)
@@ -275,8 +271,27 @@ func (b *Badger) SaveMessage(user string, mbid uint32, msg *pb.ImapMessage) erro
 	return fmt.Errorf("not implemented")
 }
 
-func (b *Badger) GetMessages(user string, mailbox string) ([]*pb.ImapMessage, error) {
-	return nil, fmt.Errorf("not implemented")
+func (b *Badger) GetMessages(user string, mailbox uint32) ([]*pb.ImapMessage, error) {
+	var messages []*pb.ImapMessage
+	err := b.db.View(func(txn *badger.Txn) error {
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+		prefix := mailboxMessagePrefix(user, mailbox)
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			msg := &pb.ImapMessage{}
+			err := unmarhalItemAndDecrypt(item, msg, b.privateKey)
+			if err != nil {
+				return err
+			}
+			messages = append(messages, msg)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return messages, nil
 }
 
 func (b *Badger) mutateInfo(user string, f func(info *pb.ImapInfo)) error {

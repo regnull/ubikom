@@ -10,10 +10,14 @@ type User struct {
 	name       string
 	db         *db.Badger
 	privateKey *easyecc.PrivateKey
+	inbox      *Mailbox
 }
 
 func NewUser(name string, db *db.Badger, privateKey *easyecc.PrivateKey) *User {
-	return &User{name: name, db: db, privateKey: privateKey}
+	return &User{
+		name:       name,
+		db:         db,
+		privateKey: privateKey}
 }
 
 func (u *User) Username() string {
