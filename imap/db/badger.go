@@ -75,7 +75,7 @@ func (b *Badger) GetMailboxes(user string, privateKey *easyecc.PrivateKey) ([]*p
 
 func (b *Badger) GetMailbox(user string, name string, privateKey *easyecc.PrivateKey) (*pb.ImapMailbox, error) {
 	var mailboxes *pb.ImapMailboxes
-	err := b.db.View(func(txn *badger.Txn) error {
+	err := b.db.Update(func(txn *badger.Txn) error {
 		var err error
 		mailboxes, err = getMailboxes(txn, user, privateKey)
 		if err != nil {

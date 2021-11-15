@@ -45,7 +45,7 @@ func Test_GetMailboxes(t *testing.T) {
 
 	mbs, err := b.GetMailboxes("foo", privateKey)
 	assert.NoError(err)
-	assert.EqualValues(3, len(mbs))
+	assert.EqualValues(4, len(mbs)) // Our mailboxes, plus inbox.
 
 	for i := 1; i <= 3; i++ {
 		name := fmt.Sprintf("mb%d", i)
