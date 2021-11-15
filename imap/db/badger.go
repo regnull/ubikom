@@ -282,7 +282,7 @@ func (b *Badger) SaveMessage(user string, mbid uint32, msg *pb.ImapMessage, priv
 	if err != nil {
 		return fmt.Errorf("failed to save message: %w", err)
 	}
-	return fmt.Errorf("not implemented")
+	return nil
 }
 
 func (b *Badger) GetMessages(user string, mailbox uint32, privateKey *easyecc.PrivateKey) ([]*pb.ImapMessage, error) {
