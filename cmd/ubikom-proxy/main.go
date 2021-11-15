@@ -15,6 +15,7 @@ import (
 
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/imap"
+	"github.com/regnull/ubikom/imap/db"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/pop"
 	"github.com/regnull/ubikom/smtp"
@@ -190,11 +191,18 @@ func main() {
 		wg.Done()
 	}()
 
+	imapBadger, err := db.NewBadger("/Users/regnull/.ubikom/imapdb")
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize IMAP Badger DB")
+	}
 	imapOpts := &imap.ServerOptions{
-		Domain:   args.ImapDomain,
-		Port:     args.ImapPort,
-		CertFile: args.TLSCertFile,
-		KeyFile:  args.TLSKeyFile,
+		Domain:       args.ImapDomain,
+		Port:         args.ImapPort,
+		CertFile:     args.TLSCertFile,
+		KeyFile:      args.TLSKeyFile,
+		LookupClient: lookupClient,
+		DumpClient:   dumpClient,
+		Badger:       imapBadger,
 	}
 	imapServer := imap.NewServer(imapOpts)
 	go func() {

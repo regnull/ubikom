@@ -4,16 +4,20 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"github.com/emersion/go-imap/backend/memory"
 	"github.com/emersion/go-imap/server"
+	"github.com/regnull/ubikom/imap/db"
+	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
 )
 
 type ServerOptions struct {
-	Domain   string
-	Port     int
-	CertFile string
-	KeyFile  string
+	Domain       string
+	Port         int
+	CertFile     string
+	KeyFile      string
+	LookupClient pb.LookupServiceClient
+	DumpClient   pb.DMSDumpServiceClient
+	Badger       *db.Badger
 }
 
 type Server struct {
@@ -22,7 +26,7 @@ type Server struct {
 }
 
 func NewServer(opts *ServerOptions) *Server {
-	s := server.New(memory.New())
+	s := server.New(NewBackend(opts.DumpClient, opts.LookupClient, nil, "", "", opts.Badger))
 	s.Addr = fmt.Sprintf("%s:%d", opts.Domain, opts.Port)
 	s.AllowInsecureAuth = true
 	return &Server{opts: opts, server: s}

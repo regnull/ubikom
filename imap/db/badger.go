@@ -14,23 +14,37 @@ import (
 var ErrNotFound = fmt.Errorf("not found")
 
 type Badger struct {
-	db         *badger.DB
-	privateKey *easyecc.PrivateKey
+	db *badger.DB
 }
 
-func NewBadger(dir string, privateKey *easyecc.PrivateKey) (*Badger, error) {
+func NewBadger(dir string) (*Badger, error) {
 	db, err := badger.Open(badger.DefaultOptions(dir))
 	if err != nil {
 		return nil, err
 	}
-	return &Badger{db: db, privateKey: privateKey}, nil
+	return &Badger{db: db}, nil
 }
 
 func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) (*pb.ImapMailboxes, error) {
 	item, err := txn.Get(mailboxKey(user))
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			return &pb.ImapMailboxes{}, nil
+			mailboxes := &pb.ImapMailboxes{
+				Mailbox: []*pb.ImapMailbox{{
+					Name:      "INBOX",
+					Attribute: nil,
+					Uid:       0,
+				}},
+			}
+			bbe, err := marshalAndEncrypt(mailboxes, privateKey)
+			if err != nil {
+				return nil, err
+			}
+			err = txn.Set(mailboxKey(user), bbe)
+			if err != nil {
+				return nil, fmt.Errorf("failed to save mailboxes: %w", err)
+			}
+			return mailboxes, nil
 		}
 		return nil, fmt.Errorf("error getting mailbox: %w", err)
 	}
@@ -43,10 +57,10 @@ func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) 
 	return mailboxes, nil
 }
 
-func (b *Badger) GetMailboxes(user string) ([]*pb.ImapMailbox, error) {
+func (b *Badger) GetMailboxes(user string, privateKey *easyecc.PrivateKey) ([]*pb.ImapMailbox, error) {
 	var mbs []*pb.ImapMailbox
-	err := b.db.View(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user, b.privateKey)
+	err := b.db.Update(func(txn *badger.Txn) error {
+		mailboxes, err := getMailboxes(txn, user, privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -59,11 +73,11 @@ func (b *Badger) GetMailboxes(user string) ([]*pb.ImapMailbox, error) {
 	return mbs, nil
 }
 
-func (b *Badger) GetMailbox(user string, name string) (*pb.ImapMailbox, error) {
+func (b *Badger) GetMailbox(user string, name string, privateKey *easyecc.PrivateKey) (*pb.ImapMailbox, error) {
 	var mailboxes *pb.ImapMailboxes
 	err := b.db.View(func(txn *badger.Txn) error {
 		var err error
-		mailboxes, err = getMailboxes(txn, user, b.privateKey)
+		mailboxes, err = getMailboxes(txn, user, privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -80,9 +94,9 @@ func (b *Badger) GetMailbox(user string, name string) (*pb.ImapMailbox, error) {
 	return nil, ErrNotFound
 }
 
-func (b *Badger) CreateMailbox(user string, mb *pb.ImapMailbox) error {
+func (b *Badger) CreateMailbox(user string, mb *pb.ImapMailbox, privateKey *easyecc.PrivateKey) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user, b.privateKey)
+		mailboxes, err := getMailboxes(txn, user, privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -92,7 +106,7 @@ func (b *Badger) CreateMailbox(user string, mb *pb.ImapMailbox) error {
 			}
 		}
 		mailboxes.Mailbox = append(mailboxes.Mailbox, mb)
-		bbe, err := marshalAndEncrypt(mailboxes, b.privateKey)
+		bbe, err := marshalAndEncrypt(mailboxes, privateKey)
 		if err != nil {
 			return err
 		}
@@ -109,9 +123,9 @@ func (b *Badger) CreateMailbox(user string, mb *pb.ImapMailbox) error {
 	return nil
 }
 
-func (b *Badger) DeleteMailbox(user string, name string) error {
+func (b *Badger) DeleteMailbox(user string, name string, privateKey *easyecc.PrivateKey) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user, b.privateKey)
+		mailboxes, err := getMailboxes(txn, user, privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -126,7 +140,7 @@ func (b *Badger) DeleteMailbox(user string, name string) error {
 			return fmt.Errorf("mailbox not found")
 		}
 		mailboxes.Mailbox = newMailboxes
-		bbe, err := marshalAndEncrypt(mailboxes, b.privateKey)
+		bbe, err := marshalAndEncrypt(mailboxes, privateKey)
 		if err != nil {
 			return err
 		}
@@ -142,9 +156,9 @@ func (b *Badger) DeleteMailbox(user string, name string) error {
 	return nil
 }
 
-func (b *Badger) RenameMailbox(user string, existingName, newName string) error {
+func (b *Badger) RenameMailbox(user string, existingName, newName string, privateKey *easyecc.PrivateKey) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user, b.privateKey)
+		mailboxes, err := getMailboxes(txn, user, privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -154,7 +168,7 @@ func (b *Badger) RenameMailbox(user string, existingName, newName string) error 
 				mb.Name = n
 			}
 		}
-		bbe, err := marshalAndEncrypt(mailboxes, b.privateKey)
+		bbe, err := marshalAndEncrypt(mailboxes, privateKey)
 		if err != nil {
 			return err
 		}
@@ -170,9 +184,9 @@ func (b *Badger) RenameMailbox(user string, existingName, newName string) error 
 	return nil
 }
 
-func (b *Badger) Subscribe(user string, name string) error {
+func (b *Badger) Subscribe(user string, name string, privateKey *easyecc.PrivateKey) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user, b.privateKey)
+		mailboxes, err := getMailboxes(txn, user, privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -187,7 +201,7 @@ func (b *Badger) Subscribe(user string, name string) error {
 			return fmt.Errorf("already subscribed")
 		}
 		mailboxes.Subscribed = append(mailboxes.Subscribed, name)
-		bbe, err := marshalAndEncrypt(mailboxes, b.privateKey)
+		bbe, err := marshalAndEncrypt(mailboxes, privateKey)
 		if err != nil {
 			return err
 		}
@@ -203,9 +217,9 @@ func (b *Badger) Subscribe(user string, name string) error {
 	return nil
 }
 
-func (b *Badger) Unsubscribe(user string, name string) error {
+func (b *Badger) Unsubscribe(user string, name string, privateKey *easyecc.PrivateKey) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user, b.privateKey)
+		mailboxes, err := getMailboxes(txn, user, privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -220,7 +234,7 @@ func (b *Badger) Unsubscribe(user string, name string) error {
 			return fmt.Errorf("not subscribed")
 		}
 		mailboxes.Subscribed = newSubscribed
-		bbe, err := marshalAndEncrypt(mailboxes, b.privateKey)
+		bbe, err := marshalAndEncrypt(mailboxes, privateKey)
 		err = txn.Set(mailboxKey(user), bbe)
 		if err != nil {
 			return fmt.Errorf("failed to save mailboxes: %w", err)
@@ -233,10 +247,10 @@ func (b *Badger) Unsubscribe(user string, name string) error {
 	return nil
 }
 
-func (b *Badger) Subscribed(user string, name string) (bool, error) {
+func (b *Badger) Subscribed(user string, name string, privateKey *easyecc.PrivateKey) (bool, error) {
 	subscribed := false
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes, err := getMailboxes(txn, user, b.privateKey)
+		mailboxes, err := getMailboxes(txn, user, privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
@@ -257,8 +271,8 @@ func mailboxKey(user string) []byte {
 	return []byte("mailbox_" + user)
 }
 
-func (b *Badger) SaveMessage(user string, mbid uint32, msg *pb.ImapMessage) error {
-	bbe, err := marshalAndEncrypt(msg, b.privateKey)
+func (b *Badger) SaveMessage(user string, mbid uint32, msg *pb.ImapMessage, privateKey *easyecc.PrivateKey) error {
+	bbe, err := marshalAndEncrypt(msg, privateKey)
 	if err != nil {
 		return err
 	}
@@ -271,7 +285,7 @@ func (b *Badger) SaveMessage(user string, mbid uint32, msg *pb.ImapMessage) erro
 	return fmt.Errorf("not implemented")
 }
 
-func (b *Badger) GetMessages(user string, mailbox uint32) ([]*pb.ImapMessage, error) {
+func (b *Badger) GetMessages(user string, mailbox uint32, privateKey *easyecc.PrivateKey) ([]*pb.ImapMessage, error) {
 	var messages []*pb.ImapMessage
 	err := b.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -280,7 +294,7 @@ func (b *Badger) GetMessages(user string, mailbox uint32) ([]*pb.ImapMessage, er
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			msg := &pb.ImapMessage{}
-			err := unmarhalItemAndDecrypt(item, msg, b.privateKey)
+			err := unmarhalItemAndDecrypt(item, msg, privateKey)
 			if err != nil {
 				return err
 			}
@@ -294,7 +308,13 @@ func (b *Badger) GetMessages(user string, mailbox uint32) ([]*pb.ImapMessage, er
 	return messages, nil
 }
 
-func (b *Badger) mutateInfo(user string, f func(info *pb.ImapInfo)) error {
+func (b *Badger) DeleteMessage(user string, mbid uint32, msgid uint32) error {
+	return b.db.Update(func(txn *badger.Txn) error {
+		return txn.Delete(messageKey(user, mbid, msgid))
+	})
+}
+
+func (b *Badger) mutateInfo(user string, f func(info *pb.ImapInfo), privateKey *easyecc.PrivateKey) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
 		info := &pb.ImapInfo{
 			NextMailboxUid: 1000,
@@ -304,13 +324,13 @@ func (b *Badger) mutateInfo(user string, f func(info *pb.ImapInfo)) error {
 			return err
 		}
 		if err == nil {
-			err = unmarhalItemAndDecrypt(item, info, b.privateKey)
+			err = unmarhalItemAndDecrypt(item, info, privateKey)
 			if err != nil {
 				return err
 			}
 		}
 		f(info)
-		bbe, err := marshalAndEncrypt(info, b.privateKey)
+		bbe, err := marshalAndEncrypt(info, privateKey)
 		if err != nil {
 			return err
 		}
@@ -326,24 +346,24 @@ func (b *Badger) mutateInfo(user string, f func(info *pb.ImapInfo)) error {
 	return nil
 }
 
-func (b *Badger) GetNextMailboxID(user string) (uint32, error) {
+func (b *Badger) GetNextMailboxID(user string, privateKey *easyecc.PrivateKey) (uint32, error) {
 	var mbid uint32
 	err := b.mutateInfo(user, func(info *pb.ImapInfo) {
 		mbid = info.GetNextMailboxUid()
 		info.NextMailboxUid++
-	})
+	}, privateKey)
 	if err != nil {
 		return 0, err
 	}
 	return mbid, nil
 }
 
-func (b *Badger) GetNextMessageID(user string) (uint32, error) {
+func (b *Badger) GetNextMessageID(user string, privateKey *easyecc.PrivateKey) (uint32, error) {
 	var msgid uint32
 	err := b.mutateInfo(user, func(info *pb.ImapInfo) {
 		msgid = info.GetNextMessageUid()
 		info.NextMessageUid++
-	})
+	}, privateKey)
 	if err != nil {
 		return 0, err
 	}

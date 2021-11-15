@@ -31,6 +31,16 @@ func NewMessageFromProto(m *pb.ImapMessage) *Message {
 		Body:  m.GetContent()}
 }
 
+func (m *Message) ToProto() *pb.ImapMessage {
+	return &pb.ImapMessage{
+		Content:           m.Body,
+		Flag:              m.Flags,
+		ReceivedTimestamp: uint64(m.Date.Unix() * 1000),
+		Size:              uint64(m.Size),
+		Uid:               m.Uid,
+	}
+}
+
 func (m *Message) entity() (*message.Entity, error) {
 	return message.Read(bytes.NewReader(m.Body))
 }

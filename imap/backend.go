@@ -28,6 +28,7 @@ type Backend struct {
 
 func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServiceClient,
 	privateKey *easyecc.PrivateKey, user, password string, db *db.Badger) *Backend {
+	log.Debug().Msg("IMAP backend created")
 	return &Backend{
 		dumpClient:   dumpClient,
 		lookupClient: lookupClient,
@@ -40,7 +41,7 @@ func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServic
 func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, error) {
 	log.Debug().Str("user", user).Msg("[IMAP] <- LOGIN")
 	privateKey := b.privateKey
-	if b.privateKey == nil {
+	if b.privateKey != nil {
 		if user != b.user || pass != b.password {
 			log.Debug().Bool("authorized", false).Msg("[IMAP] -> LOGIN")
 			return nil, ErrAccessDenied
@@ -58,5 +59,5 @@ func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, erro
 		log.Debug().Msg("confirmed key with lookup service")
 	}
 	log.Debug().Bool("authorized", true).Msg("[IMAP] -> LOGIN")
-	return NewUser(user, b.db, privateKey), nil
+	return NewUser(user, b.db, privateKey, b.lookupClient, b.dumpClient), nil
 }
