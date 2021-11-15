@@ -308,12 +308,18 @@ func (m *Mailbox) Expunge() error {
 func (m *Mailbox) Poll() error {
 	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] <- Poll")
 	if m.IsInbox() {
-		err := m.getMessageFromDumpServer(context.TODO())
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		err := m.getMessageFromDumpServer(ctx)
 		if err != nil {
+			log.Error().Str("user", m.user).Str("mailbox", m.status.Name).
+				Err(err).Msg("failed to get messages from dump server")
+			log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] -> Poll")
 			return err
 		}
 	}
-	return fmt.Errorf("not implemented")
+	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] -> Poll")
+	return nil
 }
 
 func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
