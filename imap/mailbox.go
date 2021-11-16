@@ -23,7 +23,8 @@ const (
 )
 
 type Mailbox struct {
-	status       imap.MailboxStatus
+	name         string
+	uid          uint32
 	user         string
 	db           *db.Badger
 	lookupClient pb.LookupServiceClient
@@ -36,14 +37,14 @@ func NewMailbox(user string, name string, db *db.Badger, lookupClient pb.LookupS
 	dumpClient pb.DMSDumpServiceClient, privateKey *easyecc.PrivateKey) (*Mailbox, error) {
 	mb := &Mailbox{user: user, db: db, lookupClient: lookupClient,
 		dumpClient: dumpClient, privateKey: privateKey}
-	mb.status.Name = name
+	mb.name = name
 
 	uid, err := db.GetNextMailboxID(user, privateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	mb.status.UidValidity = uid
+	mb.uid = uid
 	return mb, nil
 }
 
@@ -57,20 +58,20 @@ func NewMailboxFromProto(protoMailbox *pb.ImapMailbox, user string, db *db.Badge
 		lookupClient: lookupClient,
 		dumpClient:   dumpClient,
 		privateKey:   privateKey}
-	mb.status.Name = protoMailbox.GetName()
-	mb.status.UidValidity = protoMailbox.GetUid()
+	mb.name = protoMailbox.GetName()
+	mb.uid = protoMailbox.GetUid()
 	log.Debug().Interface("mb", mb).Msg("created mailbox from proto")
 	return mb
 }
 
 func (m *Mailbox) IsInbox() bool {
-	return m.status.Name == "INBOX"
+	return m.name == "INBOX"
 }
 
 func (m *Mailbox) ToProto() *pb.ImapMailbox {
 	return &pb.ImapMailbox{
-		Name: m.status.Name,
-		Uid:  m.status.UidValidity}
+		Name: m.name,
+		Uid:  m.uid}
 }
 
 func (m *Mailbox) User() string {
@@ -78,11 +79,11 @@ func (m *Mailbox) User() string {
 }
 
 func (m *Mailbox) ID() uint32 {
-	return m.status.UidValidity
+	return m.uid
 }
 
 func (m *Mailbox) Name() string {
-	return m.status.Name
+	return m.name
 }
 
 func (m *Mailbox) Info() (*imap.MailboxInfo, error) {
@@ -91,7 +92,7 @@ func (m *Mailbox) Info() (*imap.MailboxInfo, error) {
 	return &imap.MailboxInfo{
 		Attributes: nil,
 		Delimiter:  DELIMITER,
-		Name:       m.status.Name}, nil
+		Name:       m.name}, nil
 }
 
 func (m *Mailbox) flags(messages []*pb.ImapMessage) ([]string, error) {
@@ -165,9 +166,9 @@ func (m *Mailbox) unseen(messages []*pb.ImapMessage) uint32 {
 func (m *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 	m.logEnter("Status")
 	defer m.logExit("Status")
-	status := imap.NewMailboxStatus(m.status.Name, items)
+	status := imap.NewMailboxStatus(m.name, items)
 
-	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
+	messages, err := m.db.GetMessages(m.user, m.uid, m.privateKey)
 	if err != nil {
 		m.logError(err).Msg("failed to get messages")
 		return nil, err
@@ -216,9 +217,9 @@ func (m *Mailbox) SetSubscribed(subscribed bool) error {
 	m.logEnter("SetSubscribed")
 	defer m.logExit("SetSubscribed")
 	if subscribed {
-		return m.db.Subscribe(m.user, m.status.Name, m.privateKey)
+		return m.db.Subscribe(m.user, m.name, m.privateKey)
 	} else {
-		return m.db.Unsubscribe(m.user, m.status.Name, m.privateKey)
+		return m.db.Unsubscribe(m.user, m.name, m.privateKey)
 	}
 }
 
@@ -266,10 +267,10 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 	m.logEnter("ListMessages")
 	defer m.logExit("ListMessages")
 	defer close(ch)
-	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
+	messages, err := m.db.GetMessages(m.user, m.uid, m.privateKey)
 	if err != nil {
 		m.logError(err)
-		log.Error().Str("user", m.user).Str("mailbox", m.status.Name).Err(err).Msg("failed to read messages from the database")
+		log.Error().Str("user", m.user).Str("mailbox", m.name).Err(err).Msg("failed to read messages from the database")
 		return err
 	}
 	for i, msg := range messages {
@@ -296,7 +297,7 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 	}
 	for _, msg := range messages {
 		if clearFlag(msg, imap.RecentFlag) || setFlag(msg, imap.SeenFlag) {
-			err = m.db.SaveMessage(m.user, m.status.UidValidity, msg, m.privateKey)
+			err = m.db.SaveMessage(m.user, m.uid, msg, m.privateKey)
 			if err != nil {
 				m.logError(err).Msg("failed to save message")
 				return err
@@ -338,7 +339,7 @@ func (m *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Litera
 		Body:  b,
 	}
 
-	err = m.db.SaveMessage(m.user, m.status.UidValidity, message.ToProto(), m.privateKey)
+	err = m.db.SaveMessage(m.user, m.uid, message.ToProto(), m.privateKey)
 	if err != nil {
 		m.logError(err).Msg("failed to save message")
 	}
@@ -349,7 +350,7 @@ func (m *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.Fla
 	m.logEnter("UpdateMessagesFlags")
 	defer m.logExit("UpdateMessagesFlags")
 
-	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
+	messages, err := m.db.GetMessages(m.user, m.uid, m.privateKey)
 	if err != nil {
 		m.logError(err).Msg("failed to get messages")
 		return err
@@ -366,7 +367,7 @@ func (m *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.Fla
 		}
 
 		msg.Flag = backendutil.UpdateFlags(msg.Flag, op, flags)
-		err = m.db.SaveMessage(m.user, m.status.UidValidity, msg, m.privateKey)
+		err = m.db.SaveMessage(m.user, m.uid, msg, m.privateKey)
 		if err != nil {
 			m.logError(err).Msg("failed to save message")
 			return err
@@ -386,7 +387,7 @@ func (m *Mailbox) Expunge() error {
 	m.logEnter("Expunge")
 	defer m.logExit("Expunge")
 
-	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
+	messages, err := m.db.GetMessages(m.user, m.uid, m.privateKey)
 	if err != nil {
 		m.logError(err).Msg("failed to get messages")
 		return err
@@ -401,7 +402,7 @@ func (m *Mailbox) Expunge() error {
 		}
 
 		if deleted {
-			err := m.db.DeleteMessage(m.user, m.status.UidValidity, msg.Uid)
+			err := m.db.DeleteMessage(m.user, m.uid, msg.Uid)
 			if err != nil {
 				m.logError(err).Msg("failed to delete message")
 				return err
@@ -429,7 +430,7 @@ func (m *Mailbox) Poll() error {
 }
 
 func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
-	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("getting messages from dump server")
+	log.Debug().Str("user", m.user).Str("mailbox", m.name).Msg("getting messages from dump server")
 	// Read all remote messages.
 	count := 0
 	for {
@@ -448,7 +449,7 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 			return fmt.Errorf("failed to receive message: %w", err)
 		}
 		count++
-		log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("got new message")
+		log.Debug().Str("user", m.user).Str("mailbox", m.name).Msg("got new message")
 		msg := res.GetMessage()
 		msgid, err := m.db.GetNextMessageID(m.user, m.privateKey)
 		if err != nil {
@@ -501,17 +502,17 @@ func (m *Mailbox) decryptMessage(ctx context.Context, privateKey *easyecc.Privat
 }
 
 func (m *Mailbox) logEnter(name string) {
-	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] <- " + name)
+	log.Debug().Str("user", m.user).Str("mailbox", m.name).Msg("[IMAP] <- " + name)
 }
 
 func (m *Mailbox) logExit(name string) {
-	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] -> " + name)
+	log.Debug().Str("user", m.user).Str("mailbox", m.name).Msg("[IMAP] -> " + name)
 }
 
 func (m *Mailbox) logDebug() *zerolog.Event {
-	return log.Debug().Str("user", m.user).Str("mailbox", m.status.Name)
+	return log.Debug().Str("user", m.user).Str("mailbox", m.name)
 }
 
 func (m *Mailbox) logError(err error) *zerolog.Event {
-	return log.Error().Err(err).Str("user", m.user).Str("mailbox", m.status.Name)
+	return log.Error().Err(err).Str("user", m.user).Str("mailbox", m.name)
 }
