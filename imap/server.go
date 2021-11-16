@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/emersion/go-imap/server"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/imap/db"
 	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
@@ -13,6 +14,9 @@ import (
 type ServerOptions struct {
 	Domain       string
 	Port         int
+	User         string
+	Password     string
+	PrivateKey   *easyecc.PrivateKey
 	CertFile     string
 	KeyFile      string
 	LookupClient pb.LookupServiceClient
@@ -26,7 +30,7 @@ type Server struct {
 }
 
 func NewServer(opts *ServerOptions) *Server {
-	s := server.New(NewBackend(opts.DumpClient, opts.LookupClient, nil, "", "", opts.Badger))
+	s := server.New(NewBackend(opts.DumpClient, opts.LookupClient, opts.PrivateKey, opts.User, opts.Password, opts.Badger))
 	s.Addr = fmt.Sprintf("%s:%d", opts.Domain, opts.Port)
 	s.AllowInsecureAuth = true
 	return &Server{opts: opts, server: s}

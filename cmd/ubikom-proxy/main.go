@@ -35,6 +35,8 @@ type Args struct {
 	ImapStorePath         string `yaml:"imap-store-path"`
 	ImapDomain            string `yaml:"imap-domain"`
 	ImapPort              int    `yaml:"imap-port"`
+	ImapUser              string `yaml:"imap-user"`
+	ImapPassword          string `yaml:"imap-password"`
 	SmtpDomain            string `yaml:"smtp-domain"`
 	SmtpPort              int    `yaml:"smtp-port"`
 	SmtpUser              string `yaml:"smtp-user"`
@@ -73,6 +75,8 @@ func main() {
 	flag.StringVar(&args.ImapDomain, "imap-domain", configArgs.ImapDomain, "domain to be used by IMAP server")
 	flag.IntVar(&args.ImapPort, "imap-port", configArgs.ImapPort, "port to be used by IMAP server")
 	flag.StringVar(&args.ImapStorePath, "imap-store-path", configArgs.ImapStorePath, "IMAP store path")
+	flag.StringVar(&args.ImapUser, "imap-user", configArgs.ImapUser, "IMAP user")
+	flag.StringVar(&args.ImapPassword, "imap-password", configArgs.ImapPassword, "IMAP password")
 	flag.StringVar(&args.SmtpDomain, "smtp-domain", configArgs.SmtpDomain, "domain for SMTP server")
 	flag.IntVar(&args.SmtpPort, "smtp-port", configArgs.SmtpPort, "port used by SMTP server")
 	flag.StringVar(&args.SmtpUser, "smtp-user", configArgs.SmtpUser, "user to be used by SMTP server")
@@ -200,6 +204,9 @@ func main() {
 	imapOpts := &imap.ServerOptions{
 		Domain:       args.ImapDomain,
 		Port:         args.ImapPort,
+		User:         args.ImapUser,
+		Password:     args.ImapPassword,
+		PrivateKey:   key,
 		CertFile:     args.TLSCertFile,
 		KeyFile:      args.TLSKeyFile,
 		LookupClient: lookupClient,
