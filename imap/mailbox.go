@@ -94,14 +94,8 @@ func (m *Mailbox) Info() (*imap.MailboxInfo, error) {
 		Name:       m.status.Name}, nil
 }
 
-func (m *Mailbox) flags() ([]string, error) {
+func (m *Mailbox) flags(messages []*pb.ImapMessage) ([]string, error) {
 	flagsMap := make(map[string]bool)
-	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
-	if err != nil {
-		m.logError(err).Msg("failed to get messages")
-		return nil, err
-	}
-	m.logDebug().Int("count", len(messages)).Msg("got messages")
 	for _, msg := range messages {
 		for _, f := range msg.Flag {
 			if !flagsMap[f] {
@@ -118,12 +112,7 @@ func (m *Mailbox) flags() ([]string, error) {
 	return flags, nil
 }
 
-func (m *Mailbox) unseenSeqNum() (uint32, uint32, error) {
-	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
-	if err != nil {
-		m.logError(err).Msg("failed to get messages")
-		return 0, 0, err
-	}
+func (m *Mailbox) unseenSeqNum(messages []*pb.ImapMessage) (uint32, uint32, error) {
 	for i, msg := range messages {
 		seqNum := uint32(i + 1)
 
@@ -143,18 +132,55 @@ func (m *Mailbox) unseenSeqNum() (uint32, uint32, error) {
 	return uint32(len(messages)), 0, nil
 }
 
+func (m *Mailbox) recent(messages []*pb.ImapMessage) uint32 {
+	count := uint32(0)
+	for _, msg := range messages {
+		for _, flag := range msg.Flag {
+			if flag == imap.RecentFlag {
+				count++
+				continue
+			}
+		}
+	}
+	return count
+}
+
+func (m *Mailbox) unseen(messages []*pb.ImapMessage) uint32 {
+	count := uint32(0)
+	for _, msg := range messages {
+		seen := false
+		for _, flag := range msg.Flag {
+			if flag == imap.SeenFlag {
+				seen = true
+				break
+			}
+		}
+		if !seen {
+			count++
+		}
+	}
+	return count
+}
+
 func (m *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 	m.logEnter("Status")
 	defer m.logExit("Status")
 	status := imap.NewMailboxStatus(m.status.Name, items)
-	flags, err := m.flags()
+
+	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
+	if err != nil {
+		m.logError(err).Msg("failed to get messages")
+		return nil, err
+	}
+
+	flags, err := m.flags(messages)
 	if err != nil {
 		m.logError(err).Msg("failed to get flags")
 		return nil, err
 	}
 	status.Flags = flags
 	status.PermanentFlags = []string{"\\*"}
-	total, unseenSeqNum, err := m.unseenSeqNum()
+	total, unseenSeqNum, err := m.unseenSeqNum(messages)
 	if err != nil {
 		m.logError(err).Msg("failed to get unseenSeqNum")
 		return nil, err
@@ -176,9 +202,9 @@ func (m *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 		case imap.StatusUidValidity:
 			status.UidValidity = 1
 		case imap.StatusRecent:
-			status.Recent = 0 // TODO
+			status.Recent = m.recent(messages)
 		case imap.StatusUnseen:
-			status.Unseen = 0 // TODO
+			status.Unseen = m.unseen(messages)
 		}
 	}
 
@@ -203,6 +229,38 @@ func (m *Mailbox) Check() error {
 	return nil
 }
 
+// func (m *Mailbox) clearRecentFlag(messages []*pb.ImapMessa
+func hasFlag(msg *pb.ImapMessage, flag string) bool {
+	for _, f := range msg.GetFlag() {
+		if f == flag {
+			return true
+		}
+	}
+	return false
+}
+
+func clearFlag(msg *pb.ImapMessage, flag string) bool {
+	var flags []string
+	found := false
+	for _, f := range msg.GetFlag() {
+		if f == flag {
+			found = true
+			continue
+		}
+		flags = append(flags, f)
+	}
+	msg.Flag = flags
+	return found
+}
+
+func setFlag(msg *pb.ImapMessage, flag string) bool {
+	if hasFlag(msg, flag) {
+		return false
+	}
+	msg.Flag = append(msg.Flag, flag)
+	return true
+}
+
 func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.FetchItem,
 	ch chan<- *imap.Message) error {
 	m.logEnter("ListMessages")
@@ -215,7 +273,7 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 		return err
 	}
 	for i, msg := range messages {
-		log.Debug().Uint32("id", msg.Uid).Msg("got message")
+		log.Debug().Uint32("id", msg.Uid).Interface("flags", msg.GetFlag()).Msg("got message")
 		m := NewMessageFromProto(msg)
 		seqNum := uint32(i + 1)
 
@@ -235,6 +293,15 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 		}
 
 		ch <- m1
+	}
+	for _, msg := range messages {
+		if clearFlag(msg, imap.RecentFlag) || setFlag(msg, imap.SeenFlag) {
+			err = m.db.SaveMessage(m.user, m.status.UidValidity, msg, m.privateKey)
+			if err != nil {
+				m.logError(err).Msg("failed to save message")
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -299,6 +366,11 @@ func (m *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.Fla
 		}
 
 		msg.Flag = backendutil.UpdateFlags(msg.Flag, op, flags)
+		err = m.db.SaveMessage(m.user, m.status.UidValidity, msg, m.privateKey)
+		if err != nil {
+			m.logError(err).Msg("failed to save message")
+			return err
+		}
 	}
 
 	return nil
@@ -394,7 +466,7 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 			Uid:   msgid,
 			Date:  time.Now(),
 			Size:  uint32(len(content)),
-			Flags: []string{"\\Unseen"},
+			Flags: []string{imap.RecentFlag},
 			Body:  content,
 		}
 		err = m.db.SaveMessage(m.user, 0, message.ToProto(), m.privateKey)
