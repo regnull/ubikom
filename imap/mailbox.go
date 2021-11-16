@@ -296,7 +296,7 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 		ch <- m1
 	}
 	for _, msg := range messages {
-		if clearFlag(msg, imap.RecentFlag) || setFlag(msg, imap.SeenFlag) {
+		if clearFlag(msg, imap.RecentFlag) {
 			err = m.db.SaveMessage(m.user, m.uid, msg, m.privateKey)
 			if err != nil {
 				m.logError(err).Msg("failed to save message")
@@ -350,6 +350,8 @@ func (m *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.Fla
 	m.logEnter("UpdateMessagesFlags")
 	defer m.logExit("UpdateMessagesFlags")
 
+	m.logDebug().Str("op", string(op)).Interface("flags", flags).Msg("flag update")
+
 	messages, err := m.db.GetMessages(m.user, m.uid, m.privateKey)
 	if err != nil {
 		m.logError(err).Msg("failed to get messages")
@@ -380,7 +382,41 @@ func (m *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.Fla
 func (m *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, dest string) error {
 	m.logEnter("CopyMessages")
 	defer m.logExit("CopyMessages")
-	return fmt.Errorf("not implemented")
+
+	messages, err := m.db.GetMessages(m.user, m.uid, m.privateKey)
+	if err != nil {
+		m.logError(err).Msg("failed to get messages")
+		return err
+	}
+
+	for i, msg := range messages {
+		var id uint32
+		if uid {
+			id = msg.Uid
+		} else {
+			id = uint32(i + 1)
+		}
+		if !seqset.Contains(id) {
+			continue
+		}
+		mailboxes, err := m.db.GetMailboxes(m.user, m.privateKey)
+		if err != nil {
+			m.logError(err).Msg("failed to get mailboxes")
+			return err
+		}
+		for _, mb := range mailboxes {
+			if mb.GetName() != dest {
+				continue
+			}
+			err = m.db.SaveMessage(m.user, mb.GetUid(), msg, m.privateKey)
+			if err != nil {
+				m.logError(err).Msg("failed to save message")
+				return err
+			}
+			break
+		}
+	}
+	return nil
 }
 
 func (m *Mailbox) Expunge() error {
@@ -402,6 +438,7 @@ func (m *Mailbox) Expunge() error {
 		}
 
 		if deleted {
+			m.logDebug().Uint32("uid", msg.Uid).Msg("deleting message")
 			err := m.db.DeleteMessage(m.user, m.uid, msg.Uid)
 			if err != nil {
 				m.logError(err).Msg("failed to delete message")

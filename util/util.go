@@ -235,6 +235,16 @@ func IsKeyEncrypted(filePath string) (bool, error) {
 	return size > 32, nil
 }
 
+func StripDomainName(s string) string {
+	n := strings.Trim(s, " ")
+
+	// Strip @domain from the string, if any.
+	if i := strings.Index(n, "@"); i != -1 {
+		n = n[:i]
+	}
+	return n
+}
+
 // GetKeyFromNameAndPassword attempts to construct a private key from name and password and verify it with
 // key lookup service.
 func GetKeyFromNamePassword(ctx context.Context, name string, pass string,

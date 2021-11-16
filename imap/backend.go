@@ -59,5 +59,5 @@ func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, erro
 		log.Debug().Msg("confirmed key with lookup service")
 	}
 	log.Debug().Bool("authorized", true).Msg("[IMAP] -> LOGIN")
-	return NewUser(user, b.db, privateKey, b.lookupClient, b.dumpClient), nil
+	return NewUser(util.StripDomainName(user), b.db, privateKey, b.lookupClient, b.dumpClient), nil
 }
