@@ -310,7 +310,32 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 func (m *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uint32, error) {
 	m.logEnter("SearchMessages")
 	defer m.logExit("SearchMessages")
-	return nil, fmt.Errorf("not implemented")
+
+	messages, err := m.db.GetMessages(m.user, m.uid, m.privateKey)
+	if err != nil {
+		m.logError(err).Msg("failed to get messages")
+		return nil, err
+	}
+
+	var ids []uint32
+	for i, msg := range messages {
+		seqNum := uint32(i + 1)
+
+		m := NewMessageFromProto(msg)
+		ok, err := m.Match(seqNum, criteria)
+		if err != nil || !ok {
+			continue
+		}
+
+		var id uint32
+		if uid {
+			id = msg.Uid
+		} else {
+			id = seqNum
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
 }
 
 func (m *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Literal) error {
