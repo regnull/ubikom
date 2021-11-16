@@ -32,6 +32,7 @@ type Args struct {
 	PopPassword           string `yaml:"pop-password"`
 	PopDomain             string `yaml:"pop-domain"`
 	PopPort               int    `yaml:"pop-port"`
+	ImapStorePath         string `yaml:"imap-store-path"`
 	ImapDomain            string `yaml:"imap-domain"`
 	ImapPort              int    `yaml:"imap-port"`
 	SmtpDomain            string `yaml:"smtp-domain"`
@@ -71,6 +72,7 @@ func main() {
 	flag.IntVar(&args.PopPort, "pop-port", configArgs.PopPort, "port to be used by POP server")
 	flag.StringVar(&args.ImapDomain, "imap-domain", configArgs.ImapDomain, "domain to be used by IMAP server")
 	flag.IntVar(&args.ImapPort, "imap-port", configArgs.ImapPort, "port to be used by IMAP server")
+	flag.StringVar(&args.ImapStorePath, "imap-store-path", configArgs.ImapStorePath, "IMAP store path")
 	flag.StringVar(&args.SmtpDomain, "smtp-domain", configArgs.SmtpDomain, "domain for SMTP server")
 	flag.IntVar(&args.SmtpPort, "smtp-port", configArgs.SmtpPort, "port used by SMTP server")
 	flag.StringVar(&args.SmtpUser, "smtp-user", configArgs.SmtpUser, "user to be used by SMTP server")
@@ -191,7 +193,7 @@ func main() {
 		wg.Done()
 	}()
 
-	imapBadger, err := db.NewBadger("/Users/regnull/.ubikom/imapdb")
+	imapBadger, err := db.NewBadger(args.ImapStorePath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize IMAP Badger DB")
 	}
@@ -262,6 +264,9 @@ func verifyArgs(args *Args) error {
 
 		args.KeyLocation = os.ExpandEnv(args.KeyLocation)
 	}
+
+	args.LocalStorePath = os.ExpandEnv(args.LocalStorePath)
+	args.ImapStorePath = os.ExpandEnv(args.ImapStorePath)
 
 	return nil
 }
