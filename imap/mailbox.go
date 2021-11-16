@@ -13,6 +13,7 @@ import (
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 )
@@ -46,13 +47,19 @@ func NewMailbox(user string, name string, db *db.Badger, lookupClient pb.LookupS
 	return mb, nil
 }
 
-// NewFromProto creates a mailbox from the database data.
-func NewFromProto(protoMailbox pb.ImapMailbox, user string, db *db.Badger) *Mailbox {
+// NewMailboxFromProto creates a mailbox from the database data.
+func NewMailboxFromProto(protoMailbox *pb.ImapMailbox, user string, db *db.Badger,
+	lookupClient pb.LookupServiceClient, dumpClient pb.DMSDumpServiceClient,
+	privateKey *easyecc.PrivateKey) *Mailbox {
 	mb := &Mailbox{
-		user: user,
-		db:   db}
+		user:         user,
+		db:           db,
+		lookupClient: lookupClient,
+		dumpClient:   dumpClient,
+		privateKey:   privateKey}
 	mb.status.Name = protoMailbox.GetName()
 	mb.status.UidValidity = protoMailbox.GetUid()
+	log.Debug().Interface("mb", mb).Msg("created mailbox from proto")
 	return mb
 }
 
@@ -79,8 +86,8 @@ func (m *Mailbox) Name() string {
 }
 
 func (m *Mailbox) Info() (*imap.MailboxInfo, error) {
-	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] <- Info")
-	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] -> Info")
+	m.logEnter("Info")
+	defer m.logExit("Info")
 	return &imap.MailboxInfo{
 		Attributes: nil,
 		Delimiter:  DELIMITER,
@@ -91,8 +98,10 @@ func (m *Mailbox) flags() ([]string, error) {
 	flagsMap := make(map[string]bool)
 	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
 	if err != nil {
+		m.logError(err).Msg("failed to get messages")
 		return nil, err
 	}
+	m.logDebug().Int("count", len(messages)).Msg("got messages")
 	for _, msg := range messages {
 		for _, f := range msg.Flag {
 			if !flagsMap[f] {
@@ -105,12 +114,14 @@ func (m *Mailbox) flags() ([]string, error) {
 	for f := range flagsMap {
 		flags = append(flags, f)
 	}
+	m.logDebug().Interface("flags", flags).Msg("got flags")
 	return flags, nil
 }
 
 func (m *Mailbox) unseenSeqNum() (uint32, uint32, error) {
 	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
 	if err != nil {
+		m.logError(err).Msg("failed to get messages")
 		return 0, 0, err
 	}
 	for i, msg := range messages {
@@ -125,6 +136,7 @@ func (m *Mailbox) unseenSeqNum() (uint32, uint32, error) {
 		}
 
 		if !seen {
+			log.Debug().Int("count", len(messages)).Uint32("seqNum", seqNum).Msg("unseenSeqNum result")
 			return uint32(len(messages)), seqNum, nil
 		}
 	}
@@ -132,22 +144,26 @@ func (m *Mailbox) unseenSeqNum() (uint32, uint32, error) {
 }
 
 func (m *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
-	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] <- Status")
+	m.logEnter("Status")
+	defer m.logExit("Status")
 	status := imap.NewMailboxStatus(m.status.Name, items)
 	flags, err := m.flags()
 	if err != nil {
+		m.logError(err).Msg("failed to get flags")
 		return nil, err
 	}
 	status.Flags = flags
 	status.PermanentFlags = []string{"\\*"}
 	total, unseenSeqNum, err := m.unseenSeqNum()
 	if err != nil {
+		m.logError(err).Msg("failed to get unseenSeqNum")
 		return nil, err
 	}
 	status.UnseenSeqNum = unseenSeqNum
 
 	msgid, err := m.db.GetNextMessageID(m.user, m.privateKey)
 	if err != nil {
+		m.logError(err).Msg("failed to get next message id")
 		return nil, err
 	}
 
@@ -166,10 +182,13 @@ func (m *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 		}
 	}
 
+	m.logDebug().Interface("status", status).Msg("got status")
 	return status, nil
 }
 
 func (m *Mailbox) SetSubscribed(subscribed bool) error {
+	m.logEnter("SetSubscribed")
+	defer m.logExit("SetSubscribed")
 	if subscribed {
 		return m.db.Subscribe(m.user, m.status.Name, m.privateKey)
 	} else {
@@ -178,18 +197,21 @@ func (m *Mailbox) SetSubscribed(subscribed bool) error {
 }
 
 func (m *Mailbox) Check() error {
+	m.logEnter("Check")
+	defer m.logExit("Check")
 	// Nothing to do.
 	return nil
 }
 
 func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.FetchItem,
 	ch chan<- *imap.Message) error {
-	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] <- ListMessages")
+	m.logEnter("ListMessages")
+	defer m.logExit("ListMessages")
 	defer close(ch)
 	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
 	if err != nil {
+		m.logError(err)
 		log.Error().Str("user", m.user).Str("mailbox", m.status.Name).Err(err).Msg("failed to read messages from the database")
-		log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] -> ListMessages")
 		return err
 	}
 	for i, msg := range messages {
@@ -214,26 +236,31 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 
 		ch <- m1
 	}
-	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] -> ListMessages")
 	return nil
 }
 
 func (m *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uint32, error) {
+	m.logEnter("SearchMessages")
+	defer m.logExit("SearchMessages")
 	return nil, fmt.Errorf("not implemented")
 }
 
 func (m *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Literal) error {
+	m.logEnter("CreateMessage")
+	defer m.logExit("CreateMessage")
 	if date.IsZero() {
 		date = time.Now()
 	}
 
 	b, err := ioutil.ReadAll(body)
 	if err != nil {
+		m.logError(err).Msg("failed to read message body")
 		return err
 	}
 
 	msgid, err := m.db.GetNextMessageID(m.user, m.privateKey)
 	if err != nil {
+		m.logError(err).Msg("failed to get next message id")
 		return err
 	}
 	message := &Message{
@@ -244,13 +271,20 @@ func (m *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Litera
 		Body:  b,
 	}
 
-	m.db.SaveMessage(m.user, m.status.UidValidity, message.ToProto(), m.privateKey)
+	err = m.db.SaveMessage(m.user, m.status.UidValidity, message.ToProto(), m.privateKey)
+	if err != nil {
+		m.logError(err).Msg("failed to save message")
+	}
 	return nil
 }
 
 func (m *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.FlagsOp, flags []string) error {
+	m.logEnter("UpdateMessagesFlags")
+	defer m.logExit("UpdateMessagesFlags")
+
 	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
 	if err != nil {
+		m.logError(err).Msg("failed to get messages")
 		return err
 	}
 	for i, msg := range messages {
@@ -271,12 +305,18 @@ func (m *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.Fla
 }
 
 func (m *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, dest string) error {
+	m.logEnter("CopyMessages")
+	defer m.logExit("CopyMessages")
 	return fmt.Errorf("not implemented")
 }
 
 func (m *Mailbox) Expunge() error {
+	m.logEnter("Expunge")
+	defer m.logExit("Expunge")
+
 	messages, err := m.db.GetMessages(m.user, m.status.UidValidity, m.privateKey)
 	if err != nil {
+		m.logError(err).Msg("failed to get messages")
 		return err
 	}
 	for _, msg := range messages {
@@ -291,6 +331,7 @@ func (m *Mailbox) Expunge() error {
 		if deleted {
 			err := m.db.DeleteMessage(m.user, m.status.UidValidity, msg.Uid)
 			if err != nil {
+				m.logError(err).Msg("failed to delete message")
 				return err
 			}
 		}
@@ -300,19 +341,18 @@ func (m *Mailbox) Expunge() error {
 }
 
 func (m *Mailbox) Poll() error {
-	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] <- Poll")
+	m.logEnter("Poll")
+	defer m.logExit("Poll")
+
 	if m.IsInbox() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		err := m.getMessageFromDumpServer(ctx)
 		if err != nil {
-			log.Error().Str("user", m.user).Str("mailbox", m.status.Name).
-				Err(err).Msg("failed to get messages from dump server")
-			log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] -> Poll")
+			m.logError(err).Msg("failed to get messages from dump server")
 			return err
 		}
 	}
-	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] -> Poll")
 	return nil
 }
 
@@ -332,6 +372,7 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 			break
 		}
 		if err != nil {
+			m.logError(err).Msg("failed to receive message")
 			return fmt.Errorf("failed to receive message: %w", err)
 		}
 		count++
@@ -339,11 +380,13 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 		msg := res.GetMessage()
 		msgid, err := m.db.GetNextMessageID(m.user, m.privateKey)
 		if err != nil {
+			m.logError(err).Msg("failed go get next message id")
 			return err
 		}
 
 		content, err := m.decryptMessage(ctx, m.privateKey, msg)
 		if err != nil {
+			m.logError(err).Msg("failed to decrypt message")
 			return err
 		}
 
@@ -356,6 +399,7 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 		}
 		err = m.db.SaveMessage(m.user, 0, message.ToProto(), m.privateKey)
 		if err != nil {
+			m.logError(err).Msg("failed to save message")
 			return err
 		}
 	}
@@ -382,4 +426,20 @@ func (m *Mailbox) decryptMessage(ctx context.Context, privateKey *easyecc.Privat
 		return nil, fmt.Errorf("failed to decrypt message")
 	}
 	return content, nil
+}
+
+func (m *Mailbox) logEnter(name string) {
+	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] <- " + name)
+}
+
+func (m *Mailbox) logExit(name string) {
+	log.Debug().Str("user", m.user).Str("mailbox", m.status.Name).Msg("[IMAP] -> " + name)
+}
+
+func (m *Mailbox) logDebug() *zerolog.Event {
+	return log.Debug().Str("user", m.user).Str("mailbox", m.status.Name)
+}
+
+func (m *Mailbox) logError(err error) *zerolog.Event {
+	return log.Error().Err(err).Str("user", m.user).Str("mailbox", m.status.Name)
 }

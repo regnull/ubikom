@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
+	"github.com/rs/zerolog/log"
 )
 
 var ErrNotFound = fmt.Errorf("not found")
@@ -54,6 +55,7 @@ func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get mailbox: %w", err)
 	}
+	log.Debug().Interface("mailboxes", mailboxes).Msg("got mailboxes")
 	return mailboxes, nil
 }
 
@@ -277,6 +279,8 @@ func (b *Badger) SaveMessage(user string, mbid uint32, msg *pb.ImapMessage, priv
 		return err
 	}
 	err = b.db.Update(func(txn *badger.Txn) error {
+		key := messageKey(user, mbid, msg.GetUid())
+		log.Debug().Str("key", string(key)).Msg("saving message")
 		return txn.Set(messageKey(user, mbid, msg.GetUid()), bbe)
 	})
 	if err != nil {
@@ -291,6 +295,7 @@ func (b *Badger) GetMessages(user string, mailbox uint32, privateKey *easyecc.Pr
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 		prefix := mailboxMessagePrefix(user, mailbox)
+		log.Debug().Str("prefix", string(prefix)).Msg("reading messages")
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			msg := &pb.ImapMessage{}
