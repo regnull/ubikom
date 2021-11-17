@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -42,6 +43,7 @@ var tests = []struct {
 	{"TestLoginLogout", TestLoginLogout},
 	{"TestListMailboxes", TestListMailboxes},
 	{"TestSendReceive", TestSendReceive},
+	{"TestAppend", TestAppend},
 }
 
 func main() {
@@ -55,6 +57,10 @@ func main() {
 	flag.StringVar(&args.LookupServiceURL, "lookup-url", globals.PublicLookupServiceURL, "lookup service URL")
 	flag.DurationVar(&args.Timeout, "timeout", 2*time.Second, "connection timeout")
 	flag.Parse()
+
+	args.URL = "localhost:1122"
+	args.UseTLS = false
+	args.Password = "testme123"
 
 	if args.URL == "" {
 		log.Fatal().Msg("server url must be specified")
@@ -185,7 +191,73 @@ func TestSendReceive(args *Args) error {
 		return err
 	}
 
-	// Read all the messages from the inbox.
+	messages, err := readAllMessages(c, mbox)
+
+	if len(messages) != 1 {
+		return fmt.Errorf("expected one message, got %d", len(messages))
+	}
+
+	err = deleteAllMessages(c, mbox)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func TestAppend(args *Args) error {
+	c, err := Connect(args)
+	if err != nil {
+		return err
+	}
+
+	err = c.Login(testUser1, args.Password)
+	if err != nil {
+		return err
+	}
+	defer c.Logout()
+
+	// Select INBOX
+	mbox, err := c.Select("INBOX", false)
+	if err != nil {
+		return err
+	}
+
+	email := mail.NewMessage(testUser1, testUser1, "note to self", "Don't forget to take over the world")
+
+	err = deleteAllMessages(c, mbox)
+	if err != nil {
+		return err
+	}
+
+	messages, err := readAllMessages(c, mbox)
+	if err != nil {
+		return err
+	}
+
+	if len(messages) != 0 {
+		return fmt.Errorf("expected no messages, got %d", len(messages))
+	}
+
+	// Append it to INBOX, with two flags
+	flags := []string{imap.FlaggedFlag, "foobar"}
+	if err := c.Append("INBOX", flags, time.Now(), strings.NewReader(email)); err != nil {
+		return fmt.Errorf("failed to append message to inbox: %w", err)
+	}
+
+	messages, err = readAllMessages(c, mbox)
+	if err != nil {
+		return err
+	}
+
+	if len(messages) != 1 {
+		return fmt.Errorf("expected one message, got %d", len(messages))
+	}
+
+	return deleteAllMessages(c, mbox)
+}
+
+func readAllMessages(c *client.Client, mbox *imap.MailboxStatus) ([]*imap.Message, error) {
 	from := uint32(1)
 	to := mbox.Messages
 	seqset := new(imap.SeqSet)
@@ -203,15 +275,20 @@ func TestSendReceive(args *Args) error {
 	}
 
 	if err := <-done; err != nil {
+		return nil, err
+	}
+
+	return messages, nil
+}
+
+func deleteAllMessages(c *client.Client, mbox *imap.MailboxStatus) error {
+	messages, err := readAllMessages(c, mbox)
+	if err != nil {
 		return err
 	}
 
-	if len(messages) != 1 {
-		return fmt.Errorf("expected one message, got %d", len(messages))
-	}
-
 	for i := range messages {
-		seqset = new(imap.SeqSet)
+		seqset := new(imap.SeqSet)
 		seqset.AddNum(uint32(i + 1))
 		err = c.Store(seqset, imap.FormatFlagsOp(imap.AddFlags, true), []interface{}{imap.DeletedFlag}, nil)
 		if err != nil {
@@ -223,6 +300,5 @@ func TestSendReceive(args *Args) error {
 	if err != nil {
 		return fmt.Errorf("failed to expunge messages: %w", err)
 	}
-
 	return nil
 }

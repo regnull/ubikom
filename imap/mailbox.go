@@ -60,7 +60,6 @@ func NewMailboxFromProto(protoMailbox *pb.ImapMailbox, user string, db *db.Badge
 		privateKey:   privateKey}
 	mb.name = protoMailbox.GetName()
 	mb.uid = protoMailbox.GetUid()
-	log.Debug().Interface("mb", mb).Msg("created mailbox from proto")
 	return mb
 }
 
