@@ -12,6 +12,7 @@ import (
 	"github.com/emersion/go-message/textproto"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/util"
+	"github.com/rs/zerolog/log"
 )
 
 type Message struct {
@@ -90,6 +91,10 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 }
 
 func (m *Message) Match(seqNum uint32, c *imap.SearchCriteria) (bool, error) {
-	e, _ := m.entity()
+	e, err := m.entity()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to create email entity")
+		return false, err
+	}
 	return backendutil.Match(e, seqNum, m.Uid, m.Date, m.Flags, c)
 }

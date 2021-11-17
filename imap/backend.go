@@ -59,5 +59,19 @@ func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, erro
 		log.Debug().Msg("confirmed key with lookup service")
 	}
 	log.Debug().Bool("authorized", true).Msg("[IMAP] -> LOGIN")
-	return NewUser(util.StripDomainName(user), b.db, privateKey, b.lookupClient, b.dumpClient), nil
+	u := NewUser(util.StripDomainName(user), b.db, privateKey, b.lookupClient, b.dumpClient)
+
+	// Force polling for new messages (otherwise we will have to wait until client decides to do it).
+	inbox, err := u.GetMailbox("INBOX")
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get inbox")
+		return nil, err
+	}
+	err = inbox.(backend.MailboxPoller).Poll()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to poll for new messages")
+		return nil, err
+	}
+
+	return u, nil
 }

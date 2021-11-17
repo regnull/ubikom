@@ -237,3 +237,16 @@ func AddHeaders(content string, headers map[string]string) string {
 	// This means the body was not found, weird.
 	return strings.Join(newLines, "\n")
 }
+
+func NewMessage(to, from string, subject string, body string) string {
+	return fmt.Sprintf(`To: %s@x
+From: %s@x
+Subject: %s
+Date: %s
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Transfer-Encoding: 7bit
+Content-Language: en-US
+
+%s
+`, to, from, subject, time.Now().Format("02 Jan 06 15:04:05 -0700"), body)
+}

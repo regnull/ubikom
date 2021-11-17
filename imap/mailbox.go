@@ -321,8 +321,7 @@ func (m *Mailbox) SearchMessages(uid bool, criteria *imap.SearchCriteria) ([]uin
 	for i, msg := range messages {
 		seqNum := uint32(i + 1)
 
-		m := NewMessageFromProto(msg)
-		ok, err := m.Match(seqNum, criteria)
+		ok, err := NewMessageFromProto(msg).Match(seqNum, criteria)
 		if err != nil || !ok {
 			continue
 		}
