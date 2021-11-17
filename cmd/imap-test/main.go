@@ -58,10 +58,6 @@ func main() {
 	flag.DurationVar(&args.Timeout, "timeout", 2*time.Second, "connection timeout")
 	flag.Parse()
 
-	args.URL = "localhost:1122"
-	args.UseTLS = false
-	args.Password = "testme123"
-
 	if args.URL == "" {
 		log.Fatal().Msg("server url must be specified")
 	}
