@@ -119,7 +119,7 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 	assert.False(s)
 }
 
-func Test_Info(t *testing.T) {
+func Test_MailboxMessageID(t *testing.T) {
 	assert := assert.New(t)
 
 	privateKey, err := easyecc.NewRandomPrivateKey()
@@ -128,13 +128,28 @@ func Test_Info(t *testing.T) {
 	assert.NoError(err)
 	defer cleanup()
 
-	mbid, err := b.IncrementMailboxID("foo", privateKey)
+	// First mailbox must have ID of 1000.
+
+	mbid, err := b.GetNextMailboxID("foo", privateKey)
 	assert.NoError(err)
 	assert.EqualValues(1000, mbid)
+
+	// Increment functions return the next ID, and then increment it.
+	mbid, err = b.IncrementMailboxID("foo", privateKey)
+	assert.NoError(err)
+	assert.EqualValues(1000, mbid)
+
+	mbid, err = b.GetNextMailboxID("foo", privateKey)
+	assert.NoError(err)
+	assert.EqualValues(1001, mbid)
 
 	mbid, err = b.IncrementMailboxID("foo", privateKey)
 	assert.NoError(err)
 	assert.EqualValues(1001, mbid)
+
+	mbid, err = b.GetNextMailboxID("foo", privateKey)
+	assert.NoError(err)
+	assert.EqualValues(1002, mbid)
 
 	err = b.CreateMailbox("foo", &pb.ImapMailbox{
 		Name:           "bar",
@@ -148,6 +163,30 @@ func Test_Info(t *testing.T) {
 	assert.EqualValues(1000, msgid)
 
 	msgid, err = b.IncrementMessageID("foo", "bar", privateKey)
+	assert.NoError(err)
+	assert.EqualValues(1001, msgid)
+
+	msgid, err = b.GetNextMessageID("foo", "bar", privateKey)
+	assert.NoError(err)
+	assert.EqualValues(1002, msgid)
+
+	// Create another mailbox to verify that the next message ID is different.
+	err = b.CreateMailbox("foo", &pb.ImapMailbox{
+		Name:           "baz",
+		Uid:            1002,
+		NextMessageUid: 1000,
+	}, privateKey)
+	assert.NoError(err)
+
+	msgid, err = b.GetNextMessageID("foo", "baz", privateKey)
+	assert.NoError(err)
+	assert.EqualValues(1000, msgid)
+
+	msgid, err = b.IncrementMessageID("foo", "baz", privateKey)
+	assert.NoError(err)
+	assert.EqualValues(1000, msgid)
+
+	msgid, err = b.GetNextMessageID("foo", "baz", privateKey)
 	assert.NoError(err)
 	assert.EqualValues(1001, msgid)
 }

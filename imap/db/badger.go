@@ -37,6 +37,7 @@ func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) 
 					Uid:            0,
 					NextMessageUid: 1000,
 				}},
+				NextMailboxUid: 1000,
 			}
 			bbe, err := marshalAndEncrypt(mailboxes, privateKey)
 			if err != nil {
@@ -356,7 +357,7 @@ func (b *Badger) IncrementMailboxID(user string, privateKey *easyecc.PrivateKey)
 
 func (b *Badger) GetNextMailboxID(user string, privateKey *easyecc.PrivateKey) (uint32, error) {
 	var mbid uint32
-	err := b.db.View(func(txn *badger.Txn) error {
+	err := b.db.Update(func(txn *badger.Txn) error {
 		mailboxes, err := getMailboxes(txn, user, privateKey)
 		if err != nil {
 			return err
@@ -390,7 +391,7 @@ func (b *Badger) IncrementMessageID(user string, mb string, privateKey *easyecc.
 
 func (b *Badger) GetNextMessageID(user string, mb string, privateKey *easyecc.PrivateKey) (uint32, error) {
 	var msgid uint32
-	err := b.db.View(func(txn *badger.Txn) error {
+	err := b.db.Update(func(txn *badger.Txn) error {
 		mailboxes, err := getMailboxes(txn, user, privateKey)
 		if err != nil {
 			return err
