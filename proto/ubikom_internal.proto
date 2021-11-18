@@ -57,17 +57,19 @@ message ImapMailbox {
     string name = 1;
     repeated string attribute = 2;
     uint32 uid = 3; // Unique ID for this mailbox. It never changes, even when mailbox is renamed.
+    uint32 nextMessageUid = 4;
 }
 
 message ImapMailboxes {
     repeated ImapMailbox mailbox = 1;
     repeated string subscribed = 2;
+    uint32 nextMailboxUid = 3;
 }
 
 message ImapMessage {
     bytes content = 1;
     repeated string flag = 2;
-    uint64 received = 3;
+    uint64 received_timestamp = 3;
     uint64 size = 4;
     uint32 uid = 5;
 }

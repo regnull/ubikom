@@ -23,23 +23,29 @@ const (
 )
 
 type Mailbox struct {
-	name         string
-	uid          uint32
-	user         string
-	db           *db.Badger
-	lookupClient pb.LookupServiceClient
-	dumpClient   pb.DMSDumpServiceClient
-	privateKey   *easyecc.PrivateKey
+	name           string
+	uid            uint32
+	user           string
+	db             *db.Badger
+	lookupClient   pb.LookupServiceClient
+	dumpClient     pb.DMSDumpServiceClient
+	privateKey     *easyecc.PrivateKey
+	nextMessageUid uint32
 }
 
 // NewMailbox creates a brand new mailbox.
 func NewMailbox(user string, name string, db *db.Badger, lookupClient pb.LookupServiceClient,
 	dumpClient pb.DMSDumpServiceClient, privateKey *easyecc.PrivateKey) (*Mailbox, error) {
-	mb := &Mailbox{user: user, db: db, lookupClient: lookupClient,
-		dumpClient: dumpClient, privateKey: privateKey}
+	mb := &Mailbox{
+		user:           user,
+		db:             db,
+		lookupClient:   lookupClient,
+		dumpClient:     dumpClient,
+		privateKey:     privateKey,
+		nextMessageUid: 1000}
 	mb.name = name
 
-	uid, err := db.GetNextMailboxID(user, privateKey)
+	uid, err := db.IncrementMailboxID(user, privateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -53,11 +59,12 @@ func NewMailboxFromProto(protoMailbox *pb.ImapMailbox, user string, db *db.Badge
 	lookupClient pb.LookupServiceClient, dumpClient pb.DMSDumpServiceClient,
 	privateKey *easyecc.PrivateKey) *Mailbox {
 	mb := &Mailbox{
-		user:         user,
-		db:           db,
-		lookupClient: lookupClient,
-		dumpClient:   dumpClient,
-		privateKey:   privateKey}
+		user:           user,
+		db:             db,
+		lookupClient:   lookupClient,
+		dumpClient:     dumpClient,
+		privateKey:     privateKey,
+		nextMessageUid: protoMailbox.GetNextMessageUid()}
 	mb.name = protoMailbox.GetName()
 	mb.uid = protoMailbox.GetUid()
 	return mb
@@ -69,8 +76,9 @@ func (m *Mailbox) IsInbox() bool {
 
 func (m *Mailbox) ToProto() *pb.ImapMailbox {
 	return &pb.ImapMailbox{
-		Name: m.name,
-		Uid:  m.uid}
+		Name:           m.name,
+		Uid:            m.uid,
+		NextMessageUid: m.nextMessageUid}
 }
 
 func (m *Mailbox) User() string {
@@ -187,7 +195,7 @@ func (m *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 	}
 	status.UnseenSeqNum = unseenSeqNum
 
-	msgid, err := m.db.GetNextMessageID(m.user, m.privateKey)
+	msgid, err := m.db.GetNextMessageID(m.user, m.name, m.privateKey)
 	if err != nil {
 		m.logError(err).Msg("failed to get next message id")
 		return nil, err
@@ -349,7 +357,7 @@ func (m *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Litera
 		return err
 	}
 
-	msgid, err := m.db.GetNextMessageID(m.user, m.privateKey)
+	msgid, err := m.db.IncrementMessageID(m.user, m.name, m.privateKey)
 	if err != nil {
 		m.logError(err).Msg("failed to get next message id")
 		return err
@@ -513,7 +521,7 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 		count++
 		log.Debug().Str("user", m.user).Str("mailbox", m.name).Msg("got new message")
 		msg := res.GetMessage()
-		msgid, err := m.db.GetNextMessageID(m.user, m.privateKey)
+		msgid, err := m.db.IncrementMessageID(m.user, m.name, m.privateKey)
 		if err != nil {
 			m.logError(err).Msg("failed go get next message id")
 			return err

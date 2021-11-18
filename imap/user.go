@@ -1,6 +1,8 @@
 package imap
 
 import (
+	"errors"
+
 	"github.com/emersion/go-imap/backend"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/imap/db"
@@ -65,7 +67,7 @@ func (u *User) GetMailbox(name string) (backend.Mailbox, error) {
 		}
 	}
 
-	return nil, nil
+	return nil, errors.New("no such mailbox")
 }
 
 func (u *User) CreateMailbox(name string) error {

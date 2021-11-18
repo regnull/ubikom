@@ -136,11 +136,18 @@ func Test_Info(t *testing.T) {
 	assert.NoError(err)
 	assert.EqualValues(1001, mbid)
 
-	msgid, err := b.IncrementMessageID("foo", privateKey)
+	err = b.CreateMailbox("foo", &pb.ImapMailbox{
+		Name:           "bar",
+		Uid:            1001,
+		NextMessageUid: 1000,
+	}, privateKey)
+	assert.NoError(err)
+
+	msgid, err := b.IncrementMessageID("foo", "bar", privateKey)
 	assert.NoError(err)
 	assert.EqualValues(1000, msgid)
 
-	msgid, err = b.IncrementMessageID("foo", privateKey)
+	msgid, err = b.IncrementMessageID("foo", "bar", privateKey)
 	assert.NoError(err)
 	assert.EqualValues(1001, msgid)
 }
