@@ -191,6 +191,45 @@ func Test_MailboxMessageID(t *testing.T) {
 	assert.EqualValues(1001, msgid)
 }
 
+func Test_SaveGetMessage(t *testing.T) {
+	assert := assert.New(t)
+
+	privateKey, err := easyecc.NewRandomPrivateKey()
+	assert.NoError(err)
+	b, cleanup, err := createTestBadgerStore()
+	assert.NoError(err)
+	defer cleanup()
+
+	msg := &pb.ImapMessage{
+		Content:           []byte("this is my message"),
+		Flag:              []string{"flag1", "flag2"},
+		ReceivedTimestamp: 12345,
+		Size:              555,
+		Uid:               1001,
+	}
+	err = b.SaveMessage("foo", 1000, msg, privateKey)
+	assert.NoError(err)
+
+	messages, err := b.GetMessages("foo", 1000, privateKey)
+	assert.NoError(err)
+	assert.EqualValues(1, len(messages))
+
+	msg = messages[0]
+	assert.EqualValues("this is my message", string(msg.Content))
+	assert.Contains(msg.GetFlag(), "flag1")
+	assert.Contains(msg.GetFlag(), "flag2")
+	assert.EqualValues(12345, msg.GetReceivedTimestamp())
+	assert.EqualValues(555, msg.GetSize())
+	assert.EqualValues(1001, msg.GetUid())
+
+	err = b.DeleteMessage("foo", 1000, 1001)
+	assert.NoError(err)
+
+	messages, err = b.GetMessages("foo", 1000, privateKey)
+	assert.NoError(err)
+	assert.EqualValues(0, len(messages))
+}
+
 func createTestBadgerStore() (*Badger, func(), error) {
 	dir, err := os.MkdirTemp("", "ubikom_badgerstore_test")
 	if err != nil {
