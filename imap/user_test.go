@@ -64,6 +64,54 @@ func Test_ListMailboxes(t *testing.T) {
 	assert.NoError(err)
 	assert.EqualValues(1, len(mailboxes))
 	assert.True(containsMailbox(mailboxes, "foo"))
+
+	// Test get mailbox.
+	mb, err := u.GetMailbox("foo")
+	assert.NoError(err)
+	assert.EqualValues("foo", mb.Name())
+
+	// Try to get non-existent mailbox.
+	mb, err = u.GetMailbox("this-mailbox-doesn't-exist")
+	assert.Error(err)
+	assert.Nil(mb)
+}
+
+func Test_RenameMailbox(t *testing.T) {
+	assert := assert.New(t)
+
+	privateKey, err := easyecc.NewRandomPrivateKey()
+	assert.NoError(err)
+	b, cleanup, err := createTestBadgerStore()
+	assert.NoError(err)
+	defer cleanup()
+
+	u := NewUser("bob", b, privateKey, nil, nil)
+	assert.NoError(u.CreateMailbox("foo"))
+
+	assert.NoError(u.RenameMailbox("foo", "bar"))
+	mb, err := u.GetMailbox("foo")
+	assert.Error(err)
+	assert.Nil(mb)
+
+	mb, err = u.GetMailbox("bar")
+	assert.NoError(err)
+	assert.EqualValues("bar", mb.Name())
+}
+
+func Test_Logout(t *testing.T) {
+	assert := assert.New(t)
+
+	privateKey, err := easyecc.NewRandomPrivateKey()
+	assert.NoError(err)
+	b, cleanup, err := createTestBadgerStore()
+	assert.NoError(err)
+	defer cleanup()
+
+	u := NewUser("bob", b, privateKey, nil, nil)
+	assert.NoError(u.CreateMailbox("foo"))
+
+	// It doesn't do anything. We haven't crashed. That's great.
+	assert.NoError(u.Logout())
 }
 
 func containsMailbox(mailboxes []backend.Mailbox, name string) bool {
