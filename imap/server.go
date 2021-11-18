@@ -3,6 +3,7 @@ package imap
 import (
 	"crypto/tls"
 	"fmt"
+	"os"
 
 	"github.com/emersion/go-imap/server"
 	"github.com/regnull/easyecc"
@@ -12,16 +13,17 @@ import (
 )
 
 type ServerOptions struct {
-	Domain       string
-	Port         int
-	User         string
-	Password     string
-	PrivateKey   *easyecc.PrivateKey
-	CertFile     string
-	KeyFile      string
-	LookupClient pb.LookupServiceClient
-	DumpClient   pb.DMSDumpServiceClient
-	Badger       *db.Badger
+	Domain         string
+	Port           int
+	User           string
+	Password       string
+	PrivateKey     *easyecc.PrivateKey
+	CertFile       string
+	KeyFile        string
+	LookupClient   pb.LookupServiceClient
+	DumpClient     pb.DMSDumpServiceClient
+	Badger         *db.Badger
+	PrintDebugInfo bool
 }
 
 type Server struct {
@@ -31,6 +33,13 @@ type Server struct {
 
 func NewServer(opts *ServerOptions) *Server {
 	s := server.New(NewBackend(opts.DumpClient, opts.LookupClient, opts.PrivateKey, opts.User, opts.Password, opts.Badger))
+
+	if opts.PrintDebugInfo {
+		// This will echo everything to stderr!
+		// Good for debugging, remove later.
+		s.Debug = os.Stderr
+	}
+
 	s.Addr = fmt.Sprintf("%s:%d", opts.Domain, opts.Port)
 	s.AllowInsecureAuth = true
 	return &Server{opts: opts, server: s}

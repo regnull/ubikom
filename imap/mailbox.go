@@ -431,6 +431,8 @@ func (m *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, dest string) error
 			if mb.GetName() != dest {
 				continue
 			}
+			//clearFlag(msg, imap.SeenFlag)
+			setFlag(msg, imap.RecentFlag)
 			err = m.db.SaveMessage(m.user, mb.GetUid(), msg, m.privateKey)
 			if err != nil {
 				m.logError(err).Msg("failed to save message")

@@ -351,7 +351,7 @@ func (b *Badger) mutateInfo(user string, f func(info *pb.ImapInfo), privateKey *
 	return nil
 }
 
-func (b *Badger) GetNextMailboxID(user string, privateKey *easyecc.PrivateKey) (uint32, error) {
+func (b *Badger) IncrementMailboxID(user string, privateKey *easyecc.PrivateKey) (uint32, error) {
 	var mbid uint32
 	err := b.mutateInfo(user, func(info *pb.ImapInfo) {
 		mbid = info.GetNextMailboxUid()
@@ -363,12 +363,66 @@ func (b *Badger) GetNextMailboxID(user string, privateKey *easyecc.PrivateKey) (
 	return mbid, nil
 }
 
-func (b *Badger) GetNextMessageID(user string, privateKey *easyecc.PrivateKey) (uint32, error) {
+func (b *Badger) GetNextMailboxID(user string, privateKey *easyecc.PrivateKey) (uint32, error) {
+	var mbid uint32
+	err := b.db.View(func(txn *badger.Txn) error {
+		info := &pb.ImapInfo{
+			NextMailboxUid: 1000,
+			NextMessageUid: 1000}
+		item, err := txn.Get(infoKey(user))
+		if err == badger.ErrKeyNotFound {
+			mbid = info.NextMailboxUid
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		err = unmarhalItemAndDecrypt(item, info, privateKey)
+		if err != nil {
+			return err
+		}
+		mbid = info.NextMailboxUid
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return mbid, nil
+}
+
+func (b *Badger) IncrementMessageID(user string, privateKey *easyecc.PrivateKey) (uint32, error) {
 	var msgid uint32
 	err := b.mutateInfo(user, func(info *pb.ImapInfo) {
 		msgid = info.GetNextMessageUid()
 		info.NextMessageUid++
 	}, privateKey)
+	if err != nil {
+		return 0, err
+	}
+	return msgid, nil
+}
+
+func (b *Badger) GetNextMessageID(user string, privateKey *easyecc.PrivateKey) (uint32, error) {
+	var msgid uint32
+	err := b.db.View(func(txn *badger.Txn) error {
+		info := &pb.ImapInfo{
+			NextMailboxUid: 1000,
+			NextMessageUid: 1000}
+		item, err := txn.Get(infoKey(user))
+		if err == badger.ErrKeyNotFound {
+			msgid = info.NextMessageUid
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		err = unmarhalItemAndDecrypt(item, info, privateKey)
+		if err != nil {
+			return err
+		}
+		msgid = info.NextMessageUid
+		return nil
+	})
 	if err != nil {
 		return 0, err
 	}

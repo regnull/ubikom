@@ -202,16 +202,17 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to initialize IMAP Badger DB")
 	}
 	imapOpts := &imap.ServerOptions{
-		Domain:       args.ImapDomain,
-		Port:         args.ImapPort,
-		User:         args.ImapUser,
-		Password:     args.ImapPassword,
-		PrivateKey:   key,
-		CertFile:     args.TLSCertFile,
-		KeyFile:      args.TLSKeyFile,
-		LookupClient: lookupClient,
-		DumpClient:   dumpClient,
-		Badger:       imapBadger,
+		Domain:         args.ImapDomain,
+		Port:           args.ImapPort,
+		User:           args.ImapUser,
+		Password:       args.ImapPassword,
+		PrivateKey:     key,
+		CertFile:       args.TLSCertFile,
+		KeyFile:        args.TLSKeyFile,
+		LookupClient:   lookupClient,
+		DumpClient:     dumpClient,
+		Badger:         imapBadger,
+		PrintDebugInfo: true,
 	}
 	imapServer := imap.NewServer(imapOpts)
 	go func() {
