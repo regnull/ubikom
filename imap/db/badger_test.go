@@ -128,19 +128,19 @@ func Test_Info(t *testing.T) {
 	assert.NoError(err)
 	defer cleanup()
 
-	mbid, err := b.GetNextMailboxID("foo", privateKey)
+	mbid, err := b.IncrementMailboxID("foo", privateKey)
 	assert.NoError(err)
 	assert.EqualValues(1000, mbid)
 
-	mbid, err = b.GetNextMailboxID("foo", privateKey)
+	mbid, err = b.IncrementMailboxID("foo", privateKey)
 	assert.NoError(err)
 	assert.EqualValues(1001, mbid)
 
-	msgid, err := b.GetNextMessageID("foo", privateKey)
+	msgid, err := b.IncrementMessageID("foo", privateKey)
 	assert.NoError(err)
 	assert.EqualValues(1000, msgid)
 
-	msgid, err = b.GetNextMessageID("foo", privateKey)
+	msgid, err = b.IncrementMessageID("foo", privateKey)
 	assert.NoError(err)
 	assert.EqualValues(1001, msgid)
 }
