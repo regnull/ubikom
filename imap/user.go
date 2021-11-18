@@ -2,6 +2,7 @@ package imap
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/emersion/go-imap/backend"
 	"github.com/regnull/easyecc"
@@ -14,7 +15,6 @@ type User struct {
 	name         string
 	db           *db.Badger
 	privateKey   *easyecc.PrivateKey
-	inbox        *Mailbox // TODO
 	lookupClient pb.LookupServiceClient
 	dumpClient   pb.DMSDumpServiceClient
 }
@@ -48,6 +48,22 @@ func (u *User) ListMailboxes(subscribed bool) ([]backend.Mailbox, error) {
 		m := NewMailboxFromProto(mb, u.name, u.db, u.lookupClient, u.dumpClient, u.privateKey)
 		ret = append(ret, m)
 	}
+
+	if subscribed {
+		var filteredMailboxes []backend.Mailbox
+		for _, mb := range ret {
+			sub, err := u.db.Subscribed(u.name, mb.Name(), u.privateKey)
+			if err != nil {
+				return nil, err
+			}
+			if !sub {
+				continue
+			}
+			filteredMailboxes = append(filteredMailboxes, mb)
+		}
+		ret = filteredMailboxes
+	}
+
 	return ret, nil
 }
 
@@ -84,6 +100,10 @@ func (u *User) CreateMailbox(name string) error {
 func (u *User) DeleteMailbox(name string) error {
 	u.logEnter("DeleteMailbox")
 	defer u.logExit("DeleteMailbox")
+
+	if strings.ToUpper(name) == "INBOX" {
+		return errors.New("can't delete inbox")
+	}
 
 	return u.db.DeleteMailbox(u.name, name, u.privateKey)
 }
