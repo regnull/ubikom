@@ -405,6 +405,64 @@ func (m *Mailbox) UpdateMessagesFlags(uid bool, seqset *imap.SeqSet, op imap.Fla
 	return nil
 }
 
+func (m *Mailbox) MoveMessages(uid bool, seqset *imap.SeqSet, dest string) error {
+	m.logEnter("MoveMessages")
+	defer m.logExit("MoveMessages")
+
+	messages, err := m.db.GetMessages(m.user, m.uid, m.privateKey)
+	if err != nil {
+		m.logError(err).Msg("failed to get messages")
+		return err
+	}
+
+	// TODO: Clearly, this can be refactored.
+	for i, msg := range messages {
+		var id uint32
+		if uid {
+			id = msg.Uid
+		} else {
+			id = uint32(i + 1)
+		}
+		if !seqset.Contains(id) {
+			continue
+		}
+		mailboxes, err := m.db.GetMailboxes(m.user, m.privateKey)
+		if err != nil {
+			m.logError(err).Msg("failed to get mailboxes")
+			return err
+		}
+		for _, mb := range mailboxes {
+			if mb.GetName() != dest {
+				continue
+			}
+			setFlag(msg, imap.RecentFlag)
+
+			// We must generate new message id for the target mailbox, otherwise ids from
+			// different mailboxes may clash.
+			newMsgUid, err := m.db.IncrementMessageID(m.user, mb.GetName(), m.privateKey)
+			if err != nil {
+				m.logError(err).Msg("failed to get new message id")
+				return err
+			}
+			oldUid := msg.Uid
+			msg.Uid = newMsgUid
+			err = m.db.SaveMessage(m.user, mb.GetUid(), msg, m.privateKey)
+			if err != nil {
+				m.logError(err).Msg("failed to save message")
+				return err
+			}
+			m.logDebug().Uint32("mbid", m.uid).Uint32("msgid", oldUid).Msg("deleting message")
+			err = m.db.DeleteMessage(m.user, m.uid, oldUid)
+			if err != nil {
+				m.logError(err).Msg("failed to delete message")
+				return err
+			}
+			break
+		}
+	}
+	return nil
+}
+
 func (m *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, dest string) error {
 	m.logEnter("CopyMessages")
 	defer m.logExit("CopyMessages")
