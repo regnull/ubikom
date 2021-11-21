@@ -31,14 +31,14 @@ func Test_ListMailboxes(t *testing.T) {
 	assert.NoError(err)
 
 	// Even if no mailboxes were explicitly created, mailbox must be there.
-	assert.EqualValues(1, len(mailboxes))
+	assert.EqualValues(3, len(mailboxes))
 	assert.EqualValues("INBOX", mailboxes[0].Name())
 
 	assert.NoError(u.CreateMailbox("foo"))
 	assert.NoError(u.CreateMailbox("bar"))
 	mailboxes, err = u.ListMailboxes(false)
 	assert.NoError(err)
-	assert.EqualValues(3, len(mailboxes))
+	assert.EqualValues(5, len(mailboxes))
 	assert.True(containsMailbox(mailboxes, "foo"))
 	assert.True(containsMailbox(mailboxes, "bar"))
 	assert.False(containsMailbox(mailboxes, "zoo"))
@@ -46,7 +46,7 @@ func Test_ListMailboxes(t *testing.T) {
 	assert.NoError(u.DeleteMailbox("bar"))
 	mailboxes, err = u.ListMailboxes(false)
 	assert.NoError(err)
-	assert.EqualValues(2, len(mailboxes))
+	assert.EqualValues(4, len(mailboxes))
 	assert.True(containsMailbox(mailboxes, "foo"))
 	assert.False(containsMailbox(mailboxes, "bar"))
 	assert.True(containsMailbox(mailboxes, "INBOX"))
