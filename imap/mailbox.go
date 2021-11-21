@@ -22,6 +22,14 @@ const (
 	DELIMITER = "."
 )
 
+var mailboxFlags = []string{
+	imap.SeenFlag,
+	imap.DeletedFlag,
+	imap.AnsweredFlag,
+	imap.DraftFlag,
+	imap.FlaggedFlag,
+}
+
 type Mailbox struct {
 	name           string
 	uid            uint32
@@ -103,13 +111,7 @@ func (m *Mailbox) Info() (*imap.MailboxInfo, error) {
 }
 
 func (m *Mailbox) flags(messages []*pb.ImapMessage) ([]string, error) {
-	return []string{
-		imap.SeenFlag,
-		imap.DeletedFlag,
-		imap.AnsweredFlag,
-		imap.DraftFlag,
-		imap.FlaggedFlag,
-	}, nil
+	return mailboxFlags, nil
 }
 
 func (m *Mailbox) unseenSeqNum(messages []*pb.ImapMessage) (uint32, uint32, error) {
@@ -179,7 +181,8 @@ func (m *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 		return nil, err
 	}
 	status.Flags = flags
-	status.PermanentFlags = []string{"\\Deleted \\Seen \\*"}
+	status.PermanentFlags = mailboxFlags
+	status.PermanentFlags = append(status.PermanentFlags, "\\*")
 	total, unseenSeqNum, err := m.unseenSeqNum(messages)
 	if err != nil {
 		m.logError(err).Msg("failed to get unseenSeqNum")
