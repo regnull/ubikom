@@ -103,21 +103,13 @@ func (m *Mailbox) Info() (*imap.MailboxInfo, error) {
 }
 
 func (m *Mailbox) flags(messages []*pb.ImapMessage) ([]string, error) {
-	flagsMap := make(map[string]bool)
-	for _, msg := range messages {
-		for _, f := range msg.Flag {
-			if !flagsMap[f] {
-				flagsMap[f] = true
-			}
-		}
-	}
-
-	var flags []string
-	for f := range flagsMap {
-		flags = append(flags, f)
-	}
-	m.logDebug().Interface("flags", flags).Msg("got flags")
-	return flags, nil
+	return []string{
+		imap.SeenFlag,
+		imap.DeletedFlag,
+		imap.AnsweredFlag,
+		imap.DraftFlag,
+		imap.FlaggedFlag,
+	}, nil
 }
 
 func (m *Mailbox) unseenSeqNum(messages []*pb.ImapMessage) (uint32, uint32, error) {
@@ -187,7 +179,7 @@ func (m *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 		return nil, err
 	}
 	status.Flags = flags
-	status.PermanentFlags = []string{"\\*"}
+	status.PermanentFlags = []string{"\\Deleted \\Seen \\*"}
 	total, unseenSeqNum, err := m.unseenSeqNum(messages)
 	if err != nil {
 		m.logError(err).Msg("failed to get unseenSeqNum")
