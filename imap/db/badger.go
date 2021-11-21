@@ -34,7 +34,7 @@ func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) 
 				Mailbox: []*pb.ImapMailbox{{
 					Name:           "INBOX",
 					Attribute:      nil,
-					Uid:            0,
+					Uid:            1,
 					NextMessageUid: 1000,
 				}},
 				NextMailboxUid: 1000,

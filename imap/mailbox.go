@@ -208,7 +208,7 @@ func (m *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 		case imap.StatusUidNext:
 			status.UidNext = msgid
 		case imap.StatusUidValidity:
-			status.UidValidity = 1
+			status.UidValidity = m.uid
 		case imap.StatusRecent:
 			status.Recent = m.recent(messages)
 		case imap.StatusUnseen:
@@ -439,8 +439,16 @@ func (m *Mailbox) CopyMessages(uid bool, seqset *imap.SeqSet, dest string) error
 			if mb.GetName() != dest {
 				continue
 			}
-			//clearFlag(msg, imap.SeenFlag)
 			setFlag(msg, imap.RecentFlag)
+
+			// We must generate new message id for the target mailbox, otherwise ids from
+			// different mailboxes may clash.
+			newMsgUid, err := m.db.IncrementMessageID(m.user, mb.GetName(), m.privateKey)
+			if err != nil {
+				m.logError(err).Msg("failed to get new message id")
+				return err
+			}
+			msg.Uid = newMsgUid
 			err = m.db.SaveMessage(m.user, mb.GetUid(), msg, m.privateKey)
 			if err != nil {
 				m.logError(err).Msg("failed to save message")
@@ -540,7 +548,7 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 			Flags: []string{imap.RecentFlag},
 			Body:  content,
 		}
-		err = m.db.SaveMessage(m.user, 0, message.ToProto(), m.privateKey)
+		err = m.db.SaveMessage(m.user, 1, message.ToProto(), m.privateKey)
 		if err != nil {
 			m.logError(err).Msg("failed to save message")
 			return err

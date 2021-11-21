@@ -36,6 +36,7 @@ type Args struct {
 	ImapDomain            string `yaml:"imap-domain"`
 	ImapPort              int    `yaml:"imap-port"`
 	ImapUser              string `yaml:"imap-user"`
+	ImapPrintDebugInfo    bool   `yaml:"imap-print-debug-info"`
 	ImapPassword          string `yaml:"imap-password"`
 	SmtpDomain            string `yaml:"smtp-domain"`
 	SmtpPort              int    `yaml:"smtp-port"`
@@ -77,6 +78,7 @@ func main() {
 	flag.StringVar(&args.ImapStorePath, "imap-store-path", configArgs.ImapStorePath, "IMAP store path")
 	flag.StringVar(&args.ImapUser, "imap-user", configArgs.ImapUser, "IMAP user")
 	flag.StringVar(&args.ImapPassword, "imap-password", configArgs.ImapPassword, "IMAP password")
+	flag.BoolVar(&args.ImapPrintDebugInfo, "imap-print-debug-info", configArgs.ImapPrintDebugInfo, "IMAP print debug info")
 	flag.StringVar(&args.SmtpDomain, "smtp-domain", configArgs.SmtpDomain, "domain for SMTP server")
 	flag.IntVar(&args.SmtpPort, "smtp-port", configArgs.SmtpPort, "port used by SMTP server")
 	flag.StringVar(&args.SmtpUser, "smtp-user", configArgs.SmtpUser, "user to be used by SMTP server")
@@ -212,7 +214,7 @@ func main() {
 		LookupClient:   lookupClient,
 		DumpClient:     dumpClient,
 		Badger:         imapBadger,
-		PrintDebugInfo: true,
+		PrintDebugInfo: args.ImapPrintDebugInfo,
 	}
 	imapServer := imap.NewServer(imapOpts)
 	go func() {
