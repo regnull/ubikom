@@ -601,7 +601,7 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 			Flags: []string{imap.RecentFlag},
 			Body:  content,
 		}
-		err = m.db.SaveMessage(m.user, 1, message.ToProto(), m.privateKey)
+		err = m.db.SaveMessage(m.user, db.INBOX_UID, message.ToProto(), m.privateKey)
 		if err != nil {
 			m.logError(err).Msg("failed to save message")
 			return err

@@ -31,13 +31,27 @@ func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) 
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
 			mailboxes := &pb.ImapMailboxes{
-				Mailbox: []*pb.ImapMailbox{{
-					Name:           "INBOX",
-					Attribute:      nil,
-					Uid:            1,
-					NextMessageUid: 1000,
-				}},
-				NextMailboxUid: 1000,
+				Mailbox: []*pb.ImapMailbox{
+					{
+						Name:           "INBOX",
+						Attribute:      nil,
+						Uid:            INBOX_UID,
+						NextMessageUid: FIRST_MESSAGE_UID,
+					},
+					{
+						Name:           "Sent",
+						Attribute:      nil,
+						Uid:            SENT_UID,
+						NextMessageUid: FIRST_MESSAGE_UID,
+					},
+					{
+						Name:           "Trash",
+						Attribute:      nil,
+						Uid:            TRASH_UID,
+						NextMessageUid: FIRST_MESSAGE_UID,
+					},
+				},
+				NextMailboxUid: FIRST_REGULAR_MAILBOX_UID,
 			}
 			bbe, err := marshalAndEncrypt(mailboxes, privateKey)
 			if err != nil {
@@ -418,10 +432,6 @@ func messageKey(user string, mbid uint32, msgid uint32) []byte {
 
 func mailboxMessagePrefix(user string, mbid uint32) []byte {
 	return []byte("message_" + user + "_" + strconv.FormatInt(int64(mbid), 10) + "_")
-}
-
-func infoKey(user string) []byte {
-	return []byte("info_" + user)
 }
 
 func marshalAndEncrypt(msg proto.Message, privateKey *easyecc.PrivateKey) ([]byte, error) {
