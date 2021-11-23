@@ -16,30 +16,6 @@ import (
 
 var ErrNotFound = fmt.Errorf("not found")
 
-var initialMailboxes = &pb.ImapMailboxes{
-	Mailbox: []*pb.ImapMailbox{
-		{
-			Name:           "INBOX",
-			Attribute:      nil,
-			Uid:            INBOX_UID,
-			NextMessageUid: FIRST_MESSAGE_UID,
-		},
-		{
-			Name:           "Sent",
-			Attribute:      nil,
-			Uid:            SENT_UID,
-			NextMessageUid: FIRST_MESSAGE_UID,
-		},
-		{
-			Name:           "Trash",
-			Attribute:      nil,
-			Uid:            TRASH_UID,
-			NextMessageUid: FIRST_MESSAGE_UID,
-		},
-	},
-	NextMailboxUid: FIRST_REGULAR_MAILBOX_UID,
-}
-
 type Badger struct {
 	db  *badger.DB
 	ttl time.Duration
@@ -57,7 +33,7 @@ func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) 
 	item, err := txn.Get(mailboxKey(user))
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			mailboxes := initialMailboxes
+			mailboxes := initialMailboxes()
 			bbe, err := marshalAndEncrypt(mailboxes, privateKey)
 			if err != nil {
 				return nil, err
@@ -136,6 +112,7 @@ func (b *Badger) CreateMailbox(user string, mb *pb.ImapMailbox, privateKey *easy
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
 		for _, m := range mailboxes.GetMailbox() {
+			log.Debug().Str("name", m.GetName()).Msg("got mailbox")
 			if mb.GetName() == m.GetName() {
 				return fmt.Errorf("mailbox already exists")
 			}
@@ -345,7 +322,7 @@ func (b *Badger) DeleteMessage(user string, mbid uint32, msgid uint32) error {
 
 func (b *Badger) mutateMailboxes(user string, f func(mailboxes *pb.ImapMailboxes), privateKey *easyecc.PrivateKey) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes := initialMailboxes
+		mailboxes := initialMailboxes()
 		item, err := txn.Get(mailboxKey(user))
 		if err != nil && err != badger.ErrKeyNotFound {
 			return err
@@ -474,4 +451,31 @@ func unmarhalItemAndDecrypt(item *badger.Item, msg proto.Message, privateKey *ea
 	return item.Value(func(val []byte) error {
 		return unmarshalAndDecrypt(val, msg, privateKey)
 	})
+}
+
+func initialMailboxes() *pb.ImapMailboxes {
+	var initialMailboxes = &pb.ImapMailboxes{
+		Mailbox: []*pb.ImapMailbox{
+			{
+				Name:           "INBOX",
+				Attribute:      nil,
+				Uid:            INBOX_UID,
+				NextMessageUid: FIRST_MESSAGE_UID,
+			},
+			{
+				Name:           "Sent",
+				Attribute:      nil,
+				Uid:            SENT_UID,
+				NextMessageUid: FIRST_MESSAGE_UID,
+			},
+			{
+				Name:           "Trash",
+				Attribute:      nil,
+				Uid:            TRASH_UID,
+				NextMessageUid: FIRST_MESSAGE_UID,
+			},
+		},
+		NextMailboxUid: FIRST_REGULAR_MAILBOX_UID,
+	}
+	return initialMailboxes
 }

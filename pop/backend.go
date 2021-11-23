@@ -118,6 +118,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 		if err != nil {
 			return fmt.Errorf("failed to read local messages: %w", err)
 		}
+		log.Debug().Int("count", len(localMessages)).Msg("loaded messages from legacy store")
 
 		for _, msg := range localMessages {
 			content, err := b.decryptMessage(context.TODO(), sess.PrivateKey, msg)

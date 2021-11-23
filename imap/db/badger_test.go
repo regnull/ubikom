@@ -236,9 +236,16 @@ func createTestBadgerStore() (*Badger, func(), error) {
 		return nil, func() {}, err
 	}
 
+	fmt.Printf("creating badger store at %s\n", dir)
 	store, err := NewBadger(dir, 0)
 	if err != nil {
 		return nil, func() {}, err
 	}
-	return store, func() { os.RemoveAll(dir) }, nil
+	return store, func() {
+		fmt.Printf("cleaning up badger store at %s\n", dir)
+		err := os.RemoveAll(dir)
+		if err != nil {
+			fmt.Printf("error during cleanup: %s\n", err)
+		}
+	}, nil
 }
