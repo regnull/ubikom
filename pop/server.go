@@ -7,6 +7,7 @@ import (
 
 	"github.com/regnull/easyecc"
 	"github.com/regnull/popgun"
+	"github.com/regnull/ubikom/imap/db"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/store"
 	"github.com/rs/zerolog/log"
@@ -24,6 +25,7 @@ type ServerOptions struct {
 	CertFile     string
 	KeyFile      string
 	LocalStore   store.Store
+	ImapDB       *db.Badger
 }
 
 type Server struct {
@@ -35,7 +37,7 @@ func NewServer(opts *ServerOptions) *Server {
 	cfg := popgun.Config{
 		ListenInterface: fmt.Sprintf("%s:%d", opts.Domain, opts.Port)}
 	backend := NewBackend(opts.DumpClient, opts.LookupClient, opts.Key, opts.User,
-		opts.Password, opts.LocalStore)
+		opts.Password, opts.LocalStore, opts.ImapDB)
 	popServer := popgun.NewServer(cfg, backend, backend)
 	return &Server{opts: opts, server: popServer}
 }

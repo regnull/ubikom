@@ -48,6 +48,7 @@ type Args struct {
 	TLSKeyFile            string `yaml:"tls-key-file"`
 	LocalStorePath        string `yaml:"local-store-path"`
 	MaxMessageAgeHours    int    `yaml:"max-message-age-hours"`
+	MessageTTLDays        int    `yaml:"message-ttl-days"`
 }
 
 func main() {
@@ -89,6 +90,7 @@ func main() {
 	flag.StringVar(&args.TLSKeyFile, "tls-key-file", configArgs.TLSKeyFile, "TLS key file")
 	flag.StringVar(&args.LocalStorePath, "local-store-path", configArgs.LocalStorePath, "path for the local messages store")
 	flag.IntVar(&args.MaxMessageAgeHours, "max-message-age-hours", configArgs.MaxMessageAgeHours, "max message age, in hours")
+	flag.IntVar(&args.MessageTTLDays, "message-ttl-days", configArgs.MessageTTLDays, "message TTL, in days.")
 	flag.Parse()
 
 	err = verifyArgs(&args)
@@ -150,6 +152,15 @@ func main() {
 		}
 	}
 
+	ttl := time.Duration(0)
+	if args.MessageTTLDays > 0 {
+		ttl = time.Duration(args.MessageTTLDays) * 24 * time.Hour
+	}
+	imapBadger, err := db.NewBadger(args.ImapStorePath, ttl)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initialize IMAP Badger DB")
+	}
+
 	popOpts := &pop.ServerOptions{
 		Ctx:          context.Background(),
 		Domain:       args.PopDomain,
@@ -162,6 +173,7 @@ func main() {
 		CertFile:     args.TLSCertFile,
 		KeyFile:      args.TLSKeyFile,
 		LocalStore:   localStore,
+		ImapDB:       imapBadger,
 	}
 
 	var wg sync.WaitGroup
@@ -199,10 +211,6 @@ func main() {
 		wg.Done()
 	}()
 
-	imapBadger, err := db.NewBadger(args.ImapStorePath)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize IMAP Badger DB")
-	}
 	imapOpts := &imap.ServerOptions{
 		Domain:         args.ImapDomain,
 		Port:           args.ImapPort,

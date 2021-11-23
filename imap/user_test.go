@@ -129,7 +129,7 @@ func createTestBadgerStore() (*db.Badger, func(), error) {
 		return nil, func() {}, err
 	}
 
-	store, err := db.NewBadger(dir)
+	store, err := db.NewBadger(dir, 0)
 	if err != nil {
 		return nil, func() {}, err
 	}

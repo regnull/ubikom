@@ -236,7 +236,7 @@ func createTestBadgerStore() (*Badger, func(), error) {
 		return nil, func() {}, err
 	}
 
-	store, err := NewBadger(dir)
+	store, err := NewBadger(dir, 0)
 	if err != nil {
 		return nil, func() {}, err
 	}
