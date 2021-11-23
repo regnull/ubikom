@@ -16,6 +16,30 @@ import (
 
 var ErrNotFound = fmt.Errorf("not found")
 
+var initialMailboxes = &pb.ImapMailboxes{
+	Mailbox: []*pb.ImapMailbox{
+		{
+			Name:           "INBOX",
+			Attribute:      nil,
+			Uid:            INBOX_UID,
+			NextMessageUid: FIRST_MESSAGE_UID,
+		},
+		{
+			Name:           "Sent",
+			Attribute:      nil,
+			Uid:            SENT_UID,
+			NextMessageUid: FIRST_MESSAGE_UID,
+		},
+		{
+			Name:           "Trash",
+			Attribute:      nil,
+			Uid:            TRASH_UID,
+			NextMessageUid: FIRST_MESSAGE_UID,
+		},
+	},
+	NextMailboxUid: FIRST_REGULAR_MAILBOX_UID,
+}
+
 type Badger struct {
 	db  *badger.DB
 	ttl time.Duration
@@ -33,29 +57,7 @@ func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) 
 	item, err := txn.Get(mailboxKey(user))
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			mailboxes := &pb.ImapMailboxes{
-				Mailbox: []*pb.ImapMailbox{
-					{
-						Name:           "INBOX",
-						Attribute:      nil,
-						Uid:            INBOX_UID,
-						NextMessageUid: FIRST_MESSAGE_UID,
-					},
-					{
-						Name:           "Sent",
-						Attribute:      nil,
-						Uid:            SENT_UID,
-						NextMessageUid: FIRST_MESSAGE_UID,
-					},
-					{
-						Name:           "Trash",
-						Attribute:      nil,
-						Uid:            TRASH_UID,
-						NextMessageUid: FIRST_MESSAGE_UID,
-					},
-				},
-				NextMailboxUid: FIRST_REGULAR_MAILBOX_UID,
-			}
+			mailboxes := initialMailboxes
 			bbe, err := marshalAndEncrypt(mailboxes, privateKey)
 			if err != nil {
 				return nil, err
@@ -343,8 +345,7 @@ func (b *Badger) DeleteMessage(user string, mbid uint32, msgid uint32) error {
 
 func (b *Badger) mutateMailboxes(user string, f func(mailboxes *pb.ImapMailboxes), privateKey *easyecc.PrivateKey) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes := &pb.ImapMailboxes{
-			NextMailboxUid: 1000}
+		mailboxes := initialMailboxes
 		item, err := txn.Get(mailboxKey(user))
 		if err != nil && err != badger.ErrKeyNotFound {
 			return err
