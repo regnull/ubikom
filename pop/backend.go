@@ -143,7 +143,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 				Content:           []byte(content),
 				Flag:              nil,
 				ReceivedTimestamp: uint64(util.NowMs()),
-				Size:              uint64(len(content)) + 2,
+				Size:              uint64(len(content)) + 2, // Popgun adds two characters (\r\n)
 				Uid:               msgid,
 			}
 			err = b.imapDB.SaveMessage(user, db.INBOX_UID, imapMessage, privateKey)
@@ -197,7 +197,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 			Content:           []byte(content),
 			Flag:              []string{imap.RecentFlag},
 			ReceivedTimestamp: uint64(util.NowMs()),
-			Size:              uint64(len(content)) + 2,
+			Size:              uint64(len(content)) + 2, // Popgun adds two characters (\r\n)
 			Uid:               msgid,
 		}
 
