@@ -470,19 +470,12 @@ func (b *Backend) Top(user string, msgId int, n int) (lines []string, err error)
 		}
 		lines = append(lines, line)
 	}
-	//lines = allLines[:bodyIndex]
 	lineCount := 0
 	for i := bodyIndex; i < len(allLines) && lineCount < n; i++ {
 		lines = append(lines, allLines[i])
 		lineCount++
 	}
 	log.Debug().Int("lines", len(lines)).Msg("[POP] -> TOP")
-	totalLength := 0
-	for _, line := range lines {
-		totalLength += len(line)
-		log.Debug().Int("length", len(line)).Msg("line length")
-	}
-	log.Debug().Int("length", totalLength).Msg("total length")
 	return lines, nil
 }
 
