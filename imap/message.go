@@ -44,6 +44,7 @@ func (m *Message) ToProto() *pb.ImapMessage {
 }
 
 func (m *Message) entity() (*message.Entity, error) {
+	// TODO: Figure out what's the deal here.
 	// Filter out ">From" headers which break entity parsing.
 	body := string(m.Body)
 	lines := strings.Split(body, "\n")
@@ -54,7 +55,9 @@ func (m *Message) entity() (*message.Entity, error) {
 			// Done with headers.
 			headers = false
 		}
-		if headers && (strings.HasPrefix(line, ">From") || strings.HasPrefix(line, "From")) {
+		if headers &&
+			(strings.HasPrefix(line, ">From") || strings.HasPrefix(line, "From") &&
+				!strings.HasPrefix(line, "From:")) {
 			continue
 		}
 		newLines = append(newLines, line)
