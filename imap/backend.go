@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -61,7 +60,7 @@ func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, erro
 	}
 	log.Debug().Bool("authorized", true).Msg("[IMAP] -> LOGIN")
 	user1 := util.StripDomainName(user)
-	user1 = strings.ToLower(user1)
+	//user1 = strings.ToLower(user1)
 	u := NewUser(user1, b.db, privateKey, b.lookupClient, b.dumpClient)
 
 	// Force polling for new messages (otherwise we will have to wait until client decides to do it).
