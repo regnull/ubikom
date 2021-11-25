@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -59,7 +60,9 @@ func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, erro
 		log.Debug().Msg("confirmed key with lookup service")
 	}
 	log.Debug().Bool("authorized", true).Msg("[IMAP] -> LOGIN")
-	u := NewUser(util.StripDomainName(user), b.db, privateKey, b.lookupClient, b.dumpClient)
+	user1 := util.StripDomainName(user)
+	user1 = strings.ToLower(user1)
+	u := NewUser(user1, b.db, privateKey, b.lookupClient, b.dumpClient)
 
 	// Force polling for new messages (otherwise we will have to wait until client decides to do it).
 	inbox, err := u.GetMailbox("INBOX")

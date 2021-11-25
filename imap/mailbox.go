@@ -276,7 +276,6 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 		return err
 	}
 	for i, msg := range messages {
-		log.Debug().Uint32("id", msg.Uid).Interface("flags", msg.GetFlag()).Msg("got message")
 		m := NewMessageFromProto(msg)
 		seqNum := uint32(i + 1)
 
