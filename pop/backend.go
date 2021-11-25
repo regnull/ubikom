@@ -2,20 +2,20 @@ package pop
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/emersion/go-imap"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/imap/db"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/store"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/protobuf/proto"
 )
 
 // https://datatracker.ietf.org/doc/html/rfc1939
@@ -37,8 +37,7 @@ Example session
 
 type Session struct {
 	PrivateKey *easyecc.PrivateKey
-	Messages   []*pb.DMSMessage
-	Deleted    []bool
+	Messages   []*pb.ImapMessage
 }
 
 // Backend is a fake backend interface implementation used for test
@@ -52,10 +51,12 @@ type Backend struct {
 	password   string
 	sessions   map[string]*Session
 	localStore store.Store
+	imapDB     *db.Badger
 }
 
 func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServiceClient,
-	privateKey *easyecc.PrivateKey, user, password string, localStore store.Store) *Backend {
+	privateKey *easyecc.PrivateKey, user, password string, localStore store.Store,
+	imapDB *db.Badger) *Backend {
 	return &Backend{
 		dumpClient:   dumpClient,
 		lookupClient: lookupClient,
@@ -63,7 +64,8 @@ func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServic
 		user:         user,
 		password:     password,
 		sessions:     make(map[string]*Session),
-		localStore:   localStore}
+		localStore:   localStore,
+		imapDB:       imapDB}
 }
 
 func (b *Backend) Authorize(user, pass string) bool {
@@ -97,6 +99,14 @@ func (b *Backend) Authorize(user, pass string) bool {
 	return ok
 }
 
+// normalizeLines takes line which mix \r and \r\n endings, and
+// makes sure that every line is terminated by \r\n,
+func normalizeLines(content string) string {
+	c := strings.Replace(content, "\r", "", -1)
+	c = strings.Replace(c, "\n", "\r\n", -1)
+	return c
+}
+
 func (b *Backend) Poll(ctx context.Context, user string) error {
 	// Get private key for this user.
 	var privateKey *easyecc.PrivateKey
@@ -109,31 +119,60 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 	privateKey = sess.PrivateKey
 
 	count := 0
-	// Read all locally stored messages.
-	if b.localStore != nil {
+	// Move all local messages to IMAP inbox.
+	if b.localStore != nil && b.imapDB != nil {
 		localMessages, err := b.localStore.GetAll(privateKey.PublicKey().SerializeCompressed())
 		if err != nil {
 			return fmt.Errorf("failed to read local messages: %w", err)
 		}
+		log.Debug().Int("count", len(localMessages)).Msg("loaded messages from legacy store")
 
 		for _, msg := range localMessages {
-			sess.Messages = append(sess.Messages, msg)
-			sess.Deleted = append(sess.Deleted, false)
-			count++
+			content, err := b.decryptMessage(context.TODO(), sess.PrivateKey, msg)
+			if err != nil {
+				log.Error().Err(err).Str("user", user).Msg("failed to decrypt message")
+				continue
+			}
+			content = normalizeLines(content)
+			msgid, err := b.imapDB.IncrementMessageID(user, "INBOX", privateKey)
+			if err != nil {
+				return fmt.Errorf("failed to get message ID: %w", err)
+			}
+			log.Debug().Uint32("msgid", msgid).Msg("moving message to IMAP mailbox")
+			imapMessage := &pb.ImapMessage{
+				Content:           []byte(content),
+				Flag:              nil,
+				ReceivedTimestamp: uint64(util.NowMs()),
+				Size:              uint64(len(content)) + 2, // Popgun adds two characters (\r\n)
+				Uid:               msgid,
+			}
+			err = b.imapDB.SaveMessage(user, db.INBOX_UID, imapMessage, privateKey)
+			if err != nil {
+				return fmt.Errorf("failed to move message to IMAP inbox")
+			}
+			err = b.localStore.Remove(msg, privateKey.PublicKey().SerializeCompressed())
+			if err != nil {
+				return fmt.Errorf("failed to move message to IMAP inbox")
+			}
 		}
+	}
+
+	// Read all IMAP messages.
+	if b.imapDB != nil {
+		messages, err := b.imapDB.GetMessages(user, db.INBOX_UID, privateKey)
+		if err != nil {
+			return fmt.Errorf("failed to read messages from IMAP DB: %w", err)
+		}
+		sess.Messages = append(sess.Messages, messages...)
 	}
 	log.Debug().Int("count", count).Msg("got local messages")
 
 	// Read all remote messages.
+	count = 0
 	for {
 		res, err := b.dumpClient.Receive(ctx, &pb.ReceiveRequest{
 			IdentityProof: protoutil.IdentityProof(privateKey)})
 		if util.ErrEqualCode(err, codes.NotFound) {
-			if count == 0 {
-				log.Debug().Msg("no new messages")
-			} else {
-				log.Debug().Int("count", count).Msg("got new messages")
-			}
 			break
 		}
 		if err != nil {
@@ -141,18 +180,72 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 		}
 		msg := res.GetMessage()
 
-		if b.localStore != nil {
-			err = b.localStore.Save(msg, privateKey.PublicKey().SerializeCompressed())
+		content, err := b.decryptMessage(context.TODO(), sess.PrivateKey, msg)
+		if err != nil {
+			log.Error().Err(err).Str("user", user).Msg("failed to decrypt message")
+			continue
+		}
+		content = normalizeLines(content)
+		log.Debug().Int("length", len(content)).Msg("normalize content length")
+
+		msgid, err := b.imapDB.IncrementMessageID(user, "INBOX", privateKey)
+		if err != nil {
+			return fmt.Errorf("failed to get message ID: %w", err)
+		}
+
+		imapMsg := &pb.ImapMessage{
+			Content:           []byte(content),
+			Flag:              []string{imap.RecentFlag},
+			ReceivedTimestamp: uint64(util.NowMs()),
+			Size:              uint64(len(content)) + 2, // Popgun adds two characters (\r\n)
+			Uid:               msgid,
+		}
+
+		if b.imapDB != nil {
+			err = b.imapDB.SaveMessage(user, db.INBOX_UID, imapMsg, privateKey)
 			if err != nil {
-				log.Error().Err(err).Msg("error saving message to local store")
+				return fmt.Errorf("failed to save message to IMAP DB")
 			}
 		}
-		sess.Messages = append(sess.Messages, msg)
-		sess.Deleted = append(sess.Deleted, false)
+		sess.Messages = append(sess.Messages, imapMsg)
 		count++
 	}
-	log.Debug().Int("count", count).Msg("total messages")
+	log.Debug().Int("count", count).Msg("new messages")
 	return nil
+}
+
+func isDeleted(msg *pb.ImapMessage) bool {
+	for _, flag := range msg.GetFlag() {
+		if flag == imap.DeletedFlag {
+			return true
+		}
+	}
+	return false
+}
+
+func clearDeleted(msg *pb.ImapMessage) {
+	var flags []string
+	for _, flag := range msg.GetFlag() {
+		if flag == imap.DeletedFlag {
+			continue
+		}
+		flags = append(flags, flag)
+	}
+	msg.Flag = flags
+}
+
+func clearRecent(msg *pb.ImapMessage) bool {
+	var flags []string
+	found := false
+	for _, flag := range msg.GetFlag() {
+		if flag == imap.RecentFlag {
+			found = true
+			continue
+		}
+		flags = append(flags, flag)
+	}
+	msg.Flag = flags
+	return found
 }
 
 // Returns total message count and total mailbox size in bytes (octets).
@@ -165,12 +258,12 @@ func (b *Backend) Stat(user string) (messages, octets int, err error) {
 	}
 	totalSize := 0
 	count := 0
-	for i, msg := range sess.Messages {
-		if sess.Deleted[i] {
+	for _, msg := range sess.Messages {
+		if isDeleted(msg) {
 			continue
 		}
 		count++
-		totalSize += easyecc.GetPlainTextLength(len(msg.GetContent()))
+		totalSize += int(msg.GetSize())
 	}
 
 	log.Debug().Int("count", count).Int("octets", totalSize).Msg("[POP] -> STAT")
@@ -185,11 +278,11 @@ func (b *Backend) List(user string) (octets []int, err error) {
 		return nil, fmt.Errorf("invalid session")
 	}
 	var sizes []int
-	for i, msg := range sess.Messages {
-		if sess.Deleted[i] {
+	for _, msg := range sess.Messages {
+		if isDeleted(msg) {
 			continue
 		}
-		sizes = append(sizes, easyecc.GetPlainTextLength(len(msg.GetContent())))
+		sizes = append(sizes, int(msg.GetSize()))
 	}
 
 	log.Debug().Ints("sizes", sizes).Msg("[POP] -> LIST")
@@ -211,10 +304,8 @@ func (b *Backend) ListMessage(user string, msgId int) (exists bool, octets int, 
 		return false, 0, nil
 	}
 
-	size := easyecc.GetPlainTextLength(len(msg.GetContent()))
-
-	log.Debug().Int("size", size).Msg("[POP] -> LIST-MESSAGE")
-	return true, size, nil
+	log.Debug().Uint64("size", msg.GetSize()).Msg("[POP] -> LIST-MESSAGE")
+	return true, int(msg.GetSize()), nil
 }
 
 // Retrieve whole message by ID - note that message ID is a message position returned
@@ -234,13 +325,17 @@ func (b *Backend) Retr(user string, msgId int) (message string, err error) {
 		return "", fmt.Errorf("no such message")
 	}
 
-	content, err := b.decryptMessage(context.TODO(), sess.PrivateKey, msg)
-	if err != nil {
-		log.Error().Err(err).Msg("error decrypting message")
-		return "", fmt.Errorf("error decrypting message")
+	if clearRecent(sess.Messages[msgId-1]) {
+		if b.imapDB != nil {
+			err := b.imapDB.SaveMessage(user, db.INBOX_UID, sess.Messages[msgId-1], sess.PrivateKey)
+			if err != nil {
+				return "", fmt.Errorf("failed to save message, %w", err)
+			}
+		}
 	}
+
 	log.Debug().Msg("[POP] -> RETR")
-	return content, nil
+	return string(msg.GetContent()), nil
 }
 
 // Delete message by message ID - message should be just marked as deleted until
@@ -259,12 +354,12 @@ func (b *Backend) Dele(user string, msgId int) error {
 		return fmt.Errorf("no such message")
 
 	}
-	if sess.Deleted[msgId-1] {
+	if isDeleted(sess.Messages[msgId-1]) {
 		log.Debug().Msg("[POP] -> DELE, message already marked as deleted")
 		return fmt.Errorf("already deleted")
 	}
 
-	sess.Deleted[msgId-1] = true
+	sess.Messages[msgId-1].Flag = append(sess.Messages[msgId-1].Flag, imap.DeletedFlag)
 	log.Debug().Msg("[POP] -> DELE, message marked as deleted")
 	return nil
 }
@@ -276,8 +371,8 @@ func (b *Backend) Rset(user string) error {
 	if sess == nil {
 		return fmt.Errorf("invalid session")
 	}
-	for i := range sess.Deleted {
-		sess.Deleted[i] = false
+	for _, msg := range sess.Messages {
+		clearDeleted(msg)
 	}
 	log.Debug().Msg("[POP] <- RSET")
 	return nil
@@ -294,15 +389,11 @@ func (b *Backend) Uidl(user string) (uids []string, err error) {
 		return nil, fmt.Errorf("invalid session")
 	}
 	var ids []string
-	for i, msg := range sess.Messages {
-		if sess.Deleted[i] {
+	for _, msg := range sess.Messages {
+		if isDeleted(msg) {
 			continue
 		}
-		id, err := getMessageID(msg)
-		if err != nil {
-			log.Error().Err(err).Msg("error computing message id")
-			return nil, fmt.Errorf("error computing message id")
-		}
+		id := fmt.Sprintf("%d", msg.Uid)
 		ids = append(ids, id)
 	}
 	log.Debug().Strs("ids", ids).Msg("[POP] -> UIDL")
@@ -323,11 +414,7 @@ func (b *Backend) UidlMessage(user string, msgId int) (exists bool, uid string, 
 		log.Error().Err(err).Msg("[POP] -> UIDL-MESSAGE, failed to locate message")
 		return false, "", nil
 	}
-	id, err := getMessageID(msg)
-	if err != nil {
-		log.Error().Err(err).Msg("error computing message id")
-		return false, "", fmt.Errorf("error computing message id")
-	}
+	id := fmt.Sprintf("%d", msg.GetUid())
 	log.Debug().Str("id", id).Msg("[POP] -> UIDL-MESSAGE")
 	return true, id, nil
 }
@@ -341,12 +428,13 @@ func (b *Backend) Update(user string) error {
 		return fmt.Errorf("invalid session")
 	}
 
-	var newMessages []*pb.DMSMessage
+	var newMessages []*pb.ImapMessage
 	count := 0
-	for i, msg := range sess.Messages {
-		if sess.Deleted[i] {
-			if b.localStore != nil {
-				b.localStore.Remove(msg, sess.PrivateKey.PublicKey().SerializeCompressed())
+	for _, msg := range sess.Messages {
+		if isDeleted(msg) {
+			err := b.imapDB.DeleteMessage(user, db.INBOX_UID, msg.GetUid())
+			if err != nil {
+				return fmt.Errorf("failed to delete message, %w", err)
 			}
 			count++
 			continue
@@ -354,7 +442,6 @@ func (b *Backend) Update(user string) error {
 		newMessages = append(newMessages, msg)
 	}
 	sess.Messages = newMessages
-	sess.Deleted = make([]bool, len(newMessages))
 	log.Debug().Int("deleted", count).Msg("[POP] -> UPDATE")
 	return nil
 }
@@ -367,20 +454,14 @@ func (b *Backend) Top(user string, msgId int, n int) (lines []string, err error)
 	}
 
 	msg, err := getMessageByID(sess, msgId)
-
 	if err != nil {
 		log.Debug().Err(err).Msg("[POP] -> TOP, failed to locate message")
 		return nil, fmt.Errorf("no such message")
 	}
-	content, err := b.decryptMessage(context.TODO(), sess.PrivateKey, msg)
-	if err != nil {
-		log.Error().Err(err).Msg("error decrypting message")
-		log.Debug().Msg("[POP] -> TOP, error decrypting message")
-		return nil, fmt.Errorf("error decrypting message")
-	}
+	content := strings.Replace(string(msg.GetContent()), "\r", "", -1)
 	allLines := strings.Split(content, "\n")
 	bodyIndex := 0
-	for i, line := range lines {
+	for i, line := range allLines {
 		if line == "" {
 			// Empty line that separates headers from the content.
 			lines = append(lines, "")
@@ -389,12 +470,10 @@ func (b *Backend) Top(user string, msgId int, n int) (lines []string, err error)
 		}
 		lines = append(lines, line)
 	}
-	for i := 0; i < n; i++ {
-		j := bodyIndex + i
-		if j >= len(allLines) {
-			break
-		}
-		lines = append(lines, allLines[j])
+	lineCount := 0
+	for i := bodyIndex; i < len(allLines) && lineCount < n; i++ {
+		lines = append(lines, allLines[i])
+		lineCount++
 	}
 	log.Debug().Int("lines", len(lines)).Msg("[POP] -> TOP")
 	return lines, nil
@@ -453,35 +532,18 @@ func (b *Backend) decryptMessage(ctx context.Context, privateKey *easyecc.Privat
 	return string(content), nil
 }
 
-func getFirst(s string, i int) string {
-	if i > len(s) {
-		return s
-	}
-	return fmt.Sprintf("%s...", s[:i])
-}
-
-func getMessageID(msg *pb.DMSMessage) (string, error) {
-	b, err := proto.Marshal(msg)
-	if err != nil {
-		return "", err
-	}
-	fullID := fmt.Sprintf("%x", sha256.Sum256(b))
-	partialID := fullID[:12]
-	return partialID, nil
-}
-
 func checkMessageID(sess *Session, id int) error {
 	// Message id ranges from 1 to len(sess.Messages).
 	if id <= 0 || id > len(sess.Messages) {
 		return fmt.Errorf("invalid message id")
 	}
-	if sess.Deleted[id-1] {
+	if isDeleted(sess.Messages[id-1]) {
 		return fmt.Errorf("message is deleted")
 	}
 	return nil
 }
 
-func getMessageByID(sess *Session, id int) (*pb.DMSMessage, error) {
+func getMessageByID(sess *Session, id int) (*pb.ImapMessage, error) {
 	err := checkMessageID(sess, id)
 	if err != nil {
 		return nil, err

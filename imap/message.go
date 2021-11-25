@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/emersion/go-imap"
@@ -43,7 +44,23 @@ func (m *Message) ToProto() *pb.ImapMessage {
 }
 
 func (m *Message) entity() (*message.Entity, error) {
-	return message.Read(bytes.NewReader(m.Body))
+	// Filter out ">From" headers which break entity parsing.
+	body := string(m.Body)
+	lines := strings.Split(body, "\n")
+	var newLines []string
+	headers := true
+	for _, line := range lines {
+		if headers && (line == "" || line == "\r") {
+			// Done with headers.
+			headers = false
+		}
+		if headers && (strings.HasPrefix(line, ">From") || strings.HasPrefix(line, "From")) {
+			continue
+		}
+		newLines = append(newLines, line)
+	}
+	newBody := strings.Join(newLines, "\n")
+	return message.Read(bytes.NewReader([]byte(newBody)))
 }
 
 func (m *Message) headerAndBody() (textproto.Header, io.Reader, error) {

@@ -1,9 +1,11 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/golang/protobuf/proto"
@@ -15,44 +17,23 @@ import (
 var ErrNotFound = fmt.Errorf("not found")
 
 type Badger struct {
-	db *badger.DB
+	db  *badger.DB
+	ttl time.Duration
 }
 
-func NewBadger(dir string) (*Badger, error) {
+func NewBadger(dir string, ttl time.Duration) (*Badger, error) {
 	db, err := badger.Open(badger.DefaultOptions(dir))
 	if err != nil {
 		return nil, err
 	}
-	return &Badger{db: db}, nil
+	return &Badger{db: db, ttl: ttl}, nil
 }
 
 func getMailboxes(txn *badger.Txn, user string, privateKey *easyecc.PrivateKey) (*pb.ImapMailboxes, error) {
 	item, err := txn.Get(mailboxKey(user))
 	if err != nil {
 		if err == badger.ErrKeyNotFound {
-			mailboxes := &pb.ImapMailboxes{
-				Mailbox: []*pb.ImapMailbox{
-					{
-						Name:           "INBOX",
-						Attribute:      nil,
-						Uid:            INBOX_UID,
-						NextMessageUid: FIRST_MESSAGE_UID,
-					},
-					{
-						Name:           "Sent",
-						Attribute:      nil,
-						Uid:            SENT_UID,
-						NextMessageUid: FIRST_MESSAGE_UID,
-					},
-					{
-						Name:           "Trash",
-						Attribute:      nil,
-						Uid:            TRASH_UID,
-						NextMessageUid: FIRST_MESSAGE_UID,
-					},
-				},
-				NextMailboxUid: FIRST_REGULAR_MAILBOX_UID,
-			}
+			mailboxes := initialMailboxes()
 			bbe, err := marshalAndEncrypt(mailboxes, privateKey)
 			if err != nil {
 				return nil, err
@@ -131,6 +112,7 @@ func (b *Badger) CreateMailbox(user string, mb *pb.ImapMailbox, privateKey *easy
 			return fmt.Errorf("failed to get mailboxes: %w", err)
 		}
 		for _, m := range mailboxes.GetMailbox() {
+			log.Debug().Str("name", m.GetName()).Msg("got mailbox")
 			if mb.GetName() == m.GetName() {
 				return fmt.Errorf("mailbox already exists")
 			}
@@ -179,6 +161,10 @@ func (b *Badger) DeleteMailbox(user string, name string, privateKey *easyecc.Pri
 }
 
 func (b *Badger) RenameMailbox(user string, existingName, newName string, privateKey *easyecc.PrivateKey) error {
+	if strings.ToUpper(existingName) == "INBOX" {
+		// TODO: Implement this (create a copy of inbox, rename it, leave inbox empty).
+		return errors.New("renaming inbox is not allowed")
+	}
 	err := b.db.Update(func(txn *badger.Txn) error {
 		mailboxes, err := getMailboxes(txn, user, privateKey)
 		if err != nil {
@@ -292,7 +278,11 @@ func (b *Badger) SaveMessage(user string, mbid uint32, msg *pb.ImapMessage, priv
 	err = b.db.Update(func(txn *badger.Txn) error {
 		key := messageKey(user, mbid, msg.GetUid())
 		log.Debug().Str("key", string(key)).Msg("saving message")
-		return txn.Set(messageKey(user, mbid, msg.GetUid()), bbe)
+		e := badger.NewEntry(messageKey(user, mbid, msg.GetUid()), bbe)
+		if b.ttl > 0 {
+			e = e.WithTTL(b.ttl)
+		}
+		return txn.SetEntry(e)
 	})
 	if err != nil {
 		return fmt.Errorf("failed to save message: %w", err)
@@ -332,8 +322,7 @@ func (b *Badger) DeleteMessage(user string, mbid uint32, msgid uint32) error {
 
 func (b *Badger) mutateMailboxes(user string, f func(mailboxes *pb.ImapMailboxes), privateKey *easyecc.PrivateKey) error {
 	err := b.db.Update(func(txn *badger.Txn) error {
-		mailboxes := &pb.ImapMailboxes{
-			NextMailboxUid: 1000}
+		mailboxes := initialMailboxes()
 		item, err := txn.Get(mailboxKey(user))
 		if err != nil && err != badger.ErrKeyNotFound {
 			return err
@@ -462,4 +451,31 @@ func unmarhalItemAndDecrypt(item *badger.Item, msg proto.Message, privateKey *ea
 	return item.Value(func(val []byte) error {
 		return unmarshalAndDecrypt(val, msg, privateKey)
 	})
+}
+
+func initialMailboxes() *pb.ImapMailboxes {
+	var initialMailboxes = &pb.ImapMailboxes{
+		Mailbox: []*pb.ImapMailbox{
+			{
+				Name:           "INBOX",
+				Attribute:      nil,
+				Uid:            INBOX_UID,
+				NextMessageUid: FIRST_MESSAGE_UID,
+			},
+			{
+				Name:           "Sent",
+				Attribute:      nil,
+				Uid:            SENT_UID,
+				NextMessageUid: FIRST_MESSAGE_UID,
+			},
+			{
+				Name:           "Trash",
+				Attribute:      nil,
+				Uid:            TRASH_UID,
+				NextMessageUid: FIRST_MESSAGE_UID,
+			},
+		},
+		NextMailboxUid: FIRST_REGULAR_MAILBOX_UID,
+	}
+	return initialMailboxes
 }
