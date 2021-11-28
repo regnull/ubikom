@@ -69,7 +69,7 @@ func (m *Message) entity() (*message.Entity, error) {
 }
 
 func (m *Message) headerAndBody() (textproto.Header, io.Reader, error) {
-	body := bufio.NewReader(bytes.NewReader(m.Body))
+	body := bufio.NewReader(bytes.NewReader(filterMalformedHeaders(m.Body)))
 	hdr, err := textproto.ReadHeader(body)
 	return hdr, body, err
 }
@@ -79,10 +79,16 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 	for _, item := range items {
 		switch item {
 		case imap.FetchEnvelope:
-			hdr, _, _ := m.headerAndBody()
+			hdr, _, err := m.headerAndBody()
+			if err != nil {
+				return nil, err
+			}
 			fetched.Envelope, _ = backendutil.FetchEnvelope(hdr)
 		case imap.FetchBody, imap.FetchBodyStructure:
-			hdr, body, _ := m.headerAndBody()
+			hdr, body, err := m.headerAndBody()
+			if err != nil {
+				return nil, err
+			}
 			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(hdr, body, item == imap.FetchBodyStructure)
 		case imap.FetchFlags:
 			fetched.Flags = m.Flags
@@ -104,7 +110,10 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 				return nil, err
 			}
 
-			l, _ := backendutil.FetchBodySection(hdr, body, section)
+			l, err := backendutil.FetchBodySection(hdr, body, section)
+			if err != nil {
+				return nil, err
+			}
 			fetched.Body[section] = l
 		}
 	}
