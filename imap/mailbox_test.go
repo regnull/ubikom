@@ -26,3 +26,26 @@ func Test_NewMailbox(t *testing.T) {
 	assert.NoError(err)
 	assert.True(status.UidValidity >= 1000)
 }
+
+func Test_MailboxSubscribed(t *testing.T) {
+	assert := assert.New(t)
+
+	privateKey, err := easyecc.NewRandomPrivateKey()
+	assert.NoError(err)
+	badger, cleanup, err := db.CreateTestBadgerStore()
+	assert.NoError(err)
+	defer cleanup()
+	mb, err := NewMailbox("foo", "bar", badger, nil, nil, privateKey)
+	assert.NoError(err)
+	assert.NoError(mb.Save())
+
+	s, err := badger.Subscribed("foo", "bar", privateKey)
+	assert.NoError(err)
+	assert.False(s)
+
+	mb.SetSubscribed(true)
+	mb.Save()
+	s, err = badger.Subscribed("foo", "bar", privateKey)
+	assert.NoError(err)
+	assert.True(s)
+}
