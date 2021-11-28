@@ -228,3 +228,38 @@ func Test_SaveGetMessage(t *testing.T) {
 	assert.NoError(err)
 	assert.EqualValues(0, len(messages))
 }
+
+func testMessage(uid uint32) *pb.ImapMessage {
+	return &pb.ImapMessage{
+		Content:           []byte("this is my message"),
+		Flag:              []string{"flag1", "flag2"},
+		ReceivedTimestamp: 12345,
+		Size:              555,
+		Uid:               uid,
+	}
+}
+
+func Test_MessagesSortedByUIDs(t *testing.T) {
+	assert := assert.New(t)
+
+	privateKey, err := easyecc.NewRandomPrivateKey()
+	assert.NoError(err)
+	b, cleanup, err := CreateTestBadgerStore()
+	assert.NoError(err)
+	defer cleanup()
+
+	assert.NoError(b.SaveMessage("foo", INBOX_UID, testMessage(1), privateKey))
+	assert.NoError(b.SaveMessage("foo", INBOX_UID, testMessage(10), privateKey))
+	assert.NoError(b.SaveMessage("foo", INBOX_UID, testMessage(100), privateKey))
+	assert.NoError(b.SaveMessage("foo", INBOX_UID, testMessage(22), privateKey))
+	assert.NoError(b.SaveMessage("foo", INBOX_UID, testMessage(5555), privateKey))
+	assert.NoError(b.SaveMessage("foo", INBOX_UID, testMessage(5), privateKey))
+
+	messages, err := b.GetMessages("foo", INBOX_UID, privateKey)
+	assert.NoError(err)
+	assert.EqualValues(6, len(messages))
+
+	for i := 1; i < len(messages); i++ {
+		assert.True(messages[i].Uid > messages[i-1].Uid)
+	}
+}

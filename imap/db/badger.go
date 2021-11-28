@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -311,6 +312,11 @@ func (b *Badger) GetMessages(user string, mailbox uint32, privateKey *easyecc.Pr
 	if err != nil {
 		return nil, err
 	}
+
+	// Make sure the messages are sorted by their UIDs.
+	sort.SliceStable(messages, func(i, j int) bool {
+		return messages[i].Uid < messages[j].Uid
+	})
 	return messages, nil
 }
 
