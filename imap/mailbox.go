@@ -306,12 +306,23 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 		ch <- m1
 	}
 	m.logDebug().Int("count", count).Msg("messages returned")
-	for _, msg := range messages {
-		if clearFlag(msg, imap.RecentFlag) {
-			err = m.db.SaveMessage(m.user, m.uid, msg, m.privateKey)
-			if err != nil {
-				m.logError(err).Msg("failed to save message")
-				return err
+	clearRecent := false
+	for _, item := range items {
+		// TODO: Double-check if this is the correct set of items to clear recent flag.
+		if item == imap.FetchBody || item == imap.FetchBodyStructure ||
+			item == imap.FetchAll || item == imap.FetchFull {
+			clearRecent = true
+			break
+		}
+	}
+	if clearRecent {
+		for _, msg := range messages {
+			if clearFlag(msg, imap.RecentFlag) {
+				err = m.db.SaveMessage(m.user, m.uid, msg, m.privateKey)
+				if err != nil {
+					m.logError(err).Msg("failed to save message")
+					return err
+				}
 			}
 		}
 	}
