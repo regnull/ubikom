@@ -43,11 +43,9 @@ func (m *Message) ToProto() *pb.ImapMessage {
 	}
 }
 
-func (m *Message) entity() (*message.Entity, error) {
-	// TODO: Figure out what's the deal here.
-	// Filter out ">From" headers which break entity parsing.
-	body := string(m.Body)
-	lines := strings.Split(body, "\n")
+func filterMalformedHeaders(body []byte) []byte {
+	bodyStr := string(body)
+	lines := strings.Split(bodyStr, "\n")
 	var newLines []string
 	headers := true
 	for _, line := range lines {
@@ -63,7 +61,11 @@ func (m *Message) entity() (*message.Entity, error) {
 		newLines = append(newLines, line)
 	}
 	newBody := strings.Join(newLines, "\n")
-	return message.Read(bytes.NewReader([]byte(newBody)))
+	return []byte(newBody)
+}
+
+func (m *Message) entity() (*message.Entity, error) {
+	return message.Read(bytes.NewReader(filterMalformedHeaders(m.Body)))
 }
 
 func (m *Message) headerAndBody() (textproto.Header, io.Reader, error) {
@@ -96,7 +98,7 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 				break
 			}
 
-			body := bufio.NewReader(bytes.NewReader(m.Body))
+			body := bufio.NewReader(bytes.NewReader(filterMalformedHeaders(m.Body)))
 			hdr, err := textproto.ReadHeader(body)
 			if err != nil {
 				return nil, err

@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/regnull/easyecc"
@@ -15,7 +14,7 @@ func Test_CreateGetMailbox(t *testing.T) {
 
 	privateKey, err := easyecc.NewRandomPrivateKey()
 	assert.NoError(err)
-	b, cleanup, err := createTestBadgerStore()
+	b, cleanup, err := CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
 
@@ -35,7 +34,7 @@ func Test_GetMailboxes(t *testing.T) {
 
 	privateKey, err := easyecc.NewRandomPrivateKey()
 	assert.NoError(err)
-	b, cleanup, err := createTestBadgerStore()
+	b, cleanup, err := CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
 
@@ -65,7 +64,7 @@ func Test_RenameMailbox(t *testing.T) {
 
 	privateKey, err := easyecc.NewRandomPrivateKey()
 	assert.NoError(err)
-	b, cleanup, err := createTestBadgerStore()
+	b, cleanup, err := CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
 
@@ -83,7 +82,7 @@ func Test_DeleteMailbox(t *testing.T) {
 
 	privateKey, err := easyecc.NewRandomPrivateKey()
 	assert.NoError(err)
-	b, cleanup, err := createTestBadgerStore()
+	b, cleanup, err := CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
 
@@ -100,7 +99,7 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 
 	privateKey, err := easyecc.NewRandomPrivateKey()
 	assert.NoError(err)
-	b, cleanup, err := createTestBadgerStore()
+	b, cleanup, err := CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
 
@@ -124,7 +123,7 @@ func Test_MailboxMessageID(t *testing.T) {
 
 	privateKey, err := easyecc.NewRandomPrivateKey()
 	assert.NoError(err)
-	b, cleanup, err := createTestBadgerStore()
+	b, cleanup, err := CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
 
@@ -196,7 +195,7 @@ func Test_SaveGetMessage(t *testing.T) {
 
 	privateKey, err := easyecc.NewRandomPrivateKey()
 	assert.NoError(err)
-	b, cleanup, err := createTestBadgerStore()
+	b, cleanup, err := CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
 
@@ -228,24 +227,4 @@ func Test_SaveGetMessage(t *testing.T) {
 	messages, err = b.GetMessages("foo", 1000, privateKey)
 	assert.NoError(err)
 	assert.EqualValues(0, len(messages))
-}
-
-func createTestBadgerStore() (*Badger, func(), error) {
-	dir, err := os.MkdirTemp("", "ubikom_badgerstore_test")
-	if err != nil {
-		return nil, func() {}, err
-	}
-
-	fmt.Printf("creating badger store at %s\n", dir)
-	store, err := NewBadger(dir, 0)
-	if err != nil {
-		return nil, func() {}, err
-	}
-	return store, func() {
-		fmt.Printf("cleaning up badger store at %s\n", dir)
-		err := os.RemoveAll(dir)
-		if err != nil {
-			fmt.Printf("error during cleanup: %s\n", err)
-		}
-	}, nil
 }

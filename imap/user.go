@@ -21,6 +21,7 @@ type User struct {
 
 func NewUser(name string, db *db.Badger, privateKey *easyecc.PrivateKey,
 	lookupClient pb.LookupServiceClient, dumpClient pb.DMSDumpServiceClient) *User {
+	log.Debug().Str("name", name).Msg("[IMAP] creating new user")
 	return &User{
 		name:         name,
 		db:           db,

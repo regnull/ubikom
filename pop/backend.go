@@ -40,6 +40,10 @@ type Session struct {
 	Messages   []*pb.ImapMessage
 }
 
+func (s *Session) Address() string {
+	return s.PrivateKey.PublicKey().Address()
+}
+
 // Backend is a fake backend interface implementation used for test
 type Backend struct {
 	dumpClient   pb.DMSDumpServiceClient
@@ -134,7 +138,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 				continue
 			}
 			content = normalizeLines(content)
-			msgid, err := b.imapDB.IncrementMessageID(user, "INBOX", privateKey)
+			msgid, err := b.imapDB.IncrementMessageID(sess.Address(), "INBOX", privateKey)
 			if err != nil {
 				return fmt.Errorf("failed to get message ID: %w", err)
 			}
@@ -146,7 +150,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 				Size:              uint64(len(content)) + 2, // Popgun adds two characters (\r\n)
 				Uid:               msgid,
 			}
-			err = b.imapDB.SaveMessage(user, db.INBOX_UID, imapMessage, privateKey)
+			err = b.imapDB.SaveMessage(sess.Address(), db.INBOX_UID, imapMessage, privateKey)
 			if err != nil {
 				return fmt.Errorf("failed to move message to IMAP inbox")
 			}
@@ -159,7 +163,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 
 	// Read all IMAP messages.
 	if b.imapDB != nil {
-		messages, err := b.imapDB.GetMessages(user, db.INBOX_UID, privateKey)
+		messages, err := b.imapDB.GetMessages(sess.Address(), db.INBOX_UID, privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to read messages from IMAP DB: %w", err)
 		}
@@ -188,7 +192,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 		content = normalizeLines(content)
 		log.Debug().Int("length", len(content)).Msg("normalize content length")
 
-		msgid, err := b.imapDB.IncrementMessageID(user, "INBOX", privateKey)
+		msgid, err := b.imapDB.IncrementMessageID(sess.Address(), "INBOX", privateKey)
 		if err != nil {
 			return fmt.Errorf("failed to get message ID: %w", err)
 		}
@@ -202,7 +206,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 		}
 
 		if b.imapDB != nil {
-			err = b.imapDB.SaveMessage(user, db.INBOX_UID, imapMsg, privateKey)
+			err = b.imapDB.SaveMessage(sess.Address(), db.INBOX_UID, imapMsg, privateKey)
 			if err != nil {
 				return fmt.Errorf("failed to save message to IMAP DB")
 			}
@@ -327,7 +331,7 @@ func (b *Backend) Retr(user string, msgId int) (message string, err error) {
 
 	if clearRecent(sess.Messages[msgId-1]) {
 		if b.imapDB != nil {
-			err := b.imapDB.SaveMessage(user, db.INBOX_UID, sess.Messages[msgId-1], sess.PrivateKey)
+			err := b.imapDB.SaveMessage(sess.Address(), db.INBOX_UID, sess.Messages[msgId-1], sess.PrivateKey)
 			if err != nil {
 				return "", fmt.Errorf("failed to save message, %w", err)
 			}
@@ -432,7 +436,7 @@ func (b *Backend) Update(user string) error {
 	count := 0
 	for _, msg := range sess.Messages {
 		if isDeleted(msg) {
-			err := b.imapDB.DeleteMessage(user, db.INBOX_UID, msg.GetUid())
+			err := b.imapDB.DeleteMessage(sess.Address(), db.INBOX_UID, msg.GetUid())
 			if err != nil {
 				return fmt.Errorf("failed to delete message, %w", err)
 			}

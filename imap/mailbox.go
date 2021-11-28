@@ -89,6 +89,11 @@ func (m *Mailbox) ToProto() *pb.ImapMailbox {
 		NextMessageUid: m.nextMessageUid}
 }
 
+func (m *Mailbox) Save() error {
+	proto := m.ToProto()
+	return m.db.CreateMailbox(m.user, proto, m.privateKey)
+}
+
 func (m *Mailbox) User() string {
 	return m.user
 }
@@ -269,12 +274,14 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 	m.logEnter("ListMessages")
 	defer m.logExit("ListMessages")
 	defer close(ch)
+	m.logDebug().Interface("seqset", seqset).Bool("uid", uid).Interface("items", items).Msg("ListMessages params")
 	messages, err := m.db.GetMessages(m.user, m.uid, m.privateKey)
 	if err != nil {
 		m.logError(err)
 		log.Error().Str("user", m.user).Str("mailbox", m.name).Err(err).Msg("failed to read messages from the database")
 		return err
 	}
+	count := 0
 	for i, msg := range messages {
 		m := NewMessageFromProto(msg)
 		seqNum := uint32(i + 1)
@@ -291,11 +298,14 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 
 		m1, err := m.Fetch(seqNum, items)
 		if err != nil {
+			log.Error().Err(err).Msg("error fetching message")
 			continue
 		}
 
+		count++
 		ch <- m1
 	}
+	m.logDebug().Int("count", count).Msg("messages returned")
 	for _, msg := range messages {
 		if clearFlag(msg, imap.RecentFlag) {
 			err = m.db.SaveMessage(m.user, m.uid, msg, m.privateKey)

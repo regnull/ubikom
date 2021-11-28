@@ -47,7 +47,7 @@ type Args struct {
 	TLSCertFile           string `yaml:"tls-cert-file"`
 	TLSKeyFile            string `yaml:"tls-key-file"`
 	LocalStorePath        string `yaml:"local-store-path"`
-	MaxMessageAgeHours    int    `yaml:"max-message-age-hours"`
+	MaxMessageAgeHours    int    `yaml:"max-message-age-hours"` // TODO: Remove this (POP store only).
 	MessageTTLDays        int    `yaml:"message-ttl-days"`
 }
 
