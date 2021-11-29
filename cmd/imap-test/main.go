@@ -44,13 +44,14 @@ var tests = []struct {
 	{"TestListMailboxes", TestListMailboxes},
 	{"TestSendReceive", TestSendReceive},
 	{"TestAppend", TestAppend},
+	{"TestDeleteMessage", TestDeleteMessage},
 }
 
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
 
 	args := &Args{}
-	flag.StringVar(&args.URL, "url", "", "server url")
+	flag.StringVar(&args.URL, "url", "alpha.ubikom.cc:1993", "server url")
 	flag.StringVar(&args.Password, "password", "", "test users password")
 	flag.StringVar(&args.LogLevel, "log-level", "debug", "log level")
 	flag.BoolVar(&args.UseTLS, "use-tls", true, "use TLS for connection")
@@ -135,7 +136,7 @@ func TestListMailboxes(args *Args) error {
 		return err
 	}
 
-	if len(mailboxes) != 1 {
+	if len(mailboxes) != 3 {
 		return fmt.Errorf("expected one mailbox, got %d", len(mailboxes))
 	}
 
@@ -188,6 +189,9 @@ func TestSendReceive(args *Args) error {
 	}
 
 	messages, err := readAllMessages(c, mbox)
+	if err != nil {
+		return err
+	}
 
 	if len(messages) != 1 {
 		return fmt.Errorf("expected one message, got %d", len(messages))
@@ -251,6 +255,117 @@ func TestAppend(args *Args) error {
 	}
 
 	return deleteAllMessages(c, mbox)
+}
+
+func TestDeleteMessage(args *Args) error {
+	c, err := Connect(args)
+	if err != nil {
+		return err
+	}
+
+	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+		grpc.WithTimeout(args.Timeout),
+	}
+	log.Info().Str("url", args.LookupServiceURL).Msg("connecting to lookup service")
+	lookupConn, err := grpc.Dial(args.LookupServiceURL, opts...)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to the lookup service")
+	}
+	defer lookupConn.Close()
+
+	lookupClient := pb.NewLookupServiceClient(lookupConn)
+
+	key1 := easyecc.NewPrivateKeyFromPassword([]byte(args.Password), util.Hash256([]byte(testUser1)))
+
+	ctx := context.Background()
+	// Send a bunch of test messages.
+	for i := 0; i < 100; i++ {
+		email := mail.NewMessage(testUser2, testUser1,
+			fmt.Sprintf("integration testing message [%d]", i),
+			fmt.Sprintf("This is test message %d", i))
+		err = protoutil.SendMessage(ctx, key1, []byte(email), testUser1, testUser2, lookupClient)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Make sure all messages are received.
+	err = c.Login(testUser2, args.Password)
+	if err != nil {
+		return err
+	}
+	defer c.Logout()
+
+	// Select INBOX
+	mbox, err := c.Select("INBOX", false)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		// Clean up, even if the test fails.
+		_ = deleteAllMessages(c, mbox)
+	}()
+
+	messages, err := readAllMessages(c, mbox)
+	if err != nil {
+		return err
+	}
+	if len(messages) != 100 {
+		return fmt.Errorf("expected 100 messages, got %d", len(messages))
+	}
+
+	seqset := new(imap.SeqSet)
+	seqset.AddNum(uint32(77))
+	err = c.Store(seqset, imap.FormatFlagsOp(imap.AddFlags, true), []interface{}{imap.DeletedFlag}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to mark message as deleted, %w", err)
+	}
+
+	err = c.Expunge(nil)
+	if err != nil {
+		return fmt.Errorf("failed to expunge messages: %w", err)
+	}
+
+	messages, err = readAllMessages(c, mbox)
+	if err != nil {
+		return err
+	}
+	if len(messages) != 99 {
+		return fmt.Errorf("expected 100 messages, got %d", len(messages))
+	}
+
+	for i := 0; i < 100; i++ {
+		found := false
+		for _, message := range messages {
+			if strings.Contains(message.Envelope.Subject,
+				fmt.Sprintf("message [%d]", i)) {
+				found = true
+				break
+			}
+		}
+		if found {
+			fmt.Printf("message %d found\n", i)
+		} else {
+			fmt.Printf("message %d NOT FOUND\n", i)
+		}
+
+	}
+
+	// found := false
+	// for _, message := range messages {
+	// 	if strings.Contains(message.Envelope.Subject, "message 76") {
+	// 		found = true
+	// 		break
+	// 	}
+	// }
+	// if found {
+	// 	return fmt.Errorf("found message that was supposed to be deleted")
+	// }
+
+	return nil
 }
 
 func readAllMessages(c *client.Client, mbox *imap.MailboxStatus) ([]*imap.Message, error) {
