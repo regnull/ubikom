@@ -49,10 +49,13 @@ type Args struct {
 	LocalStorePath        string `yaml:"local-store-path"`
 	MaxMessageAgeHours    int    `yaml:"max-message-age-hours"` // TODO: Remove this (POP store only).
 	MessageTTLDays        int    `yaml:"message-ttl-days"`
+	LogNoColor            bool   `yaml:"log-no-color"`
 }
 
 func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
+	// We must initialize logging here in case we need to log error before we parse the rest of command line
+	// arguments.
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05", NoColor: true})
 
 	configFile := util.GetConfigFromArgs(os.Args)
 
@@ -91,12 +94,16 @@ func main() {
 	flag.StringVar(&args.LocalStorePath, "local-store-path", configArgs.LocalStorePath, "path for the local messages store")
 	flag.IntVar(&args.MaxMessageAgeHours, "max-message-age-hours", configArgs.MaxMessageAgeHours, "max message age, in hours")
 	flag.IntVar(&args.MessageTTLDays, "message-ttl-days", configArgs.MessageTTLDays, "message TTL, in days.")
+	flag.BoolVar(&args.LogNoColor, "log-no-color", configArgs.LogNoColor, "disable colors for logging")
 	flag.Parse()
 
 	err = verifyArgs(&args)
 	if err != nil {
 		log.Fatal().Err(err).Msg("invalid arguments")
 	}
+
+	// Now we can re-initialize logging with actual arguments.
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05", NoColor: args.LogNoColor})
 
 	// Set the log level.
 	logLevel, err := zerolog.ParseLevel(args.LogLevel)

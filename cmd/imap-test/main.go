@@ -317,11 +317,18 @@ func TestDeleteMessage(args *Args) error {
 		return fmt.Errorf("expected 100 messages, got %d", len(messages))
 	}
 
-	seqset := new(imap.SeqSet)
-	seqset.AddNum(uint32(77))
-	err = c.Store(seqset, imap.FormatFlagsOp(imap.AddFlags, true), []interface{}{imap.DeletedFlag}, nil)
-	if err != nil {
-		return fmt.Errorf("failed to mark message as deleted, %w", err)
+	// Delete some messages.
+	var deletedSubjects []string
+	for _, deleteIndex := range []int{33, 55, 77} {
+		seqset := new(imap.SeqSet)
+		seqset.AddNum(uint32(deleteIndex))
+		err = c.Store(seqset, imap.FormatFlagsOp(imap.AddFlags, true), []interface{}{imap.DeletedFlag}, nil)
+		if err != nil {
+			return fmt.Errorf("failed to mark message as deleted, %w", err)
+		}
+		subject := messages[deleteIndex-1].Envelope.Subject
+		log.Info().Str("subject", subject).Msg("deleting message")
+		deletedSubjects = append(deletedSubjects, subject)
 	}
 
 	err = c.Expunge(nil)
@@ -333,12 +340,13 @@ func TestDeleteMessage(args *Args) error {
 	if err != nil {
 		return err
 	}
-	if len(messages) != 99 {
+	if len(messages) != 100-3 {
 		return fmt.Errorf("expected 100 messages, got %d", len(messages))
 	}
 
 	for i := 0; i < 100; i++ {
 		found := false
+		subject := fmt.Sprintf("integration testing message [%d]", i)
 		for _, message := range messages {
 			if strings.Contains(message.Envelope.Subject,
 				fmt.Sprintf("message [%d]", i)) {
@@ -346,24 +354,22 @@ func TestDeleteMessage(args *Args) error {
 				break
 			}
 		}
-		if found {
-			fmt.Printf("message %d found\n", i)
-		} else {
-			fmt.Printf("message %d NOT FOUND\n", i)
+
+		isDeletedSubject := false
+		for _, s := range deletedSubjects {
+			if s == subject {
+				isDeletedSubject = true
+				break
+			}
 		}
 
+		if found && isDeletedSubject {
+			return fmt.Errorf("expected message is not deleted")
+		}
+		if !found && !isDeletedSubject {
+			return fmt.Errorf("unexpected message deleted")
+		}
 	}
-
-	// found := false
-	// for _, message := range messages {
-	// 	if strings.Contains(message.Envelope.Subject, "message 76") {
-	// 		found = true
-	// 		break
-	// 	}
-	// }
-	// if found {
-	// 	return fmt.Errorf("found message that was supposed to be deleted")
-	// }
 
 	return nil
 }

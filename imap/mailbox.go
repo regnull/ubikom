@@ -302,6 +302,8 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 			continue
 		}
 
+		log.Debug().Uint32("seqnum", seqNum).Str("subject", m1.Envelope.Subject).Msg("returning message")
+
 		count++
 		ch <- m1
 	}
