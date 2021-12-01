@@ -19,6 +19,7 @@ import (
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
@@ -39,10 +40,11 @@ That is all. Have a nice day!
 `
 
 const (
-	defaultPowStrength = 23
-	dumpAddress        = "alpha.ubikom.cc:8826"
-	minNameLength      = 3
-	minPasswordLength  = 6
+	defaultPowStrength      = 23
+	dumpAddress             = "alpha.ubikom.cc:8826"
+	minNameLength           = 3
+	minPasswordLength       = 6
+	defaultRateLimitPerHour = 200
 )
 
 type CmdArgs struct {
@@ -56,6 +58,7 @@ type CmdArgs struct {
 	UbikomName         string
 	NotificationName   string
 	PowStrength        int
+	RateLimitPerHour   int
 }
 
 type Server struct {
@@ -66,10 +69,12 @@ type Server struct {
 	name             string
 	notificationName string
 	powStrength      int
+	rateLimiter      *rate.Limiter
 }
 
 func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentityServiceClient,
-	privateKey *easyecc.PrivateKey, name string, notificationName string, powStrength int) *Server {
+	privateKey *easyecc.PrivateKey, name string, notificationName string, powStrength int,
+	rateLimitPerHour int) *Server {
 	return &Server{
 		lookupClient:     lookupClient,
 		identityClient:   identityClient,
@@ -78,10 +83,17 @@ func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentitySe
 		name:             name,
 		notificationName: notificationName,
 		powStrength:      powStrength,
+		rateLimiter:      rate.NewLimiter(rate.Every(time.Hour), rateLimitPerHour),
 	}
 }
 
 func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
+	if !s.rateLimiter.Allow() {
+		log.Warn().Msg("rate limit triggered")
+		w.WriteHeader(http.StatusTooManyRequests)
+		return
+	}
+
 	name := r.URL.Query().Get("name")
 	_, err := s.lookupClient.LookupName(r.Context(), &pb.LookupNameRequest{
 		Name: name,
@@ -409,6 +421,7 @@ func main() {
 	flag.StringVar(&args.UbikomName, "ubikom-name", "", "ubikom name")
 	flag.StringVar(&args.NotificationName, "notification-name", "", "where to send notifications")
 	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength")
+	flag.IntVar(&args.RateLimitPerHour, "rate-limit-per-hour", defaultRateLimitPerHour, "rate limit per hour for identity creation")
 	flag.Parse()
 
 	opts := []grpc.DialOption{
@@ -443,7 +456,8 @@ func main() {
 		}
 	}
 
-	server := NewServer(lookupClient, identityClient, privateKey, args.UbikomName, args.NotificationName, args.PowStrength)
+	server := NewServer(lookupClient, identityClient, privateKey, args.UbikomName,
+		args.NotificationName, args.PowStrength, args.RateLimitPerHour)
 
 	http.HandleFunc("/lookupName", server.HandleNameLookup)
 	http.HandleFunc("/easySetup", server.HandleEasySetup)
