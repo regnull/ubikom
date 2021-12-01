@@ -92,7 +92,10 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 			if err != nil {
 				return nil, err
 			}
-			fetched.BodyStructure, _ = backendutil.FetchBodyStructure(hdr, body, item == imap.FetchBodyStructure)
+			fetched.BodyStructure, err = backendutil.FetchBodyStructure(hdr, body, item == imap.FetchBodyStructure)
+			if err != nil {
+				return nil, err
+			}
 		case imap.FetchFlags:
 			fetched.Flags = m.Flags
 		case imap.FetchInternalDate:

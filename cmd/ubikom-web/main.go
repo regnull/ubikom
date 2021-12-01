@@ -119,6 +119,7 @@ type EasySetupRequest struct {
 }
 
 func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
+	log.Debug().Str("origin", r.RemoteAddr).Msg("got registration request")
 	name := ""
 	password := ""
 	useMainKey := true
