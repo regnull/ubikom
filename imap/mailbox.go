@@ -283,7 +283,7 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 	}
 	count := 0
 	for i, msg := range messages {
-		m := NewMessageFromProto(msg)
+		m1 := NewMessageFromProto(msg)
 		seqNum := uint32(i + 1)
 
 		var id uint32
@@ -296,36 +296,25 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 			continue
 		}
 
-		m1, err := m.Fetch(seqNum, items)
+		m2, err := m1.Fetch(seqNum, items)
 		if err != nil {
 			log.Error().Err(err).Msg("error fetching message")
 			continue
 		}
 
 		count++
-		ch <- m1
-	}
-	m.logDebug().Int("count", count).Msg("messages returned")
-	clearRecent := false
-	for _, item := range items {
-		// TODO: Double-check if this is the correct set of items to clear recent flag.
-		if item == imap.FetchBody || item == imap.FetchBodyStructure ||
-			item == imap.FetchAll || item == imap.FetchFull {
-			clearRecent = true
-			break
-		}
-	}
-	if clearRecent {
-		for _, msg := range messages {
-			if clearFlag(msg, imap.RecentFlag) {
-				err = m.db.SaveMessage(m.user, m.uid, msg, m.privateKey)
-				if err != nil {
-					m.logError(err).Msg("failed to save message")
-					return err
-				}
+		ch <- m2
+
+		// Make sure we return this message marked as recent only once.
+		if util.ContainsFlag(m2.Flags, imap.RecentFlag) {
+			err = m.db.SaveMessage(m.user, m.uid, msg, m.privateKey)
+			if err != nil {
+				m.logError(err).Msg("failed to save message")
+				return err
 			}
 		}
 	}
+	m.logDebug().Int("count", count).Msg("messages returned")
 	return nil
 }
 

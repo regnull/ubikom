@@ -290,3 +290,13 @@ func GetKeyFromNamePassword(ctx context.Context, name string, pass string,
 func NowUint32() uint32 {
 	return uint32(time.Now().UnixNano() / 1000000000)
 }
+
+// ContainsFlag return true if the flags slice contains the specified flag.
+func ContainsFlag(flags []string, flag string) bool {
+	for _, f := range flags {
+		if f == flag {
+			return true
+		}
+	}
+	return false
+}
