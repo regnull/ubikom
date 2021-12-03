@@ -368,12 +368,13 @@ func (b *BadgerDB) GetName(name string) (*easyecc.PublicKey, error) {
 }
 
 func (b *BadgerDB) GetAddress(name string, protocol pb.Protocol) (string, error) {
+	name = strings.ToLower(name)
 	var addressBytes []byte
 	err := b.db.View(func(txn *badger.Txn) error {
 		addressKey := addressPrefix + name + "_" + protocol.String()
 		item, err := txn.Get([]byte(addressKey))
 		if err != nil {
-			return fmt.Errorf("error getting name, %w", err)
+			return fmt.Errorf("error getting address, %w", err)
 		}
 		if item == nil {
 			return ErrNotFound
