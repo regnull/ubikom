@@ -12,7 +12,6 @@ import (
 	"github.com/regnull/ubikom/imap/db"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
-	"github.com/regnull/ubikom/store"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
@@ -54,12 +53,11 @@ type Backend struct {
 	user       string
 	password   string
 	sessions   map[string]*Session
-	localStore store.Store
 	imapDB     *db.Badger
 }
 
 func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServiceClient,
-	privateKey *easyecc.PrivateKey, user, password string, localStore store.Store,
+	privateKey *easyecc.PrivateKey, user, password string,
 	imapDB *db.Badger) *Backend {
 	return &Backend{
 		dumpClient:   dumpClient,
@@ -68,7 +66,6 @@ func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServic
 		user:         user,
 		password:     password,
 		sessions:     make(map[string]*Session),
-		localStore:   localStore,
 		imapDB:       imapDB}
 }
 
@@ -123,44 +120,6 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 	privateKey = sess.PrivateKey
 
 	count := 0
-	// Move all local messages to IMAP inbox.
-	if b.localStore != nil && b.imapDB != nil {
-		localMessages, err := b.localStore.GetAll(privateKey.PublicKey().SerializeCompressed())
-		if err != nil {
-			return fmt.Errorf("failed to read local messages: %w", err)
-		}
-		log.Debug().Int("count", len(localMessages)).Msg("loaded messages from legacy store")
-
-		for _, msg := range localMessages {
-			content, err := b.decryptMessage(context.TODO(), sess.PrivateKey, msg)
-			if err != nil {
-				log.Error().Err(err).Str("user", user).Msg("failed to decrypt message")
-				continue
-			}
-			content = normalizeLines(content)
-			msgid, err := b.imapDB.IncrementMessageID(sess.Address(), "INBOX", privateKey)
-			if err != nil {
-				return fmt.Errorf("failed to get message ID: %w", err)
-			}
-			log.Debug().Uint32("msgid", msgid).Msg("moving message to IMAP mailbox")
-			imapMessage := &pb.ImapMessage{
-				Content:           []byte(content),
-				Flag:              nil,
-				ReceivedTimestamp: uint64(util.NowMs()),
-				Size:              uint64(len(content)) + 2, // Popgun adds two characters (\r\n)
-				Uid:               msgid,
-			}
-			err = b.imapDB.SaveMessage(sess.Address(), db.INBOX_UID, imapMessage, privateKey)
-			if err != nil {
-				return fmt.Errorf("failed to move message to IMAP inbox")
-			}
-			err = b.localStore.Remove(msg, privateKey.PublicKey().SerializeCompressed())
-			if err != nil {
-				return fmt.Errorf("failed to move message to IMAP inbox")
-			}
-		}
-	}
-
 	// Read all IMAP messages.
 	if b.imapDB != nil {
 		messages, err := b.imapDB.GetMessages(sess.Address(), db.INBOX_UID, privateKey)

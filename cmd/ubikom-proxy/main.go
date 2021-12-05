@@ -19,7 +19,6 @@ import (
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/pop"
 	"github.com/regnull/ubikom/smtp"
-	"github.com/regnull/ubikom/store"
 	"github.com/regnull/ubikom/util"
 )
 
@@ -151,14 +150,6 @@ func main() {
 		log.Info().Str("cert-file", args.TLSCertFile).Str("key-file", args.TLSKeyFile).Msg("using TLS")
 	}
 
-	var localStore store.Store
-	if args.LocalStorePath != "" {
-		localStore, err = store.NewBadger(args.LocalStorePath, time.Duration(args.MaxMessageAgeHours)*time.Hour)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to create local store")
-		}
-	}
-
 	ttl := time.Duration(0)
 	if args.MessageTTLDays > 0 {
 		ttl = time.Duration(args.MessageTTLDays) * 24 * time.Hour
@@ -179,7 +170,6 @@ func main() {
 		Key:          key,
 		CertFile:     args.TLSCertFile,
 		KeyFile:      args.TLSKeyFile,
-		LocalStore:   localStore,
 		ImapDB:       imapBadger,
 	}
 
