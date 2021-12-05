@@ -45,7 +45,6 @@ type Args struct {
 	LogLevel              string `yaml:"log-level"`
 	TLSCertFile           string `yaml:"tls-cert-file"`
 	TLSKeyFile            string `yaml:"tls-key-file"`
-	LocalStorePath        string `yaml:"local-store-path"`
 	MaxMessageAgeHours    int    `yaml:"max-message-age-hours"` // TODO: Remove this (POP store only).
 	MessageTTLDays        int    `yaml:"message-ttl-days"`
 	LogNoColor            bool   `yaml:"log-no-color"`
@@ -90,7 +89,6 @@ func main() {
 	flag.StringVar(&args.LogLevel, "log-level", configArgs.LogLevel, "log level")
 	flag.StringVar(&args.TLSCertFile, "tls-cert-file", configArgs.TLSCertFile, "TLS certificate file")
 	flag.StringVar(&args.TLSKeyFile, "tls-key-file", configArgs.TLSKeyFile, "TLS key file")
-	flag.StringVar(&args.LocalStorePath, "local-store-path", configArgs.LocalStorePath, "path for the local messages store")
 	flag.IntVar(&args.MaxMessageAgeHours, "max-message-age-hours", configArgs.MaxMessageAgeHours, "max message age, in hours")
 	flag.IntVar(&args.MessageTTLDays, "message-ttl-days", configArgs.MessageTTLDays, "message TTL, in days.")
 	flag.BoolVar(&args.LogNoColor, "log-no-color", configArgs.LogNoColor, "disable colors for logging")
@@ -280,7 +278,6 @@ func verifyArgs(args *Args) error {
 		args.KeyLocation = os.ExpandEnv(args.KeyLocation)
 	}
 
-	args.LocalStorePath = os.ExpandEnv(args.LocalStorePath)
 	args.ImapStorePath = os.ExpandEnv(args.ImapStorePath)
 
 	return nil
