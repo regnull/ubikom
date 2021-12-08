@@ -101,12 +101,12 @@ func Test_Sender_Run(t *testing.T) {
 	externalSender.On("Send", "spongebob@ubikom.cc", mock.Anything).Return(nil).Once()
 
 	senderOpts := &SenderOptions{
-		PrivateKey:             gatewayKey,
-		LookupClient:           lookupClient,
-		DumpClient:             dumpClient,
-		GlobalRateLimitPerHour: 10000,
-		PollInterval:           100 * time.Millisecond,
-		ExternalSender:         externalSender,
+		PrivateKey:       gatewayKey,
+		LookupClient:     lookupClient,
+		DumpClient:       dumpClient,
+		RateLimitPerHour: 10000,
+		PollInterval:     100 * time.Millisecond,
+		ExternalSender:   externalSender,
 	}
 	sender := NewSender(senderOpts)
 	err = sender.Run(ctx)

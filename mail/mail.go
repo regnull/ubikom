@@ -41,6 +41,17 @@ func ExtractSenderAddress(content string) (address string, err error) {
 	return
 }
 
+// ExtractSubject returns the message subject.
+func ExtractSubject(content string) (subject string, err error) {
+	contentReader := strings.NewReader(content)
+	mailMsg, err := mail.ReadMessage(contentReader)
+	if err != nil {
+		return
+	}
+	subject = mailMsg.Header.Get("Subject")
+	return
+}
+
 func ExtractReceiverInternalName(content string) (receiver string, err error) {
 	contentReader := strings.NewReader(content)
 	mailMsg, err := mail.ReadMessage(contentReader)

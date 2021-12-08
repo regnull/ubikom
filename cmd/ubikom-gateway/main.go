@@ -24,15 +24,15 @@ const (
 )
 
 type CmdArgs struct {
-	KeyLocation            string
-	DumpURL                string
-	LookupURL              string
-	ConnectionTimeoutMsec  int
-	GlobalRateLimitPerHour int
-	PollInterval           time.Duration
-	Receive                bool
-	SenderName             string
-	LogFile                string
+	KeyLocation           string
+	DumpURL               string
+	LookupURL             string
+	ConnectionTimeoutMsec int
+	RateLimitPerHour      int
+	PollInterval          time.Duration
+	Receive               bool
+	SenderName            string
+	LogFile               string
 }
 
 func main() {
@@ -43,7 +43,7 @@ func main() {
 	flag.StringVar(&args.DumpURL, "dump-url", globals.PublicDumpServiceURL, "dump service URL")
 	flag.StringVar(&args.LookupURL, "lookup-url", globals.PublicLookupServiceURL, "lookup service URL")
 	flag.IntVar(&args.ConnectionTimeoutMsec, "connection-timeout-msec", 5000, "connection timeout, milliseconds")
-	flag.IntVar(&args.GlobalRateLimitPerHour, "global-rate-limit-per-hour", 100, "global rate limit, per hour")
+	flag.IntVar(&args.RateLimitPerHour, "rate-limit-per-hour", 100, "global rate limit, per hour")
 	flag.DurationVar(&args.PollInterval, "poll-interval", time.Minute, "poll interval")
 	flag.BoolVar(&args.Receive, "receive", false, "receive mail (if false, will monitor and send mail)")
 	flag.StringVar(&args.SenderName, "sender-name", defaultSenderName, "sender name (must correspond to the key)")
@@ -135,12 +135,12 @@ func receive(ctx context.Context, privateKey *easyecc.PrivateKey, lookupClient p
 func send(ctx context.Context, privateKey *easyecc.PrivateKey, lookupClient pb.LookupServiceClient,
 	dumpClient pb.DMSDumpServiceClient, args *CmdArgs) {
 	senderOpts := &gateway.SenderOptions{
-		PrivateKey:             privateKey,
-		LookupClient:           lookupClient,
-		DumpClient:             dumpClient,
-		GlobalRateLimitPerHour: args.GlobalRateLimitPerHour,
-		PollInterval:           args.PollInterval,
-		ExternalSender:         gateway.NewSendmailSender(),
+		PrivateKey:       privateKey,
+		LookupClient:     lookupClient,
+		DumpClient:       dumpClient,
+		RateLimitPerHour: args.RateLimitPerHour,
+		PollInterval:     args.PollInterval,
+		ExternalSender:   gateway.NewSendmailSender(),
 	}
 
 	sender := gateway.NewSender(senderOpts)

@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/regnull/easyecc"
@@ -17,40 +18,41 @@ import (
 
 // SendOptions is used to pass options when creating a Sender.
 type SenderOptions struct {
-	PrivateKey             *easyecc.PrivateKey
-	LookupClient           pb.LookupServiceClient
-	DumpClient             pb.DMSDumpServiceClient
-	GlobalRateLimitPerHour int
-	PollInterval           time.Duration
-	ExternalSender         ExternalSender
+	PrivateKey       *easyecc.PrivateKey
+	LookupClient     pb.LookupServiceClient
+	DumpClient       pb.DMSDumpServiceClient
+	RateLimitPerHour int
+	PollInterval     time.Duration
+	ExternalSender   ExternalSender
 }
 
 // Sender sends emails to the outside world.
 type Sender struct {
-	privateKey             *easyecc.PrivateKey
-	lookupClient           pb.LookupServiceClient
-	dumpClient             pb.DMSDumpServiceClient
-	globalRateLimitPerHour int
-	pollInterval           time.Duration
-	externalSender         ExternalSender
+	privateKey       *easyecc.PrivateKey
+	lookupClient     pb.LookupServiceClient
+	dumpClient       pb.DMSDumpServiceClient
+	rateLimitPerHour int
+	pollInterval     time.Duration
+	externalSender   ExternalSender
+	rateLimiters     map[string]*rate.Limiter
 }
 
 // NewSender creates and returns a new sender.
 func NewSender(opts *SenderOptions) *Sender {
 	return &Sender{
-		privateKey:             opts.PrivateKey,
-		lookupClient:           opts.LookupClient,
-		dumpClient:             opts.DumpClient,
-		globalRateLimitPerHour: opts.GlobalRateLimitPerHour,
-		pollInterval:           opts.PollInterval,
-		externalSender:         opts.ExternalSender}
+		privateKey:       opts.PrivateKey,
+		lookupClient:     opts.LookupClient,
+		dumpClient:       opts.DumpClient,
+		rateLimitPerHour: opts.RateLimitPerHour,
+		pollInterval:     opts.PollInterval,
+		externalSender:   opts.ExternalSender,
+		rateLimiters:     make(map[string]*rate.Limiter)}
 }
 
 // Run blocks while running receive loop and returns when the context expires, or
 // when an unrecoverable error happens.
 func (s *Sender) Run(ctx context.Context) error {
 	ticker := time.NewTicker(s.pollInterval)
-	globalRateLimiter := rate.NewLimiter(rate.Every(time.Hour), s.globalRateLimitPerHour)
 	for {
 		select {
 		case <-ctx.Done():
@@ -59,15 +61,16 @@ func (s *Sender) Run(ctx context.Context) error {
 		case <-ticker.C:
 			// Poll for messages, ignore errors.
 			// TODO: Maybe exit if a serious error occurs.
-			_ = s.poll(ctx, globalRateLimiter)
+			_ = s.poll(ctx)
 		}
 	}
 }
 
 // Poll the dump server, send messages to the outside world.
-func (s *Sender) poll(ctx context.Context, rateLimiter *rate.Limiter) error {
+func (s *Sender) poll(ctx context.Context) error {
 	// Get all the messages ready to send.
-	var messages []string
+	var outgoingMessages []string
+	var messages []*pb.DMSMessage
 	for {
 		res, err := s.dumpClient.Receive(ctx, &pb.ReceiveRequest{IdentityProof: protoutil.IdentityProof(s.privateKey)})
 		if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
@@ -83,29 +86,46 @@ func (s *Sender) poll(ctx context.Context, rateLimiter *rate.Limiter) error {
 			return fmt.Errorf("failed to receive message")
 		}
 		msg := res.GetMessage()
+
 		content, err := protoutil.DecryptMessage(ctx, s.lookupClient, s.privateKey, msg)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to decrypt message")
 			continue
 		}
-		messages = append(messages, content)
+		messages = append(messages, msg)
+		outgoingMessages = append(outgoingMessages, content)
 	}
 
 	// Now that we have all the messages, send them out one by one.
 
-	for _, content := range messages {
-		// Check rate limit.
-
-		if rateLimiter != nil && !rateLimiter.Allow() {
-			log.Warn().Msg("external send is blocked by the global rate limiter")
-			continue
-		}
-
+	for i, content := range outgoingMessages {
 		// Parse email.
-
 		rewritten, from, to, err := mail.RewriteFromHeader(content)
 		if err != nil {
 			log.Error().Err(err).Msg("error re-writting message")
+			continue
+		}
+
+		msg := messages[i]
+		blocked := false
+		// Check rate limit.
+		for range to {
+			// Check rate limit.
+			if s.rateLimiters[msg.Sender] == nil {
+				s.rateLimiters[msg.Sender] = rate.NewLimiter(rate.Every(time.Hour), s.rateLimitPerHour)
+			}
+			if !s.rateLimiters[msg.Sender].Allow() {
+				blocked = true
+			}
+		}
+
+		if blocked {
+			subject, _ := mail.ExtractSubject(content)
+			err = NotifyMessageBlocked(ctx, s.privateKey, s.lookupClient, msg.Sender, strings.Join(to, ", "), subject)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send rate limit exceeded notification message")
+			}
+			log.Warn().Str("user", msg.Sender).Msg("outgoing message blocked due to the rate limit")
 			continue
 		}
 
