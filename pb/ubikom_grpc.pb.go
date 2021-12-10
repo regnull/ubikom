@@ -11,8 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-// Requires gRPC-Go v1.32.0 or later.
-const _ = grpc.SupportPackageIsVersion7
+const _ = grpc.SupportPackageIsVersion6
 
 // IdentityServiceClient is the client API for IdentityService service.
 //
@@ -116,32 +115,25 @@ type IdentityServiceServer interface {
 type UnimplementedIdentityServiceServer struct {
 }
 
-func (UnimplementedIdentityServiceServer) RegisterKey(context.Context, *SignedWithPow) (*KeyRegistrationResponse, error) {
+func (*UnimplementedIdentityServiceServer) RegisterKey(context.Context, *SignedWithPow) (*KeyRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterKey not implemented")
 }
-func (UnimplementedIdentityServiceServer) RegisterKeyRelationship(context.Context, *SignedWithPow) (*KeyRelationshipRegistrationResponse, error) {
+func (*UnimplementedIdentityServiceServer) RegisterKeyRelationship(context.Context, *SignedWithPow) (*KeyRelationshipRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterKeyRelationship not implemented")
 }
-func (UnimplementedIdentityServiceServer) DisableKey(context.Context, *SignedWithPow) (*KeyDisableResponse, error) {
+func (*UnimplementedIdentityServiceServer) DisableKey(context.Context, *SignedWithPow) (*KeyDisableResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DisableKey not implemented")
 }
-func (UnimplementedIdentityServiceServer) RegisterName(context.Context, *SignedWithPow) (*NameRegistrationResponse, error) {
+func (*UnimplementedIdentityServiceServer) RegisterName(context.Context, *SignedWithPow) (*NameRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterName not implemented")
 }
-func (UnimplementedIdentityServiceServer) RegisterAddress(context.Context, *SignedWithPow) (*AddressRegistrationResponse, error) {
+func (*UnimplementedIdentityServiceServer) RegisterAddress(context.Context, *SignedWithPow) (*AddressRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterAddress not implemented")
 }
-func (UnimplementedIdentityServiceServer) mustEmbedUnimplementedIdentityServiceServer() {}
+func (*UnimplementedIdentityServiceServer) mustEmbedUnimplementedIdentityServiceServer() {}
 
-// UnsafeIdentityServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to IdentityServiceServer will
-// result in compilation errors.
-type UnsafeIdentityServiceServer interface {
-	mustEmbedUnimplementedIdentityServiceServer()
-}
-
-func RegisterIdentityServiceServer(s grpc.ServiceRegistrar, srv IdentityServiceServer) {
-	s.RegisterService(&IdentityService_ServiceDesc, srv)
+func RegisterIdentityServiceServer(s *grpc.Server, srv IdentityServiceServer) {
+	s.RegisterService(&_IdentityService_serviceDesc, srv)
 }
 
 func _IdentityService_RegisterKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -234,10 +226,7 @@ func _IdentityService_RegisterAddress_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-// IdentityService_ServiceDesc is the grpc.ServiceDesc for IdentityService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var IdentityService_ServiceDesc = grpc.ServiceDesc{
+var _IdentityService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "Ubikom.IdentityService",
 	HandlerType: (*IdentityServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
@@ -324,26 +313,19 @@ type LookupServiceServer interface {
 type UnimplementedLookupServiceServer struct {
 }
 
-func (UnimplementedLookupServiceServer) LookupKey(context.Context, *LookupKeyRequest) (*LookupKeyResponse, error) {
+func (*UnimplementedLookupServiceServer) LookupKey(context.Context, *LookupKeyRequest) (*LookupKeyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupKey not implemented")
 }
-func (UnimplementedLookupServiceServer) LookupName(context.Context, *LookupNameRequest) (*LookupNameResponse, error) {
+func (*UnimplementedLookupServiceServer) LookupName(context.Context, *LookupNameRequest) (*LookupNameResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupName not implemented")
 }
-func (UnimplementedLookupServiceServer) LookupAddress(context.Context, *LookupAddressRequest) (*LookupAddressResponse, error) {
+func (*UnimplementedLookupServiceServer) LookupAddress(context.Context, *LookupAddressRequest) (*LookupAddressResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupAddress not implemented")
 }
-func (UnimplementedLookupServiceServer) mustEmbedUnimplementedLookupServiceServer() {}
+func (*UnimplementedLookupServiceServer) mustEmbedUnimplementedLookupServiceServer() {}
 
-// UnsafeLookupServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to LookupServiceServer will
-// result in compilation errors.
-type UnsafeLookupServiceServer interface {
-	mustEmbedUnimplementedLookupServiceServer()
-}
-
-func RegisterLookupServiceServer(s grpc.ServiceRegistrar, srv LookupServiceServer) {
-	s.RegisterService(&LookupService_ServiceDesc, srv)
+func RegisterLookupServiceServer(s *grpc.Server, srv LookupServiceServer) {
+	s.RegisterService(&_LookupService_serviceDesc, srv)
 }
 
 func _LookupService_LookupKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -400,10 +382,7 @@ func _LookupService_LookupAddress_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-// LookupService_ServiceDesc is the grpc.ServiceDesc for LookupService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var LookupService_ServiceDesc = grpc.ServiceDesc{
+var _LookupService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "Ubikom.LookupService",
 	HandlerType: (*LookupServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
@@ -471,23 +450,16 @@ type DMSDumpServiceServer interface {
 type UnimplementedDMSDumpServiceServer struct {
 }
 
-func (UnimplementedDMSDumpServiceServer) Send(context.Context, *SendRequest) (*SendResponse, error) {
+func (*UnimplementedDMSDumpServiceServer) Send(context.Context, *SendRequest) (*SendResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Send not implemented")
 }
-func (UnimplementedDMSDumpServiceServer) Receive(context.Context, *ReceiveRequest) (*ReceiveResponse, error) {
+func (*UnimplementedDMSDumpServiceServer) Receive(context.Context, *ReceiveRequest) (*ReceiveResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Receive not implemented")
 }
-func (UnimplementedDMSDumpServiceServer) mustEmbedUnimplementedDMSDumpServiceServer() {}
+func (*UnimplementedDMSDumpServiceServer) mustEmbedUnimplementedDMSDumpServiceServer() {}
 
-// UnsafeDMSDumpServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to DMSDumpServiceServer will
-// result in compilation errors.
-type UnsafeDMSDumpServiceServer interface {
-	mustEmbedUnimplementedDMSDumpServiceServer()
-}
-
-func RegisterDMSDumpServiceServer(s grpc.ServiceRegistrar, srv DMSDumpServiceServer) {
-	s.RegisterService(&DMSDumpService_ServiceDesc, srv)
+func RegisterDMSDumpServiceServer(s *grpc.Server, srv DMSDumpServiceServer) {
+	s.RegisterService(&_DMSDumpService_serviceDesc, srv)
 }
 
 func _DMSDumpService_Send_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -526,10 +498,7 @@ func _DMSDumpService_Receive_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-// DMSDumpService_ServiceDesc is the grpc.ServiceDesc for DMSDumpService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var DMSDumpService_ServiceDesc = grpc.ServiceDesc{
+var _DMSDumpService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "Ubikom.DMSDumpService",
 	HandlerType: (*DMSDumpServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
