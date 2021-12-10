@@ -73,3 +73,38 @@ message ImapMessage {
     uint64 size = 4;
     uint32 uid = 5;
 }
+
+enum EventType {
+    ET_NONE = 0;
+
+    // Registration events.
+    ET_KEY_REGISTRATION = 1;
+    ET_NAME_REGISTRATION = 2;
+    ET_ADDRESS_REGISTRATION = 3;
+
+    // Proxy events - POP.
+    ET_PROXY_POP_LOGIN = 1001;
+
+    // Proxy events - IMAP.
+    ET_PROXY_IMAP_LOGIN = 1101;
+
+    // Proxy events - SMTP.
+    ET_PROXY_SMTP_LOGIN = 1201;
+    ET_PROXY_SMTP_MESSAGE_SENT = 1202;
+
+    // Gateway events.
+    ET_GATEWAY_UBIKOM_MESSAGE_RECEIVED = 2001;
+    ET_GATEWAY_EMAIL_MESSAGE_RECEIVED = 2002;
+    ET_GATEWAY_UBIKOM_MESSAGE_SENT = 2003;
+    ET_GATEWAY_EMAIL_MESSAGE_SENT = 2004;
+}
+
+message Event {
+    string id = 1;
+    uint64 timestamp = 2;
+    EventType event_type = 3;
+    string user1 = 4;
+    string user2 = 5;
+    string message = 6;
+    
+}
