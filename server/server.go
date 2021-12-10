@@ -34,7 +34,6 @@ type Server struct {
 	dbi         *db.BadgerDB
 	powStrength int
 	privateKey  *easyecc.PrivateKey
-	ubikomName  string
 	eventSender *event.Sender
 }
 
@@ -45,12 +44,11 @@ func NewServer(d *badger.DB, powStrength int, privateKey *easyecc.PrivateKey,
 		dbi:         db.NewBadgerDB(d),
 		powStrength: powStrength,
 		privateKey:  privateKey,
-		ubikomName:  ubikomName,
 	}
 	var eventSender *event.Sender
 	if privateKey != nil && ubikomName != "" && eventTarget != "" {
 		log.Debug().Msg("creating event sender")
-		eventSender = event.NewSender(eventTarget, &loopbackLookupClient{s})
+		eventSender = event.NewSender(eventTarget, ubikomName, "server", &loopbackLookupClient{s})
 	} else {
 		log.Warn().Msg("cannot create event sender")
 	}
@@ -95,12 +93,10 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Ke
 	}
 
 	if s.eventSender != nil {
-		err = s.eventSender.KeyRegistered(ctx, s.privateKey, s.ubikomName,
+		err = s.eventSender.KeyRegistered(ctx, s.privateKey,
 			util.SerializedCompressedToAddress(keyRegistrationReq.GetKey()))
 		if err != nil {
 			log.Error().Err(err).Msg("error sending event")
-		} else {
-			log.Debug().Msg("key registered event sent")
 		}
 	}
 
@@ -230,6 +226,15 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.N
 		log.Error().Str("name", nameRegistrationReq.GetName()).Err(err).Msg("error writing name")
 		return nil, status.Error(codes.Internal, "db error")
 	}
+
+	if s.eventSender != nil {
+		err = s.eventSender.NameRegistered(ctx, s.privateKey,
+			util.SerializedCompressedToAddress(nameRegistrationReq.GetKey()), nameRegistrationReq.GetName())
+		if err != nil {
+			log.Error().Err(err).Msg("error sending event")
+		}
+	}
+
 	log.Info().Str("name", nameRegistrationReq.GetName()).Msg("name registered successfully")
 	return &pb.NameRegistrationResponse{}, nil
 }
@@ -272,6 +277,14 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 			return nil, status.Error(codes.PermissionDenied, "permission denied")
 		}
 		return nil, status.Error(codes.Internal, "db error")
+	}
+
+	if s.eventSender != nil {
+		err = s.eventSender.AddressRegistered(ctx, s.privateKey,
+			addressRegistrationReq.GetAddress(), addressRegistrationReq.GetName())
+		if err != nil {
+			log.Error().Err(err).Msg("error sending event")
+		}
 	}
 
 	log.Info().Str("name", addressRegistrationReq.GetName()).
