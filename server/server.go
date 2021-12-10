@@ -11,6 +11,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/regnull/easyecc"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -37,12 +38,24 @@ type Server struct {
 	eventSender *event.Sender
 }
 
-func NewServer(d *badger.DB, powStrength int, privateKey *easyecc.PrivateKey, ubikomName string) *Server {
-	return &Server{
+func NewServer(d *badger.DB, powStrength int, privateKey *easyecc.PrivateKey,
+	ubikomName string, eventTarget string) *Server {
+
+	s := &Server{
 		dbi:         db.NewBadgerDB(d),
 		powStrength: powStrength,
 		privateKey:  privateKey,
-		ubikomName:  ubikomName}
+		ubikomName:  ubikomName,
+	}
+	var eventSender *event.Sender
+	if privateKey != nil && ubikomName != "" && eventTarget != "" {
+		log.Debug().Msg("creating event sender")
+		eventSender = event.NewSender(eventTarget, &loopbackLookupClient{s})
+	} else {
+		log.Warn().Msg("cannot create event sender")
+	}
+	s.eventSender = eventSender
+	return s
 }
 
 func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.KeyRegistrationResponse, error) {
@@ -81,11 +94,13 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Ke
 		return nil, status.Error(codes.Internal, "failed to register key")
 	}
 
-	if s.privateKey != nil && s.ubikomName != "" && s.eventSender != nil {
+	if s.eventSender != nil {
 		err = s.eventSender.KeyRegistered(ctx, s.privateKey, s.ubikomName,
 			util.SerializedCompressedToAddress(keyRegistrationReq.GetKey()))
 		if err != nil {
 			log.Error().Err(err).Msg("error sending event")
+		} else {
+			log.Debug().Msg("key registered event sent")
 		}
 	}
 
@@ -332,6 +347,23 @@ func (s *Server) LookupAddress(ctx context.Context, req *pb.LookupAddressRequest
 	return &pb.LookupAddressResponse{
 		Address: address,
 	}, nil
+}
+
+// loopbackLookupClient allows us to use lookup server as client.
+type loopbackLookupClient struct {
+	s *Server
+}
+
+func (c *loopbackLookupClient) LookupKey(ctx context.Context, in *pb.LookupKeyRequest, opts ...grpc.CallOption) (*pb.LookupKeyResponse, error) {
+	return c.s.LookupKey(ctx, in)
+}
+
+func (c *loopbackLookupClient) LookupName(ctx context.Context, in *pb.LookupNameRequest, opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
+	return c.s.LookupName(ctx, in)
+}
+
+func (c *loopbackLookupClient) LookupAddress(ctx context.Context, in *pb.LookupAddressRequest, opts ...grpc.CallOption) (*pb.LookupAddressResponse, error) {
+	return c.s.LookupAddress(ctx, in)
 }
 
 func Int64ToBytes(i int64) []byte {

@@ -13,10 +13,10 @@ import (
 
 type Sender struct {
 	target       string
-	lookupClient *pb.LookupServiceClient
+	lookupClient pb.LookupServiceClient
 }
 
-func NewSender(target string, lookupClient *pb.LookupServiceClient) *Sender {
+func NewSender(target string, lookupClient pb.LookupServiceClient) *Sender {
 	return &Sender{target: target, lookupClient: lookupClient}
 }
 
@@ -32,7 +32,7 @@ func (s *Sender) KeyRegistered(ctx context.Context, privateKey *easyecc.PrivateK
 	if err != nil {
 		return err
 	}
-	err = protoutil.SendMessage(ctx, privateKey, b, sender, s.target, *s.lookupClient)
+	err = protoutil.SendMessage(ctx, privateKey, b, sender, s.target, s.lookupClient)
 	if err != nil {
 		return err
 	}

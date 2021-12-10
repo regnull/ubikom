@@ -74,9 +74,7 @@ func (s *Sender) poll(ctx context.Context) error {
 	for {
 		res, err := s.dumpClient.Receive(ctx, &pb.ReceiveRequest{IdentityProof: protoutil.IdentityProof(s.privateKey)})
 		if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
-			if len(messages) == 0 {
-				log.Info().Msg("no new messages")
-			} else {
+			if len(messages) != 0 {
 				log.Info().Int("count", len(messages)).Msg("messages received")
 			}
 			break

@@ -23,6 +23,7 @@ const (
 	defaultHomeSubDir  = ".ubikom"
 	defaultDBSubDir    = "db"
 	defaultPowStrength = 10
+	defaultEventTarget = "ubikom-event-processor"
 )
 
 type HealthChecker struct{}
@@ -51,6 +52,7 @@ type CmdArgs struct {
 	PowStrength   int
 	UbikomKeyFile string
 	UbikomName    string
+	EventTarget   string
 }
 
 func main() {
@@ -64,6 +66,7 @@ func main() {
 	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength required")
 	flag.StringVar(&args.UbikomKeyFile, "ubikom-key-file", "", "ubikom key file")
 	flag.StringVar(&args.UbikomName, "ubikom-name", "", "ubikom name")
+	flag.StringVar(&args.EventTarget, "event-target", defaultEventTarget, "where to send events")
 	flag.Parse()
 
 	dbDir := args.DbDir
@@ -85,6 +88,7 @@ func main() {
 		if err != nil {
 			log.Fatal().Err(err).Str("location", args.UbikomKeyFile).Msg("cannot load private key")
 		}
+		log.Info().Str("file", args.UbikomKeyFile).Msg("private key loaded")
 	}
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", args.Port))
@@ -98,7 +102,7 @@ func main() {
 	healthService := &HealthChecker{}
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthService)
 
-	srv := server.NewServer(db, args.PowStrength, privateKey, args.UbikomName)
+	srv := server.NewServer(db, args.PowStrength, privateKey, args.UbikomName, args.EventTarget)
 	pb.RegisterIdentityServiceServer(grpcServer, srv)
 	pb.RegisterLookupServiceServer(grpcServer, srv)
 	log.Info().Int("port", args.Port).Msg("server is up and running")
