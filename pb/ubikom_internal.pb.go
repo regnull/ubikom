@@ -21,6 +21,87 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type EventType int32
+
+const (
+	EventType_ET_NONE EventType = 0
+	// Registration events.
+	EventType_ET_KEY_REGISTRATION     EventType = 1
+	EventType_ET_NAME_REGISTRATION    EventType = 2
+	EventType_ET_ADDRESS_REGISTRATION EventType = 3
+	// Proxy events - POP.
+	EventType_ET_PROXY_POP_LOGIN EventType = 1001
+	// Proxy events - IMAP.
+	EventType_ET_PROXY_IMAP_LOGIN EventType = 1101
+	// Proxy events - SMTP.
+	EventType_ET_PROXY_SMTP_LOGIN        EventType = 1201
+	EventType_ET_PROXY_SMTP_MESSAGE_SENT EventType = 1202
+	// Gateway events.
+	EventType_ET_GATEWAY_UBIKOM_MESSAGE_RECEIVED EventType = 2001
+	EventType_ET_GATEWAY_EMAIL_MESSAGE_RECEIVED  EventType = 2002
+	EventType_ET_GATEWAY_UBIKOM_MESSAGE_SENT     EventType = 2003
+	EventType_ET_GATEWAY_EMAIL_MESSAGE_SENT      EventType = 2004
+)
+
+// Enum value maps for EventType.
+var (
+	EventType_name = map[int32]string{
+		0:    "ET_NONE",
+		1:    "ET_KEY_REGISTRATION",
+		2:    "ET_NAME_REGISTRATION",
+		3:    "ET_ADDRESS_REGISTRATION",
+		1001: "ET_PROXY_POP_LOGIN",
+		1101: "ET_PROXY_IMAP_LOGIN",
+		1201: "ET_PROXY_SMTP_LOGIN",
+		1202: "ET_PROXY_SMTP_MESSAGE_SENT",
+		2001: "ET_GATEWAY_UBIKOM_MESSAGE_RECEIVED",
+		2002: "ET_GATEWAY_EMAIL_MESSAGE_RECEIVED",
+		2003: "ET_GATEWAY_UBIKOM_MESSAGE_SENT",
+		2004: "ET_GATEWAY_EMAIL_MESSAGE_SENT",
+	}
+	EventType_value = map[string]int32{
+		"ET_NONE":                            0,
+		"ET_KEY_REGISTRATION":                1,
+		"ET_NAME_REGISTRATION":               2,
+		"ET_ADDRESS_REGISTRATION":            3,
+		"ET_PROXY_POP_LOGIN":                 1001,
+		"ET_PROXY_IMAP_LOGIN":                1101,
+		"ET_PROXY_SMTP_LOGIN":                1201,
+		"ET_PROXY_SMTP_MESSAGE_SENT":         1202,
+		"ET_GATEWAY_UBIKOM_MESSAGE_RECEIVED": 2001,
+		"ET_GATEWAY_EMAIL_MESSAGE_RECEIVED":  2002,
+		"ET_GATEWAY_UBIKOM_MESSAGE_SENT":     2003,
+		"ET_GATEWAY_EMAIL_MESSAGE_SENT":      2004,
+	}
+)
+
+func (x EventType) Enum() *EventType {
+	p := new(EventType)
+	*p = x
+	return p
+}
+
+func (x EventType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventType) Descriptor() protoreflect.EnumDescriptor {
+	return file_ubikom_internal_proto_enumTypes[0].Descriptor()
+}
+
+func (EventType) Type() protoreflect.EnumType {
+	return &file_ubikom_internal_proto_enumTypes[0]
+}
+
+func (x EventType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventType.Descriptor instead.
+func (EventType) EnumDescriptor() ([]byte, []int) {
+	return file_ubikom_internal_proto_rawDescGZIP(), []int{0}
+}
+
 type KeyRecord struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -678,6 +759,93 @@ func (x *ImapMessage) GetUid() uint32 {
 	return 0
 }
 
+type Event struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id        string    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Timestamp uint64    `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	EventType EventType `protobuf:"varint,3,opt,name=event_type,json=eventType,proto3,enum=Ubikom.EventType" json:"event_type,omitempty"`
+	User1     string    `protobuf:"bytes,4,opt,name=user1,proto3" json:"user1,omitempty"`
+	User2     string    `protobuf:"bytes,5,opt,name=user2,proto3" json:"user2,omitempty"`
+	Message   string    `protobuf:"bytes,6,opt,name=message,proto3" json:"message,omitempty"`
+}
+
+func (x *Event) Reset() {
+	*x = Event{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_ubikom_internal_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Event) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Event) ProtoMessage() {}
+
+func (x *Event) ProtoReflect() protoreflect.Message {
+	mi := &file_ubikom_internal_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Event.ProtoReflect.Descriptor instead.
+func (*Event) Descriptor() ([]byte, []int) {
+	return file_ubikom_internal_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *Event) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Event) GetTimestamp() uint64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *Event) GetEventType() EventType {
+	if x != nil {
+		return x.EventType
+	}
+	return EventType_ET_NONE
+}
+
+func (x *Event) GetUser1() string {
+	if x != nil {
+		return x.User1
+	}
+	return ""
+}
+
+func (x *Event) GetUser2() string {
+	if x != nil {
+		return x.User2
+	}
+	return ""
+}
+
+func (x *Event) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_ubikom_internal_proto protoreflect.FileDescriptor
 
 var file_ubikom_internal_proto_rawDesc = []byte{
@@ -763,8 +931,42 @@ var file_ubikom_internal_proto_rawDesc = []byte{
 	0x28, 0x04, 0x52, 0x11, 0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x64, 0x54, 0x69, 0x6d, 0x65,
 	0x73, 0x74, 0x61, 0x6d, 0x70, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x04, 0x20,
 	0x01, 0x28, 0x04, 0x52, 0x04, 0x73, 0x69, 0x7a, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x69, 0x64,
-	0x18, 0x05, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x03, 0x75, 0x69, 0x64, 0x42, 0x07, 0x5a, 0x05, 0x2e,
-	0x2f, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x18, 0x05, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x03, 0x75, 0x69, 0x64, 0x22, 0xad, 0x01, 0x0a, 0x05,
+	0x45, 0x76, 0x65, 0x6e, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x1c, 0x0a, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61,
+	0x6d, 0x70, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74,
+	0x61, 0x6d, 0x70, 0x12, 0x30, 0x0a, 0x0a, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x5f, 0x74, 0x79, 0x70,
+	0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x11, 0x2e, 0x55, 0x62, 0x69, 0x6b, 0x6f, 0x6d,
+	0x2e, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x54, 0x79, 0x70, 0x65, 0x52, 0x09, 0x65, 0x76, 0x65, 0x6e,
+	0x74, 0x54, 0x79, 0x70, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x75, 0x73, 0x65, 0x72, 0x31, 0x18, 0x04,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x75, 0x73, 0x65, 0x72, 0x31, 0x12, 0x14, 0x0a, 0x05, 0x75,
+	0x73, 0x65, 0x72, 0x32, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x75, 0x73, 0x65, 0x72,
+	0x32, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x06, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x2a, 0xf0, 0x02, 0x0a, 0x09,
+	0x45, 0x76, 0x65, 0x6e, 0x74, 0x54, 0x79, 0x70, 0x65, 0x12, 0x0b, 0x0a, 0x07, 0x45, 0x54, 0x5f,
+	0x4e, 0x4f, 0x4e, 0x45, 0x10, 0x00, 0x12, 0x17, 0x0a, 0x13, 0x45, 0x54, 0x5f, 0x4b, 0x45, 0x59,
+	0x5f, 0x52, 0x45, 0x47, 0x49, 0x53, 0x54, 0x52, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x10, 0x01, 0x12,
+	0x18, 0x0a, 0x14, 0x45, 0x54, 0x5f, 0x4e, 0x41, 0x4d, 0x45, 0x5f, 0x52, 0x45, 0x47, 0x49, 0x53,
+	0x54, 0x52, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x10, 0x02, 0x12, 0x1b, 0x0a, 0x17, 0x45, 0x54, 0x5f,
+	0x41, 0x44, 0x44, 0x52, 0x45, 0x53, 0x53, 0x5f, 0x52, 0x45, 0x47, 0x49, 0x53, 0x54, 0x52, 0x41,
+	0x54, 0x49, 0x4f, 0x4e, 0x10, 0x03, 0x12, 0x17, 0x0a, 0x12, 0x45, 0x54, 0x5f, 0x50, 0x52, 0x4f,
+	0x58, 0x59, 0x5f, 0x50, 0x4f, 0x50, 0x5f, 0x4c, 0x4f, 0x47, 0x49, 0x4e, 0x10, 0xe9, 0x07, 0x12,
+	0x18, 0x0a, 0x13, 0x45, 0x54, 0x5f, 0x50, 0x52, 0x4f, 0x58, 0x59, 0x5f, 0x49, 0x4d, 0x41, 0x50,
+	0x5f, 0x4c, 0x4f, 0x47, 0x49, 0x4e, 0x10, 0xcd, 0x08, 0x12, 0x18, 0x0a, 0x13, 0x45, 0x54, 0x5f,
+	0x50, 0x52, 0x4f, 0x58, 0x59, 0x5f, 0x53, 0x4d, 0x54, 0x50, 0x5f, 0x4c, 0x4f, 0x47, 0x49, 0x4e,
+	0x10, 0xb1, 0x09, 0x12, 0x1f, 0x0a, 0x1a, 0x45, 0x54, 0x5f, 0x50, 0x52, 0x4f, 0x58, 0x59, 0x5f,
+	0x53, 0x4d, 0x54, 0x50, 0x5f, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x53, 0x45, 0x4e,
+	0x54, 0x10, 0xb2, 0x09, 0x12, 0x27, 0x0a, 0x22, 0x45, 0x54, 0x5f, 0x47, 0x41, 0x54, 0x45, 0x57,
+	0x41, 0x59, 0x5f, 0x55, 0x42, 0x49, 0x4b, 0x4f, 0x4d, 0x5f, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47,
+	0x45, 0x5f, 0x52, 0x45, 0x43, 0x45, 0x49, 0x56, 0x45, 0x44, 0x10, 0xd1, 0x0f, 0x12, 0x26, 0x0a,
+	0x21, 0x45, 0x54, 0x5f, 0x47, 0x41, 0x54, 0x45, 0x57, 0x41, 0x59, 0x5f, 0x45, 0x4d, 0x41, 0x49,
+	0x4c, 0x5f, 0x4d, 0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x52, 0x45, 0x43, 0x45, 0x49, 0x56,
+	0x45, 0x44, 0x10, 0xd2, 0x0f, 0x12, 0x23, 0x0a, 0x1e, 0x45, 0x54, 0x5f, 0x47, 0x41, 0x54, 0x45,
+	0x57, 0x41, 0x59, 0x5f, 0x55, 0x42, 0x49, 0x4b, 0x4f, 0x4d, 0x5f, 0x4d, 0x45, 0x53, 0x53, 0x41,
+	0x47, 0x45, 0x5f, 0x53, 0x45, 0x4e, 0x54, 0x10, 0xd3, 0x0f, 0x12, 0x22, 0x0a, 0x1d, 0x45, 0x54,
+	0x5f, 0x47, 0x41, 0x54, 0x45, 0x57, 0x41, 0x59, 0x5f, 0x45, 0x4d, 0x41, 0x49, 0x4c, 0x5f, 0x4d,
+	0x45, 0x53, 0x53, 0x41, 0x47, 0x45, 0x5f, 0x53, 0x45, 0x4e, 0x54, 0x10, 0xd4, 0x0f, 0x42, 0x07,
+	0x5a, 0x05, 0x2e, 0x2f, 0x3b, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -779,31 +981,35 @@ func file_ubikom_internal_proto_rawDescGZIP() []byte {
 	return file_ubikom_internal_proto_rawDescData
 }
 
-var file_ubikom_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_ubikom_internal_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_ubikom_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_ubikom_internal_proto_goTypes = []interface{}{
-	(*KeyRecord)(nil),           // 0: Ubikom.KeyRecord
-	(*ExportKeyRecord)(nil),     // 1: Ubikom.ExportKeyRecord
-	(*ExportNameRecord)(nil),    // 2: Ubikom.ExportNameRecord
-	(*ExportAddressRecord)(nil), // 3: Ubikom.ExportAddressRecord
-	(*DBValue)(nil),             // 4: Ubikom.DBValue
-	(*DBEntry)(nil),             // 5: Ubikom.DBEntry
-	(*ImapInfo)(nil),            // 6: Ubikom.ImapInfo
-	(*ImapMailbox)(nil),         // 7: Ubikom.ImapMailbox
-	(*ImapMailboxes)(nil),       // 8: Ubikom.ImapMailboxes
-	(*ImapMessage)(nil),         // 9: Ubikom.ImapMessage
-	(Protocol)(0),               // 10: Ubikom.Protocol
-	(*anypb.Any)(nil),           // 11: google.protobuf.Any
+	(EventType)(0),              // 0: Ubikom.EventType
+	(*KeyRecord)(nil),           // 1: Ubikom.KeyRecord
+	(*ExportKeyRecord)(nil),     // 2: Ubikom.ExportKeyRecord
+	(*ExportNameRecord)(nil),    // 3: Ubikom.ExportNameRecord
+	(*ExportAddressRecord)(nil), // 4: Ubikom.ExportAddressRecord
+	(*DBValue)(nil),             // 5: Ubikom.DBValue
+	(*DBEntry)(nil),             // 6: Ubikom.DBEntry
+	(*ImapInfo)(nil),            // 7: Ubikom.ImapInfo
+	(*ImapMailbox)(nil),         // 8: Ubikom.ImapMailbox
+	(*ImapMailboxes)(nil),       // 9: Ubikom.ImapMailboxes
+	(*ImapMessage)(nil),         // 10: Ubikom.ImapMessage
+	(*Event)(nil),               // 11: Ubikom.Event
+	(Protocol)(0),               // 12: Ubikom.Protocol
+	(*anypb.Any)(nil),           // 13: google.protobuf.Any
 }
 var file_ubikom_internal_proto_depIdxs = []int32{
-	10, // 0: Ubikom.ExportAddressRecord.protocol:type_name -> Ubikom.Protocol
-	11, // 1: Ubikom.DBValue.payload:type_name -> google.protobuf.Any
-	4,  // 2: Ubikom.DBEntry.value:type_name -> Ubikom.DBValue
-	7,  // 3: Ubikom.ImapMailboxes.mailbox:type_name -> Ubikom.ImapMailbox
-	4,  // [4:4] is the sub-list for method output_type
-	4,  // [4:4] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	12, // 0: Ubikom.ExportAddressRecord.protocol:type_name -> Ubikom.Protocol
+	13, // 1: Ubikom.DBValue.payload:type_name -> google.protobuf.Any
+	5,  // 2: Ubikom.DBEntry.value:type_name -> Ubikom.DBValue
+	8,  // 3: Ubikom.ImapMailboxes.mailbox:type_name -> Ubikom.ImapMailbox
+	0,  // 4: Ubikom.Event.event_type:type_name -> Ubikom.EventType
+	5,  // [5:5] is the sub-list for method output_type
+	5,  // [5:5] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_ubikom_internal_proto_init() }
@@ -933,19 +1139,32 @@ func file_ubikom_internal_proto_init() {
 				return nil
 			}
 		}
+		file_ubikom_internal_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Event); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_ubikom_internal_proto_rawDesc,
-			NumEnums:      0,
-			NumMessages:   10,
+			NumEnums:      1,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_ubikom_internal_proto_goTypes,
 		DependencyIndexes: file_ubikom_internal_proto_depIdxs,
+		EnumInfos:         file_ubikom_internal_proto_enumTypes,
 		MessageInfos:      file_ubikom_internal_proto_msgTypes,
 	}.Build()
 	File_ubikom_internal_proto = out.File

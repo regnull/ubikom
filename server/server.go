@@ -31,10 +31,16 @@ type Server struct {
 
 	dbi         *db.BadgerDB
 	powStrength int
+	privateKey  *easyecc.PrivateKey
+	ubikomName  string
 }
 
-func NewServer(d *badger.DB, powStrength int) *Server {
-	return &Server{dbi: db.NewBadgerDB(d), powStrength: powStrength}
+func NewServer(d *badger.DB, powStrength int, privateKey *easyecc.PrivateKey, ubikomName string) *Server {
+	return &Server{
+		dbi:         db.NewBadgerDB(d),
+		powStrength: powStrength,
+		privateKey:  privateKey,
+		ubikomName:  ubikomName}
 }
 
 func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.KeyRegistrationResponse, error) {
@@ -72,6 +78,10 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Ke
 		log.Error().Err(err).Str("key", publicKeyBase58).Msg("error writing public key")
 		return nil, status.Error(codes.Internal, "failed to register key")
 	}
+
+	event := &pb.Event{}
+	//protoutil.SendMessage(ctx, s.privateKey, )
+
 	log.Info().Str("key", util.SerializedCompressedToAddress(keyRegistrationReq.GetKey())).Msg("key is registered successfully")
 	return &pb.KeyRegistrationResponse{}, nil
 }

@@ -9,6 +9,7 @@ import (
 	"path"
 
 	"github.com/dgraph-io/badger/v3"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/server"
 	"github.com/rs/zerolog"
@@ -44,10 +45,12 @@ func (h *HealthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, srv grpc_h
 }
 
 type CmdArgs struct {
-	BaseDir     string
-	DbDir       string
-	Port        int
-	PowStrength int
+	BaseDir       string
+	DbDir         string
+	Port          int
+	PowStrength   int
+	UbikomKeyFile string
+	UbikomName    string
 }
 
 func main() {
@@ -59,6 +62,8 @@ func main() {
 	flag.StringVar(&args.BaseDir, "base-dir", "", "base directory")
 	flag.StringVar(&args.DbDir, "db", "", "db directory")
 	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength required")
+	flag.StringVar(&args.UbikomKeyFile, "ubikom-key-file", "", "ubikom key file")
+	flag.StringVar(&args.UbikomName, "ubikom-name", "", "ubikom name")
 	flag.Parse()
 
 	dbDir := args.DbDir
@@ -74,6 +79,14 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to initialize the database")
 	}
 
+	var privateKey *easyecc.PrivateKey
+	if args.UbikomKeyFile != "" {
+		privateKey, err = easyecc.NewPrivateKeyFromFile(args.UbikomKeyFile, "")
+		if err != nil {
+			log.Fatal().Err(err).Str("location", args.UbikomKeyFile).Msg("cannot load private key")
+		}
+	}
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", args.Port))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to listen")
@@ -85,7 +98,7 @@ func main() {
 	healthService := &HealthChecker{}
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthService)
 
-	srv := server.NewServer(db, args.PowStrength)
+	srv := server.NewServer(db, args.PowStrength, privateKey, args.UbikomName)
 	pb.RegisterIdentityServiceServer(grpcServer, srv)
 	pb.RegisterLookupServiceServer(grpcServer, srv)
 	log.Info().Int("port", args.Port).Msg("server is up and running")
