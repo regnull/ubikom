@@ -106,5 +106,5 @@ message Event {
     string user1 = 4;
     string user2 = 5;
     string message = 6;
-    
+    string data1 = 7;
 }

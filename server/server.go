@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/regnull/ubikom/db"
+	"github.com/regnull/ubikom/event"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/pow"
 	"github.com/regnull/ubikom/protoutil"
@@ -33,6 +34,7 @@ type Server struct {
 	powStrength int
 	privateKey  *easyecc.PrivateKey
 	ubikomName  string
+	eventSender *event.Sender
 }
 
 func NewServer(d *badger.DB, powStrength int, privateKey *easyecc.PrivateKey, ubikomName string) *Server {
@@ -79,8 +81,13 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Ke
 		return nil, status.Error(codes.Internal, "failed to register key")
 	}
 
-	event := &pb.Event{}
-	//protoutil.SendMessage(ctx, s.privateKey, )
+	if s.privateKey != nil && s.ubikomName != "" && s.eventSender != nil {
+		err = s.eventSender.KeyRegistered(ctx, s.privateKey, s.ubikomName,
+			util.SerializedCompressedToAddress(keyRegistrationReq.GetKey()))
+		if err != nil {
+			log.Error().Err(err).Msg("error sending event")
+		}
+	}
 
 	log.Info().Str("key", util.SerializedCompressedToAddress(keyRegistrationReq.GetKey())).Msg("key is registered successfully")
 	return &pb.KeyRegistrationResponse{}, nil
