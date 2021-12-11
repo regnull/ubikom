@@ -10,6 +10,7 @@ import (
 
 	gosmtp "github.com/emersion/go-smtp"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/event"
 	umail "github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
@@ -23,16 +24,19 @@ type Backend struct {
 	lookupClient pb.LookupServiceClient
 	dumpClient   pb.DMSDumpServiceClient
 	privateKey   *easyecc.PrivateKey
+	eventSender  *event.Sender
 }
 
 func NewBackend(user, password string, lookupClient pb.LookupServiceClient,
-	dumpClient pb.DMSDumpServiceClient, privateKey *easyecc.PrivateKey) *Backend {
+	dumpClient pb.DMSDumpServiceClient, privateKey *easyecc.PrivateKey,
+	eventSender *event.Sender) *Backend {
 	return &Backend{
 		user:         user,
 		password:     password,
 		lookupClient: lookupClient,
 		dumpClient:   dumpClient,
-		privateKey:   privateKey}
+		privateKey:   privateKey,
+		eventSender:  eventSender}
 }
 
 func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string) (gosmtp.Session, error) {
@@ -52,6 +56,13 @@ func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string
 	log.Debug().Bool("authorized", ok).Msg("[SMTP] -> LOGIN")
 	if !ok {
 		return nil, errors.New("invalid username or password")
+	} else {
+		if b.eventSender != nil {
+			err := b.eventSender.SMTPLogin(context.TODO(), username)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send SMTP login event")
+			}
+		}
 	}
 	return &Session{
 		lookupClient: b.lookupClient,

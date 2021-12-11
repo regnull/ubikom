@@ -33,7 +33,6 @@ type Server struct {
 
 	dbi         *db.BadgerDB
 	powStrength int
-	privateKey  *easyecc.PrivateKey
 	eventSender *event.Sender
 }
 
@@ -42,13 +41,11 @@ func NewServer(d *badger.DB, powStrength int, privateKey *easyecc.PrivateKey,
 
 	s := &Server{
 		dbi:         db.NewBadgerDB(d),
-		powStrength: powStrength,
-		privateKey:  privateKey,
-	}
+		powStrength: powStrength}
 	var eventSender *event.Sender
 	if privateKey != nil && ubikomName != "" && eventTarget != "" {
 		log.Debug().Msg("creating event sender")
-		eventSender = event.NewSender(eventTarget, ubikomName, "server", &loopbackLookupClient{s})
+		eventSender = event.NewSender(eventTarget, ubikomName, "proxy", privateKey, &loopbackLookupClient{s})
 	} else {
 		log.Warn().Msg("cannot create event sender")
 	}
@@ -93,7 +90,7 @@ func (s *Server) RegisterKey(ctx context.Context, req *pb.SignedWithPow) (*pb.Ke
 	}
 
 	if s.eventSender != nil {
-		err = s.eventSender.KeyRegistered(ctx, s.privateKey,
+		err = s.eventSender.KeyRegistered(ctx,
 			util.SerializedCompressedToAddress(keyRegistrationReq.GetKey()))
 		if err != nil {
 			log.Error().Err(err).Msg("error sending event")
@@ -228,7 +225,7 @@ func (s *Server) RegisterName(ctx context.Context, req *pb.SignedWithPow) (*pb.N
 	}
 
 	if s.eventSender != nil {
-		err = s.eventSender.NameRegistered(ctx, s.privateKey,
+		err = s.eventSender.NameRegistered(ctx,
 			util.SerializedCompressedToAddress(nameRegistrationReq.GetKey()), nameRegistrationReq.GetName())
 		if err != nil {
 			log.Error().Err(err).Msg("error sending event")
@@ -280,7 +277,7 @@ func (s *Server) RegisterAddress(ctx context.Context, req *pb.SignedWithPow) (*p
 	}
 
 	if s.eventSender != nil {
-		err = s.eventSender.AddressRegistered(ctx, s.privateKey,
+		err = s.eventSender.AddressRegistered(ctx,
 			addressRegistrationReq.GetAddress(), addressRegistrationReq.GetName())
 		if err != nil {
 			log.Error().Err(err).Msg("error sending event")

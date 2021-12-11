@@ -23,31 +23,33 @@ import (
 )
 
 type Args struct {
-	DumpURL               string `yaml:"dump-url"`
-	LookupURL             string `yaml:"lookup-url"`
-	GetKeyFromUser        bool   `yaml:"get-key-from-user"`
-	KeyLocation           string `yaml:"key-location"`
-	PopUser               string `yaml:"pop-user"`
-	PopPassword           string `yaml:"pop-password"`
-	PopDomain             string `yaml:"pop-domain"`
-	PopPort               int    `yaml:"pop-port"`
-	ImapStorePath         string `yaml:"imap-store-path"`
-	ImapDomain            string `yaml:"imap-domain"`
-	ImapPort              int    `yaml:"imap-port"`
-	ImapUser              string `yaml:"imap-user"`
-	ImapPrintDebugInfo    bool   `yaml:"imap-print-debug-info"`
-	ImapPassword          string `yaml:"imap-password"`
-	SmtpDomain            string `yaml:"smtp-domain"`
-	SmtpPort              int    `yaml:"smtp-port"`
-	SmtpUser              string `yaml:"smtp-user"`
-	SmtpPassword          string `yaml:"smtp-password"`
-	ConnectionTimeoutMsec int    `yaml:"connection-timeout-msec"`
-	LogLevel              string `yaml:"log-level"`
-	TLSCertFile           string `yaml:"tls-cert-file"`
-	TLSKeyFile            string `yaml:"tls-key-file"`
-	MaxMessageAgeHours    int    `yaml:"max-message-age-hours"` // TODO: Remove this (POP store only).
-	MessageTTLDays        int    `yaml:"message-ttl-days"`
-	LogNoColor            bool   `yaml:"log-no-color"`
+	DumpURL                string `yaml:"dump-url"`
+	LookupURL              string `yaml:"lookup-url"`
+	GetKeyFromUser         bool   `yaml:"get-key-from-user"`
+	KeyLocation            string `yaml:"key-location"`
+	PopUser                string `yaml:"pop-user"`
+	PopPassword            string `yaml:"pop-password"`
+	PopDomain              string `yaml:"pop-domain"`
+	PopPort                int    `yaml:"pop-port"`
+	ImapStorePath          string `yaml:"imap-store-path"`
+	ImapDomain             string `yaml:"imap-domain"`
+	ImapPort               int    `yaml:"imap-port"`
+	ImapUser               string `yaml:"imap-user"`
+	ImapPrintDebugInfo     bool   `yaml:"imap-print-debug-info"`
+	ImapPassword           string `yaml:"imap-password"`
+	SmtpDomain             string `yaml:"smtp-domain"`
+	SmtpPort               int    `yaml:"smtp-port"`
+	SmtpUser               string `yaml:"smtp-user"`
+	SmtpPassword           string `yaml:"smtp-password"`
+	ConnectionTimeoutMsec  int    `yaml:"connection-timeout-msec"`
+	LogLevel               string `yaml:"log-level"`
+	TLSCertFile            string `yaml:"tls-cert-file"`
+	TLSKeyFile             string `yaml:"tls-key-file"`
+	MessageTTLDays         int    `yaml:"message-ttl-days"`
+	LogNoColor             bool   `yaml:"log-no-color"`
+	EventSenderKeyLocation string `yaml:"event-sender-key-location"`
+	EventSenderUbikomName  string `yaml:"event-sender-ubikom-name"`
+	EventSenderTarget      string `yaml:"event-sender-target"`
 }
 
 func main() {
@@ -89,9 +91,11 @@ func main() {
 	flag.StringVar(&args.LogLevel, "log-level", configArgs.LogLevel, "log level")
 	flag.StringVar(&args.TLSCertFile, "tls-cert-file", configArgs.TLSCertFile, "TLS certificate file")
 	flag.StringVar(&args.TLSKeyFile, "tls-key-file", configArgs.TLSKeyFile, "TLS key file")
-	flag.IntVar(&args.MaxMessageAgeHours, "max-message-age-hours", configArgs.MaxMessageAgeHours, "max message age, in hours")
 	flag.IntVar(&args.MessageTTLDays, "message-ttl-days", configArgs.MessageTTLDays, "message TTL, in days.")
 	flag.BoolVar(&args.LogNoColor, "log-no-color", configArgs.LogNoColor, "disable colors for logging")
+	flag.StringVar(&args.EventSenderKeyLocation, "event-sender-key-location", configArgs.EventSenderKeyLocation, "event sender key location")
+	flag.StringVar(&args.EventSenderUbikomName, "event-sender-ubikom-name", configArgs.EventSenderUbikomName, "event sender ubikom name")
+	flag.StringVar(&args.EventSenderTarget, "event-sender-target", configArgs.EventSenderTarget, "event sender target")
 	flag.Parse()
 
 	err = verifyArgs(&args)
@@ -144,6 +148,14 @@ func main() {
 		}
 	}
 
+	var eventSenderKey *easyecc.PrivateKey
+	if args.EventSenderKeyLocation != "" {
+		eventSenderKey, err = easyecc.NewPrivateKeyFromFile(args.EventSenderKeyLocation, "")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load event sender private key")
+		}
+	}
+
 	if args.TLSCertFile != "" && args.TLSKeyFile != "" {
 		log.Info().Str("cert-file", args.TLSCertFile).Str("key-file", args.TLSKeyFile).Msg("using TLS")
 	}
@@ -184,15 +196,18 @@ func main() {
 	}()
 
 	smtpOpts := &smtp.ServerOptions{
-		Domain:       args.SmtpDomain,
-		Port:         args.SmtpPort,
-		User:         args.SmtpUser,
-		Password:     args.SmtpPassword,
-		LookupClient: lookupClient,
-		DumpClient:   dumpClient,
-		PrivateKey:   key,
-		CertFile:     args.TLSCertFile,
-		KeyFile:      args.TLSKeyFile,
+		Domain:                args.SmtpDomain,
+		Port:                  args.SmtpPort,
+		User:                  args.SmtpUser,
+		Password:              args.SmtpPassword,
+		LookupClient:          lookupClient,
+		DumpClient:            dumpClient,
+		PrivateKey:            key,
+		CertFile:              args.TLSCertFile,
+		KeyFile:               args.TLSKeyFile,
+		EventSenderPrivateKey: eventSenderKey,
+		UbikomName:            args.EventSenderUbikomName,
+		EventTarget:           args.EventSenderTarget,
 	}
 	smtpServer, err := smtp.NewServer(smtpOpts)
 	if err != nil {
@@ -246,10 +261,6 @@ func verifyArgs(args *Args) error {
 
 	if args.LookupURL == "" {
 		return fmt.Errorf("lookup url must be specified")
-	}
-
-	if args.MaxMessageAgeHours == 0 {
-		args.MaxMessageAgeHours = 7 * 24
 	}
 
 	if !args.GetKeyFromUser {

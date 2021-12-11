@@ -15,14 +15,21 @@ type Sender struct {
 	target       string
 	sender       string
 	component    string
+	privateKey   *easyecc.PrivateKey
 	lookupClient pb.LookupServiceClient
 }
 
-func NewSender(target string, sender string, component string, lookupClient pb.LookupServiceClient) *Sender {
-	return &Sender{target: target, sender: sender, component: component, lookupClient: lookupClient}
+func NewSender(target string, sender string, component string,
+	privateKey *easyecc.PrivateKey, lookupClient pb.LookupServiceClient) *Sender {
+	return &Sender{
+		target:       target,
+		sender:       sender,
+		component:    component,
+		privateKey:   privateKey,
+		lookupClient: lookupClient}
 }
 
-func (s *Sender) KeyRegistered(ctx context.Context, privateKey *easyecc.PrivateKey, keyAddress string) error {
+func (s *Sender) KeyRegistered(ctx context.Context, keyAddress string) error {
 	event := &pb.Event{
 		Id:        uuid.New().String(),
 		Timestamp: uint64(util.NowMs()),
@@ -30,18 +37,10 @@ func (s *Sender) KeyRegistered(ctx context.Context, privateKey *easyecc.PrivateK
 		Data1:     keyAddress,
 		Message:   "New key was registered",
 		Component: s.component}
-	b, err := proto.Marshal(event)
-	if err != nil {
-		return err
-	}
-	err = protoutil.SendMessage(ctx, privateKey, b, s.sender, s.target, s.lookupClient)
-	if err != nil {
-		return err
-	}
-	return err
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
 }
 
-func (s *Sender) NameRegistered(ctx context.Context, privateKey *easyecc.PrivateKey, keyAddress string, name string) error {
+func (s *Sender) NameRegistered(ctx context.Context, keyAddress string, name string) error {
 	event := &pb.Event{
 		Id:        uuid.New().String(),
 		Timestamp: uint64(util.NowMs()),
@@ -50,18 +49,10 @@ func (s *Sender) NameRegistered(ctx context.Context, privateKey *easyecc.Private
 		Data1:     keyAddress,
 		Message:   "New name was registered",
 		Component: s.component}
-	b, err := proto.Marshal(event)
-	if err != nil {
-		return err
-	}
-	err = protoutil.SendMessage(ctx, privateKey, b, s.sender, s.target, s.lookupClient)
-	if err != nil {
-		return err
-	}
-	return err
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
 }
 
-func (s *Sender) AddressRegistered(ctx context.Context, privateKey *easyecc.PrivateKey, address string, name string) error {
+func (s *Sender) AddressRegistered(ctx context.Context, address string, name string) error {
 	event := &pb.Event{
 		Id:        uuid.New().String(),
 		Timestamp: uint64(util.NowMs()),
@@ -70,11 +61,49 @@ func (s *Sender) AddressRegistered(ctx context.Context, privateKey *easyecc.Priv
 		Data1:     address,
 		Message:   "New address was registered",
 		Component: s.component}
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
+}
+
+func (s *Sender) POPLogin(ctx context.Context, name string) error {
+	event := &pb.Event{
+		Id:        uuid.New().String(),
+		Timestamp: uint64(util.NowMs()),
+		EventType: pb.EventType_ET_PROXY_POP_LOGIN,
+		User1:     name,
+		Message:   "User logged in via POP",
+		Component: s.component}
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
+}
+
+func (s *Sender) IMAPLogin(ctx context.Context, name string) error {
+	event := &pb.Event{
+		Id:        uuid.New().String(),
+		Timestamp: uint64(util.NowMs()),
+		EventType: pb.EventType_ET_PROXY_IMAP_LOGIN,
+		User1:     name,
+		Message:   "User logged in via IMAP",
+		Component: s.component}
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
+}
+
+func (s *Sender) SMTPLogin(ctx context.Context, name string) error {
+	event := &pb.Event{
+		Id:        uuid.New().String(),
+		Timestamp: uint64(util.NowMs()),
+		EventType: pb.EventType_ET_PROXY_SMTP_LOGIN,
+		User1:     name,
+		Message:   "User logged in via SMTP",
+		Component: s.component}
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
+}
+
+func marshalAndSend(ctx context.Context, privateKey *easyecc.PrivateKey, sender, target string,
+	lookupClient pb.LookupServiceClient, event *pb.Event) error {
 	b, err := proto.Marshal(event)
 	if err != nil {
 		return err
 	}
-	err = protoutil.SendMessage(ctx, privateKey, b, s.sender, s.target, s.lookupClient)
+	err = protoutil.SendMessage(ctx, privateKey, b, sender, target, lookupClient)
 	if err != nil {
 		return err
 	}

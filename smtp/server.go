@@ -7,20 +7,24 @@ import (
 
 	gosmtp "github.com/emersion/go-smtp"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/event"
 	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
 )
 
 type ServerOptions struct {
-	Domain       string
-	Port         int
-	User         string
-	Password     string
-	LookupClient pb.LookupServiceClient
-	DumpClient   pb.DMSDumpServiceClient
-	PrivateKey   *easyecc.PrivateKey
-	CertFile     string
-	KeyFile      string
+	Domain                string
+	Port                  int
+	User                  string
+	Password              string
+	LookupClient          pb.LookupServiceClient
+	DumpClient            pb.DMSDumpServiceClient
+	PrivateKey            *easyecc.PrivateKey
+	CertFile              string
+	KeyFile               string
+	EventTarget           string
+	UbikomName            string
+	EventSenderPrivateKey *easyecc.PrivateKey
 }
 
 type Server struct {
@@ -30,7 +34,16 @@ type Server struct {
 }
 
 func NewServer(opts *ServerOptions) (*Server, error) {
-	backend := NewBackend(opts.User, opts.Password, opts.LookupClient, opts.DumpClient, opts.PrivateKey)
+	var eventSender *event.Sender
+	if opts.EventSenderPrivateKey != nil && opts.UbikomName != "" && opts.EventTarget != "" {
+		log.Debug().Msg("creating event sender")
+		eventSender = event.NewSender(opts.EventTarget, opts.UbikomName, "server",
+			opts.EventSenderPrivateKey, opts.LookupClient)
+	} else {
+		log.Warn().Msg("cannot create event sender")
+	}
+	backend := NewBackend(opts.User, opts.Password, opts.LookupClient, opts.DumpClient,
+		opts.PrivateKey, eventSender)
 	server := gosmtp.NewServer(backend)
 	server.Addr = fmt.Sprintf(":%d", opts.Port)
 	server.Domain = opts.Domain

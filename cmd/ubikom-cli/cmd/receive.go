@@ -219,51 +219,54 @@ var receiveEventCmd = &cobra.Command{
 
 		ctx := context.Background()
 		client := pb.NewDMSDumpServiceClient(dumpConn)
-		res, err := client.Receive(ctx, &pb.ReceiveRequest{IdentityProof: signed})
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to send message")
-		}
-		msg := res.GetMessage()
-
 		lookupConn, err := grpc.Dial(lookupServiceURL, opts...)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to connect to the lookup server")
 		}
 		defer lookupConn.Close()
 		lookupService := pb.NewLookupServiceClient(lookupConn)
-		lookupRes, err := lookupService.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get receiver public key")
-		}
-		senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
-		if err != nil {
-			log.Fatal().Err(err).Msg("invalid receiver public key")
-		}
 
-		if !protoutil.VerifySignature(msg.GetSignature(), lookupRes.GetKey(), msg.GetContent()) {
-			log.Fatal().Msg("signature verification failed")
-		}
+		for {
+			res, err := client.Receive(ctx, &pb.ReceiveRequest{IdentityProof: signed})
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to receive message")
+			}
+			msg := res.GetMessage()
 
-		content, err := privateKey.Decrypt(msg.Content, senderKey)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to decrypt message")
-		}
+			lookupRes, err := lookupService.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to get sender public key")
+			}
+			senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+			if err != nil {
+				log.Fatal().Err(err).Msg("invalid sender public key")
+			}
 
-		event := &pb.Event{}
-		err = proto.Unmarshal(content, event)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to unmarshal event")
-		}
+			if !protoutil.VerifySignature(msg.GetSignature(), lookupRes.GetKey(), msg.GetContent()) {
+				log.Fatal().Msg("signature verification failed")
+			}
 
-		marshalOpts := protojson.MarshalOptions{
-			Multiline: true,
-			Indent:    "  ",
-		}
-		json, err := marshalOpts.Marshal(event)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to marshal to JSON")
-		}
+			content, err := privateKey.Decrypt(msg.Content, senderKey)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to decrypt message")
+			}
 
-		fmt.Printf("%s\n", json)
+			event := &pb.Event{}
+			err = proto.Unmarshal(content, event)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to unmarshal event")
+			}
+
+			marshalOpts := protojson.MarshalOptions{
+				Multiline: true,
+				Indent:    "  ",
+			}
+			json, err := marshalOpts.Marshal(event)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to marshal to JSON")
+			}
+
+			fmt.Printf("%s\n", json)
+		}
 	},
 }
