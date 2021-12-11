@@ -125,7 +125,7 @@ func receive(ctx context.Context, privateKey *easyecc.PrivateKey, lookupClient p
 	for _, r := range receivers {
 		// Send the message.
 		log.Debug().Str("receiver", r).Msg("sending mail")
-		err = protoutil.SendMessage(ctx, privateKey, body, sender, r, lookupClient)
+		err = protoutil.SendEmail(ctx, privateKey, body, sender, r, lookupClient)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to send message")
 		}

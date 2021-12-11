@@ -5,7 +5,7 @@ TEMP_DIR=$(mktemp -d)
 GOOS="linux darwin windows"
 GOARCH="amd64 arm64"
 WIN_EXE=".exe"
-for BIN_NAME in ubikom-server ubikom-dump ubikom-cli ubikom-proxy easy-setup ubikom-gateway ubikom-web dbexport dbimport snap-print
+for BIN_NAME in ubikom-server ubikom-dump ubikom-cli ubikom-proxy easy-setup ubikom-gateway ubikom-web dbexport dbimport snap-print event-processor
 do
     MAIN_DIR="$SCRIPT_DIR/../cmd/$BIN_NAME"
     pushd $MAIN_DIR > /dev/null
@@ -13,6 +13,7 @@ do
     do
         for ARCH in $GOARCH
         do
+            echo Building $BIN_NAME for $OS $ARCH...
             SUFFIX=""
             if [ $OS == windows ]
             then

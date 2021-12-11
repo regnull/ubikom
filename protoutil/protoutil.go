@@ -80,13 +80,7 @@ func VerifySignature(sig *pb.Signature, serializedKey []byte, content []byte) bo
 // CreateMessages creates a new DMSMessage, signed and encrypted.
 func CreateMessage(privateKey *easyecc.PrivateKey, body []byte, sender, receiver string,
 	receiverKey *easyecc.PublicKey) (*pb.DMSMessage, error) {
-	headers := map[string]string{
-		"X-Ubikom-Sender":       sender,
-		"X-Ubikom-Sender-Key":   privateKey.PublicKey().Address(),
-		"X-Ubikom-Receiver":     receiver,
-		"X-Ubikom-Receiver-Key": receiverKey.Address()}
-	withHeaders := mail.AddHeaders(string(body), headers)
-	encryptedBody, err := privateKey.Encrypt([]byte(withHeaders), receiverKey)
+	encryptedBody, err := privateKey.Encrypt(body, receiverKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt message: %w", err)
 	}
@@ -106,6 +100,17 @@ func CreateMessage(privateKey *easyecc.PrivateKey, body []byte, sender, receiver
 			S: sig.S.Bytes(),
 		},
 	}, nil
+}
+
+// SendEmail adds Ubikom headers to the email message and sends it.
+func SendEmail(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
+	sender, receiver string, lookupService pb.LookupServiceClient) error {
+	withHeaders, err := mail.AddUbikomHeaders(ctx, string(body), sender, receiver,
+		privateKey.PublicKey(), lookupService)
+	if err != nil {
+		return err
+	}
+	return SendMessage(ctx, privateKey, []byte(withHeaders), sender, receiver, lookupService)
 }
 
 // SendMessage creates a new DMSMessage and sends it out to the appropriate address.

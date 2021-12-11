@@ -130,7 +130,7 @@ func (s *Session) Data(r io.Reader) error {
 	if len(externalAddresses) > 0 {
 		log.Debug().Str("sender", sender).Str("receiver", "gateway").Msg("about to send message to the gateway")
 
-		err = protoutil.SendMessage(context.Background(), s.privateKey, body, sender, "gateway", s.lookupClient)
+		err = protoutil.SendEmail(context.Background(), s.privateKey, body, sender, "gateway", s.lookupClient)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to send message")
 			return fmt.Errorf("failed to send message: %w", err)

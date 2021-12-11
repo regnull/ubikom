@@ -300,7 +300,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		err = protoutil.SendMessage(r.Context(), s.privateKey, []byte(body), s.name, s.notificationName, s.lookupClient)
+		err = protoutil.SendEmail(r.Context(), s.privateKey, []byte(body), s.name, s.notificationName, s.lookupClient)
 		if err != nil {
 			log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending notification message")
 		}

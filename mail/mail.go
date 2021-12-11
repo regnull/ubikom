@@ -2,12 +2,15 @@ package mail
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/mail"
 	"strings"
 	"time"
 
+	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
 )
 
@@ -260,4 +263,24 @@ Content-Language: en-US
 
 %s
 `, to, from, subject, time.Now().Format("02 Jan 06 15:04:05 -0700"), body)
+}
+
+func AddUbikomHeaders(ctx context.Context, body string, sender, receiver string,
+	senderKey *easyecc.PublicKey, lookupService pb.LookupServiceClient) (string, error) {
+	// Get receiver's public key.
+	lookupRes, err := lookupService.LookupName(ctx, &pb.LookupNameRequest{Name: receiver})
+	if err != nil {
+		return "", fmt.Errorf("failed to get receiver public key: %w", err)
+	}
+	receiverKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+	if err != nil {
+		return "", err
+	}
+	headers := map[string]string{
+		"X-Ubikom-Sender":       sender,
+		"X-Ubikom-Sender-Key":   senderKey.Address(),
+		"X-Ubikom-Receiver":     receiver,
+		"X-Ubikom-Receiver-Key": receiverKey.Address()}
+	withHeaders := AddHeaders(string(body), headers)
+	return withHeaders, nil
 }
