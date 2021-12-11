@@ -97,6 +97,19 @@ func (s *Sender) SMTPLogin(ctx context.Context, name string) error {
 	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
 }
 
+func (s *Sender) SMTPSend(ctx context.Context, name string, toInternal, toExternal string) error {
+	event := &pb.Event{
+		Id:        uuid.New().String(),
+		Timestamp: uint64(util.NowMs()),
+		EventType: pb.EventType_ET_PROXY_SMTP_MESSAGE_SENT,
+		User1:     name,
+		Message:   "User sent an SMTP message",
+		Component: s.component,
+		User2:     toInternal,
+		Data1:     toExternal}
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
+}
+
 func marshalAndSend(ctx context.Context, privateKey *easyecc.PrivateKey, sender, target string,
 	lookupClient pb.LookupServiceClient, event *pb.Event) error {
 	b, err := proto.Marshal(event)

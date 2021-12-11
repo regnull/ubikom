@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	gosmtp "github.com/emersion/go-smtp"
@@ -68,6 +69,7 @@ func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string
 		lookupClient: b.lookupClient,
 		dumpClient:   b.dumpClient,
 		privateKey:   privateKey,
+		eventSender:  b.eventSender,
 	}, nil
 }
 
@@ -85,6 +87,7 @@ type Session struct {
 	lookupClient pb.LookupServiceClient
 	dumpClient   pb.DMSDumpServiceClient
 	privateKey   *easyecc.PrivateKey
+	eventSender  *event.Sender
 }
 
 func (s *Session) Mail(from string, opts gosmtp.MailOptions) error {
@@ -145,6 +148,14 @@ func (s *Session) Data(r io.Reader) error {
 		if err != nil {
 			log.Error().Err(err).Msg("failed to send message")
 			return fmt.Errorf("failed to send message: %w", err)
+		}
+	}
+
+	if s.eventSender != nil {
+		err := s.eventSender.SMTPSend(context.TODO(), sender, strings.Join(internalAddresses, ", "),
+			strings.Join(externalAddresses, ", "))
+		if err != nil {
+			log.Error().Err(err).Msg("failed to send SMTP login event")
 		}
 	}
 
