@@ -124,7 +124,7 @@ func (s *Session) Data(r io.Reader) error {
 		if umail.IsInternal(to) {
 			internalAddresses = append(internalAddresses, umail.StripDomain(to))
 		} else {
-			externalAddresses = append(externalAddresses, umail.StripDomain(to))
+			externalAddresses = append(externalAddresses, to)
 		}
 	}
 
@@ -151,7 +151,12 @@ func (s *Session) Data(r io.Reader) error {
 	}
 
 	if s.eventSender != nil {
-		err := s.eventSender.SMTPSend(context.TODO(), sender, strings.Join(internalAddresses, ", "),
+		var dest []string
+		dest = append(dest, internalAddresses...)
+		if len(externalAddresses) > 0 {
+			dest = append(dest, "gateway")
+		}
+		err := s.eventSender.SMTPSend(context.TODO(), sender, strings.Join(dest, ", "),
 			strings.Join(externalAddresses, ", "))
 		if err != nil {
 			log.Error().Err(err).Msg("failed to send SMTP login event")

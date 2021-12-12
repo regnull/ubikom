@@ -34,7 +34,7 @@ func (s *Sender) KeyRegistered(ctx context.Context, keyAddress string) error {
 		Id:        uuid.New().String(),
 		Timestamp: uint64(util.NowMs()),
 		EventType: pb.EventType_ET_KEY_REGISTRATION,
-		Data1:     keyAddress,
+		User1:     keyAddress,
 		Message:   "New key was registered",
 		Component: s.component}
 	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
@@ -45,8 +45,8 @@ func (s *Sender) NameRegistered(ctx context.Context, keyAddress string, name str
 		Id:        uuid.New().String(),
 		Timestamp: uint64(util.NowMs()),
 		EventType: pb.EventType_ET_NAME_REGISTRATION,
-		User1:     name,
-		Data1:     keyAddress,
+		User1:     keyAddress,
+		Data1:     name,
 		Message:   "New name was registered",
 		Component: s.component}
 	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
@@ -107,6 +107,30 @@ func (s *Sender) SMTPSend(ctx context.Context, name string, toInternal, toExtern
 		Component: s.component,
 		User2:     toInternal,
 		Data1:     toExternal}
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
+}
+
+func (s *Sender) ExternalEmailSend(ctx context.Context, name string, toExternal string) error {
+	event := &pb.Event{
+		Id:        uuid.New().String(),
+		Timestamp: uint64(util.NowMs()),
+		EventType: pb.EventType_ET_GATEWAY_EMAIL_MESSAGE_SENT,
+		User1:     name,
+		Message:   "User sent an external email",
+		Component: s.component,
+		User2:     toExternal}
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
+}
+
+func (s *Sender) GatewayUbikomMessageSend(ctx context.Context, from, to string) error {
+	event := &pb.Event{
+		Id:        uuid.New().String(),
+		Timestamp: uint64(util.NowMs()),
+		EventType: pb.EventType_ET_GATEWAY_UBIKOM_MESSAGE_SENT,
+		User1:     from,
+		Message:   "Gateway sent message to internal user",
+		Component: s.component,
+		User2:     to}
 	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
 }
 

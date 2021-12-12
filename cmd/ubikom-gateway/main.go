@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/event"
 	"github.com/regnull/ubikom/gateway"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/mail"
@@ -33,6 +34,7 @@ type CmdArgs struct {
 	Receive               bool
 	SenderName            string
 	LogFile               string
+	EventTarget           string
 }
 
 func main() {
@@ -48,6 +50,7 @@ func main() {
 	flag.BoolVar(&args.Receive, "receive", false, "receive mail (if false, will monitor and send mail)")
 	flag.StringVar(&args.SenderName, "sender-name", defaultSenderName, "sender name (must correspond to the key)")
 	flag.StringVar(&args.LogFile, "log-file", "", "log file")
+	flag.StringVar(&args.EventTarget, "event-target", "ubikom-event-processor", "where to send events")
 	flag.Parse()
 
 	if args.LogFile != "" {
@@ -88,7 +91,7 @@ func main() {
 
 	if args.Receive {
 		// Receive mail and exit.
-		receive(ctx, privateKey, lookupClient, args.SenderName)
+		receive(ctx, privateKey, lookupClient, args.SenderName, args.EventTarget)
 		return
 	}
 
@@ -105,7 +108,13 @@ func main() {
 	send(ctx, privateKey, lookupClient, dumpClient, &args)
 }
 
-func receive(ctx context.Context, privateKey *easyecc.PrivateKey, lookupClient pb.LookupServiceClient, sender string) {
+func receive(ctx context.Context, privateKey *easyecc.PrivateKey, lookupClient pb.LookupServiceClient,
+	sender string, eventTarget string) {
+	var eventSender *event.Sender
+	if eventTarget != "" {
+		eventSender = event.NewSender(eventTarget, "gateway", "gateway", privateKey, lookupClient)
+	}
+
 	// Read the email from stdin.
 	body, err := io.ReadAll(os.Stdin)
 	if err != nil {
@@ -129,6 +138,12 @@ func receive(ctx context.Context, privateKey *easyecc.PrivateKey, lookupClient p
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to send message")
 		}
+		if eventSender != nil {
+			err = eventSender.GatewayUbikomMessageSend(ctx, "gateway", r)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send event")
+			}
+		}
 	}
 }
 
@@ -141,6 +156,7 @@ func send(ctx context.Context, privateKey *easyecc.PrivateKey, lookupClient pb.L
 		RateLimitPerHour: args.RateLimitPerHour,
 		PollInterval:     args.PollInterval,
 		ExternalSender:   gateway.NewSendmailSender(),
+		EventTarget:      args.EventTarget,
 	}
 
 	sender := gateway.NewSender(senderOpts)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/event"
 	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
@@ -24,6 +25,7 @@ type SenderOptions struct {
 	RateLimitPerHour int
 	PollInterval     time.Duration
 	ExternalSender   ExternalSender
+	EventTarget      string
 }
 
 // Sender sends emails to the outside world.
@@ -35,10 +37,15 @@ type Sender struct {
 	pollInterval     time.Duration
 	externalSender   ExternalSender
 	rateLimiters     map[string]*rate.Limiter
+	eventSender      *event.Sender
 }
 
 // NewSender creates and returns a new sender.
 func NewSender(opts *SenderOptions) *Sender {
+	var eventSender *event.Sender
+	if opts.EventTarget != "" {
+		eventSender = event.NewSender(opts.EventTarget, "gateway", "gateway", opts.PrivateKey, opts.LookupClient)
+	}
 	return &Sender{
 		privateKey:       opts.PrivateKey,
 		lookupClient:     opts.LookupClient,
@@ -46,7 +53,9 @@ func NewSender(opts *SenderOptions) *Sender {
 		rateLimitPerHour: opts.RateLimitPerHour,
 		pollInterval:     opts.PollInterval,
 		externalSender:   opts.ExternalSender,
-		rateLimiters:     make(map[string]*rate.Limiter)}
+		rateLimiters:     make(map[string]*rate.Limiter),
+		eventSender:      eventSender,
+	}
 }
 
 // Run blocks while running receive loop and returns when the context expires, or
@@ -127,12 +136,20 @@ func (s *Sender) poll(ctx context.Context) error {
 			continue
 		}
 
+		for _, target := range to {
+			err = s.eventSender.ExternalEmailSend(ctx, from, target)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send event")
+			}
+		}
+
 		// Pipe to sendmail.
 		err = s.externalSender.Send(from, rewritten)
 		if err != nil {
 			log.Error().Err(err).Msg("error sending mail")
 			continue
 		}
+		// TODO: Retry and notify the sender of any errors.
 
 		log.Debug().Strs("to", to).Msg("external mail sent")
 	}
