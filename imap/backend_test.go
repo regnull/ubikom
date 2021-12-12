@@ -14,7 +14,7 @@ func Test_NewBackend_Login(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	b := NewBackend(nil, nil, nil, "foo", "bar", nil)
+	b := NewBackend(nil, nil, nil, "foo", "bar", nil, nil)
 	require.NotNil(b)
 	user, err := b.Login(nil, "foo", "bar")
 	assert.NoError(err)

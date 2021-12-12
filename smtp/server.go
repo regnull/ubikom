@@ -37,7 +37,7 @@ func NewServer(opts *ServerOptions) (*Server, error) {
 	var eventSender *event.Sender
 	if opts.EventSenderPrivateKey != nil && opts.UbikomName != "" && opts.EventTarget != "" {
 		log.Debug().Msg("creating event sender")
-		eventSender = event.NewSender(opts.EventTarget, opts.UbikomName, "server",
+		eventSender = event.NewSender(opts.EventTarget, opts.UbikomName, "proxy",
 			opts.EventSenderPrivateKey, opts.LookupClient)
 	} else {
 		log.Warn().Msg("cannot create event sender")

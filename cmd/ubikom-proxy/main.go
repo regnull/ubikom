@@ -170,17 +170,20 @@ func main() {
 	}
 
 	popOpts := &pop.ServerOptions{
-		Ctx:          context.Background(),
-		Domain:       args.PopDomain,
-		Port:         args.PopPort,
-		User:         args.PopUser,
-		Password:     args.PopPassword,
-		DumpClient:   dumpClient,
-		LookupClient: lookupClient,
-		Key:          key,
-		CertFile:     args.TLSCertFile,
-		KeyFile:      args.TLSKeyFile,
-		ImapDB:       imapBadger,
+		Ctx:                   context.Background(),
+		Domain:                args.PopDomain,
+		Port:                  args.PopPort,
+		User:                  args.PopUser,
+		Password:              args.PopPassword,
+		DumpClient:            dumpClient,
+		LookupClient:          lookupClient,
+		Key:                   key,
+		CertFile:              args.TLSCertFile,
+		KeyFile:               args.TLSKeyFile,
+		ImapDB:                imapBadger,
+		EventSenderPrivateKey: eventSenderKey,
+		UbikomName:            args.EventSenderUbikomName,
+		EventTarget:           args.EventSenderTarget,
 	}
 
 	var wg sync.WaitGroup
@@ -222,17 +225,20 @@ func main() {
 	}()
 
 	imapOpts := &imap.ServerOptions{
-		Domain:         args.ImapDomain,
-		Port:           args.ImapPort,
-		User:           args.ImapUser,
-		Password:       args.ImapPassword,
-		PrivateKey:     key,
-		CertFile:       args.TLSCertFile,
-		KeyFile:        args.TLSKeyFile,
-		LookupClient:   lookupClient,
-		DumpClient:     dumpClient,
-		Badger:         imapBadger,
-		PrintDebugInfo: args.ImapPrintDebugInfo,
+		Domain:                args.ImapDomain,
+		Port:                  args.ImapPort,
+		User:                  args.ImapUser,
+		Password:              args.ImapPassword,
+		PrivateKey:            key,
+		CertFile:              args.TLSCertFile,
+		KeyFile:               args.TLSKeyFile,
+		LookupClient:          lookupClient,
+		DumpClient:            dumpClient,
+		Badger:                imapBadger,
+		PrintDebugInfo:        args.ImapPrintDebugInfo,
+		EventSenderPrivateKey: eventSenderKey,
+		UbikomName:            args.EventSenderUbikomName,
+		EventTarget:           args.EventSenderTarget,
 	}
 	imapServer := imap.NewServer(imapOpts)
 	go func() {

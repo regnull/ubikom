@@ -53,17 +53,16 @@ func (b *Backend) Login(state *gosmtp.ConnectionState, username, password string
 		var err error
 		privateKey, err = util.GetKeyFromNamePassword(ctx, username, password, b.lookupClient)
 		ok = err == nil
-	}
-	log.Debug().Bool("authorized", ok).Msg("[SMTP] -> LOGIN")
-	if !ok {
-		return nil, errors.New("invalid username or password")
-	} else {
-		if b.eventSender != nil {
-			err := b.eventSender.SMTPLogin(context.TODO(), username)
+		if ok && b.eventSender != nil {
+			err := b.eventSender.SMTPLogin(context.TODO(), privateKey.PublicKey().Address())
 			if err != nil {
 				log.Error().Err(err).Msg("failed to send SMTP login event")
 			}
 		}
+	}
+	log.Debug().Bool("authorized", ok).Msg("[SMTP] -> LOGIN")
+	if !ok {
+		return nil, errors.New("invalid username or password")
 	}
 	return &Session{
 		lookupClient: b.lookupClient,

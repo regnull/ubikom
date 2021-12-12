@@ -9,6 +9,7 @@ require (
 	github.com/emersion/go-imap-proxy v0.0.0-20200907082814-3567bcb5ed7c // indirect
 	github.com/emersion/go-message v0.15.0
 	github.com/emersion/go-smtp v0.15.0
+	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0
 	github.com/regnull/easyecc v0.1.4

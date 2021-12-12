@@ -9,6 +9,7 @@ import (
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/backend"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/event"
 	"github.com/regnull/ubikom/imap/db"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/util"
@@ -24,10 +25,11 @@ type Backend struct {
 	user         string
 	password     string
 	db           *db.Badger
+	eventSender  *event.Sender
 }
 
 func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServiceClient,
-	privateKey *easyecc.PrivateKey, user, password string, db *db.Badger) *Backend {
+	privateKey *easyecc.PrivateKey, user, password string, db *db.Badger, eventSender *event.Sender) *Backend {
 	log.Debug().Msg("IMAP backend created")
 	return &Backend{
 		dumpClient:   dumpClient,
@@ -35,7 +37,8 @@ func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServic
 		privateKey:   privateKey,
 		user:         user,
 		password:     password,
-		db:           db}
+		db:           db,
+		eventSender:  eventSender}
 }
 
 func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, error) {
@@ -55,6 +58,9 @@ func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, erro
 			log.Error().Err(err).Msg("failed to get private key")
 			log.Debug().Bool("authorized", false).Msg("[IMAP] -> LOGIN")
 			return nil, fmt.Errorf("failed to get private key")
+		}
+		if b.eventSender != nil {
+			b.eventSender.IMAPLogin(context.TODO(), privateKey.PublicKey().Address())
 		}
 	}
 	log.Debug().Bool("authorized", true).Msg("[IMAP] -> LOGIN")

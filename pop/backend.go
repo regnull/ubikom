@@ -9,6 +9,7 @@ import (
 
 	"github.com/emersion/go-imap"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/event"
 	"github.com/regnull/ubikom/imap/db"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
@@ -48,17 +49,18 @@ type Backend struct {
 	dumpClient   pb.DMSDumpServiceClient
 	lookupClient pb.LookupServiceClient
 	// If private key is nil, we expect to get key from the user.
-	privateKey *easyecc.PrivateKey
-	lock       sync.Mutex
-	user       string
-	password   string
-	sessions   map[string]*Session
-	imapDB     *db.Badger
+	privateKey  *easyecc.PrivateKey
+	lock        sync.Mutex
+	user        string
+	password    string
+	sessions    map[string]*Session
+	imapDB      *db.Badger
+	eventSender *event.Sender
 }
 
 func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServiceClient,
 	privateKey *easyecc.PrivateKey, user, password string,
-	imapDB *db.Badger) *Backend {
+	imapDB *db.Badger, eventSender *event.Sender) *Backend {
 	return &Backend{
 		dumpClient:   dumpClient,
 		lookupClient: lookupClient,
@@ -66,7 +68,8 @@ func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServic
 		user:         user,
 		password:     password,
 		sessions:     make(map[string]*Session),
-		imapDB:       imapDB}
+		imapDB:       imapDB,
+		eventSender:  eventSender}
 }
 
 func (b *Backend) Authorize(user, pass string) bool {
@@ -94,6 +97,12 @@ func (b *Backend) Authorize(user, pass string) bool {
 			PrivateKey: privateKey}
 		b.lock.Unlock()
 		ok = true
+		if b.eventSender != nil {
+			err := b.eventSender.POPLogin(context.TODO(), privateKey.PublicKey().Address())
+			if err != nil {
+				log.Error().Err(err).Msg("error sending event")
+			}
+		}
 	}
 
 	log.Debug().Bool("authorized", ok).Msg("[POP] -> LOGIN")
