@@ -136,10 +136,12 @@ func (s *Sender) poll(ctx context.Context) error {
 			continue
 		}
 
-		for _, target := range to {
-			err = s.eventSender.ExternalEmailSend(ctx, from, target)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to send event")
+		if s.eventSender != nil {
+			for _, target := range to {
+				err = s.eventSender.ExternalEmailSend(ctx, from, target)
+				if err != nil {
+					log.Error().Err(err).Msg("failed to send event")
+				}
 			}
 		}
 
