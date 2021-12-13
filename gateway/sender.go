@@ -146,12 +146,17 @@ func (s *Sender) poll(ctx context.Context) error {
 		}
 
 		// Pipe to sendmail.
-		err = s.externalSender.Send(from, rewritten)
+		out, err := s.externalSender.Send(from, rewritten)
 		if err != nil {
 			log.Error().Err(err).Msg("error sending mail")
+			subject, _ := mail.ExtractSubject(content)
+			err = NotifyMessageFailedToSend(ctx, s.privateKey, s.lookupClient,
+				msg.Sender, strings.Join(to, ", "), subject, out)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to send delivery failure notification")
+			}
 			continue
 		}
-		// TODO: Retry and notify the sender of any errors.
 
 		log.Debug().Strs("to", to).Msg("external mail sent")
 	}

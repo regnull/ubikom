@@ -37,10 +37,31 @@ Yours truly,
 Ubikom Gateway
 `
 
+const sendFailedTmpl = `
+Greetings from your friendly Ubikom Gateway!
+
+Unfortunately, there was an error sending your message. Here are some details:
+
+Originating user: {{.OriginatingUser}} 
+
+Recipient: {{.Recipient}} 
+
+Subject: {{.Subject}}
+
+Error: {{.ErrorText}}
+
+Please check your recipient address and try again.
+
+Yours truly,
+
+Ubikom Gateway
+`
+
 type messageArs struct {
 	OriginatingUser string
 	Recipient       string
 	Subject         string
+	ErrorText       string
 }
 
 func NotifyMessageBlocked(ctx context.Context,
@@ -63,7 +84,35 @@ func NotifyMessageBlocked(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	body := mail.NewMessage(notifyUser, "Ubikom Gateway", "outgoing message blocked", b.String())
+	body := mail.NewMessage(notifyUser, "gateway", "outgoing message blocked", b.String())
+	log.Debug().Str("to", notifyUser).Msg("sending notification")
+
+	// TODO: Pass gateway name instead of hardcoding.
+	return protoutil.SendMessage(ctx, privateKey, []byte(body), "gateway", notifyUser, lookupClient)
+}
+
+func NotifyMessageFailedToSend(ctx context.Context,
+	privateKey *easyecc.PrivateKey,
+	lookupClient pb.LookupServiceClient,
+	notifyUser string,
+	messageTo string,
+	subject string,
+	errorText string) error {
+	tmpl, err := template.New("notification").Parse(sendFailedTmpl)
+	if err != nil {
+		return err
+	}
+	var b bytes.Buffer
+	err = tmpl.Execute(&b, &messageArs{
+		OriginatingUser: notifyUser,
+		Recipient:       messageTo,
+		Subject:         subject,
+		ErrorText:       errorText,
+	})
+	if err != nil {
+		return err
+	}
+	body := mail.NewMessage(notifyUser, "gateway", "message delivery failure", b.String())
 	log.Debug().Str("to", notifyUser).Msg("sending notification")
 
 	// TODO: Pass gateway name instead of hardcoding.

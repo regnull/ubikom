@@ -52,6 +52,7 @@ type ReportArgs struct {
 	ExternalMessagesSent     int
 	ExternalMessagesReceived int
 	Fortune                  string
+	DiskInfo                 string
 }
 
 func main() {
@@ -148,6 +149,11 @@ func main() {
 	reportArgs.Fortune, err = GetFortune()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get fortune")
+	}
+
+	reportArgs.DiskInfo, err = GetDiskInfo()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get disk info")
 	}
 
 	report, err := GenerateReport(reportArgs)
@@ -457,6 +463,10 @@ Until next time,
 P.S. 
 
 {{.Fortune}}
+
+--- Disk Space ---
+
+{{.DiskInfo}}
 `
 	reportTmpl, err := template.New("report").Parse(reportTmplTxt)
 	if err != nil {
@@ -472,6 +482,20 @@ P.S.
 
 func GetFortune() (string, error) {
 	cmd := exec.Command("bash", "-c", "fortune | cowsay")
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+
+	if err != nil {
+		return "", err
+	}
+	return out.String(), nil
+}
+
+func GetDiskInfo() (string, error) {
+	cmd := exec.Command("/bin/df", "-h")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out

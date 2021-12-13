@@ -7,7 +7,7 @@ import (
 
 // ExternalSender represents anything that can send an email to the outside world.
 type ExternalSender interface {
-	Send(from string, message string) error
+	Send(from string, message string) (string, error)
 }
 
 // SendmailSender implements ExternalSender and sends mail using sendmail.
@@ -20,12 +20,16 @@ func NewSendmailSender() *SendmailSender {
 }
 
 // Send sends email to the outside world.
-func (s *SendmailSender) Send(from string, message string) error {
+func (s *SendmailSender) Send(from string, message string) (string, error) {
 	cmd := exec.Command("sendmail", "-t", "-f", from)
 	cmd.Stdin = bytes.NewReader([]byte(message))
 	err := cmd.Run()
 	if err != nil {
-		return err
+		out, err1 := cmd.CombinedOutput()
+		if err1 != nil {
+			return "", err
+		}
+		return string(out), err
 	}
-	return nil
+	return "", nil
 }
