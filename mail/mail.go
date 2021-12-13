@@ -253,8 +253,8 @@ func AddHeaders(content string, headers map[string]string) string {
 }
 
 func NewMessage(to, from string, subject string, body string) string {
-	return fmt.Sprintf(`To: %s@x
-From: %s@x
+	return fmt.Sprintf(`To: %s@ubikom.cc
+From: %s@ubikom.cc
 Subject: %s
 Date: %s
 Content-Type: text/plain; charset=utf-8; format=flowed

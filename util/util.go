@@ -300,3 +300,12 @@ func ContainsFlag(flags []string, flag string) bool {
 	}
 	return false
 }
+
+// FileNameNoExtension returns file name without extension.
+func FileNameNoExtension(filePath string) string {
+	b := path.Base(filePath)
+	if pos := strings.LastIndexByte(b, '.'); pos != -1 {
+		return b[:pos]
+	}
+	return b
+}

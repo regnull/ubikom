@@ -95,3 +95,11 @@ func Test_NowUint32(t *testing.T) {
 	now := NowUint32()
 	assert.True(now > 1636658188)
 }
+
+func Test_FileNameNoExtension(t *testing.T) {
+	assert := assert.New(t)
+
+	assert.Equal("foo", FileNameNoExtension("foo"))
+	assert.Equal("foo", FileNameNoExtension("foo.bar"))
+	assert.Equal("foo", FileNameNoExtension("/bar/baz/foo.xyz"))
+}

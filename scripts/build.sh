@@ -2,10 +2,12 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" > /dev/null 2>&1 && pwd )"
 TEMP_DIR=$(mktemp -d)
-GOOS="linux darwin windows"
-GOARCH="amd64 arm64"
+#GOOS="linux darwin windows"
+GOOS="linux darwin"
+#GOARCH="amd64 arm64"
+GOARCH="amd64"
 WIN_EXE=".exe"
-for BIN_NAME in ubikom-server ubikom-dump ubikom-cli ubikom-proxy easy-setup ubikom-gateway ubikom-web dbexport dbimport snap-print event-processor
+for BIN_NAME in ubikom-server ubikom-dump ubikom-cli ubikom-proxy easy-setup ubikom-gateway ubikom-web dbexport dbimport snap-print event-processor daily-report
 do
     MAIN_DIR="$SCRIPT_DIR/../cmd/$BIN_NAME"
     pushd $MAIN_DIR > /dev/null
