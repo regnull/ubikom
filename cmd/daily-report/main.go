@@ -42,15 +42,16 @@ type Registration struct {
 }
 
 type ReportArgs struct {
-	RegNum               int
-	Registrations        []*Registration
-	IMAPClientNum        int
-	POPClientNum         int
-	ClientNum            int
-	NewClientNum         int
-	SMTPMessagesSent     int
-	ExternalMessagesSent int
-	Fortune              string
+	RegNum                   int
+	Registrations            []*Registration
+	IMAPClientNum            int
+	POPClientNum             int
+	ClientNum                int
+	NewClientNum             int
+	SMTPMessagesSent         int
+	ExternalMessagesSent     int
+	ExternalMessagesReceived int
+	Fortune                  string
 }
 
 func main() {
@@ -137,6 +138,11 @@ func main() {
 	reportArgs.ExternalMessagesSent, err = GetExternalMessagesSent(db)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get external messages sent")
+	}
+
+	reportArgs.ExternalMessagesReceived, err = GetExternalMessagesReceived(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get external messages received")
 	}
 
 	reportArgs.Fortune, err = GetFortune()
@@ -394,6 +400,31 @@ WHERE
 	return num, nil
 }
 
+func GetExternalMessagesReceived(db *sql.DB) (int, error) {
+	const query = `
+SELECT
+	COUNT(*)
+FROM
+	events
+WHERE
+		event_type = 'ET_GATEWAY_UBIKOM_MESSAGE_SENT' AND
+		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	rows, err := db.Query(query)
+	if err != nil {
+		return 0, err
+	}
+	var num int
+	if !rows.Next() {
+		return 0, fmt.Errorf("no data found")
+	}
+	err = rows.Scan(&num)
+	if err != nil {
+		return 0, nil
+	}
+	return num, nil
+}
+
 func GenerateReport(args *ReportArgs) (string, error) {
 	const reportTmplTxt = `Greetings humans!
 
@@ -410,6 +441,8 @@ There were {{.NewClientNum}} new clients who actually used the service.
 There were {{.SMTPMessagesSent}} messages sent via SMTP.
 
 {{.ExternalMessagesSent}} messages were sent to external recipients.
+
+{{.ExternalMessagesReceived}} messages were received from external users.
 
 Here's the list of names that were registered:
 
