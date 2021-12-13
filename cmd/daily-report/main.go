@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"text/template"
 	"time"
@@ -37,15 +38,19 @@ type CmdArgs struct {
 
 type Registration struct {
 	Name      string
-	Timestamp time.Time
+	Timestamp string
 }
 
 type ReportArgs struct {
-	RegNum        int
-	Registrations []*Registration
-	IMAPClientNum int
-	POPClientNum  int
-	ClientNum     int
+	RegNum               int
+	Registrations        []*Registration
+	IMAPClientNum        int
+	POPClientNum         int
+	ClientNum            int
+	NewClientNum         int
+	SMTPMessagesSent     int
+	ExternalMessagesSent int
+	Fortune              string
 }
 
 func main() {
@@ -64,7 +69,9 @@ func main() {
 	flag.StringVar(&recipients, "recipients", "", "report recipients")
 	flag.Parse()
 
-	args.ReportRecipients = strings.Split(recipients, ",")
+	if len(recipients) > 0 {
+		args.ReportRecipients = strings.Split(recipients, ",")
+	}
 
 	privateKey, ubikomName, err := ReadKey(args.Key)
 	if err != nil {
@@ -117,11 +124,36 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to get pop clients num")
 	}
 
+	reportArgs.NewClientNum, err = GetNewClientNum(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get new clients num")
+	}
+
+	reportArgs.SMTPMessagesSent, err = GetSMTPMessagesSent(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get smtp messages sent")
+	}
+
+	reportArgs.ExternalMessagesSent, err = GetExternalMessagesSent(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get external messages sent")
+	}
+
+	reportArgs.Fortune, err = GetFortune()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get fortune")
+	}
+
 	report, err := GenerateReport(reportArgs)
 	if err != nil {
 		log.Fatal().Err(err).Msg("error generating report")
 	}
-	fmt.Printf("%s\n", report)
+
+	// If there are no recipients, just print out the report.
+	if len(args.ReportRecipients) == 0 {
+		fmt.Printf("%s\n", report)
+		return
+	}
 
 	for _, r := range args.ReportRecipients {
 		message := mail.NewMessage(r, ubikomName, "Ubikom Daily Report", report)
@@ -193,12 +225,7 @@ ORDER BY
 	var res []*Registration
 	for rows.Next() {
 		reg := &Registration{}
-		var ts string
-		err = rows.Scan(&reg.Name, &ts)
-		if err != nil {
-			return nil, err
-		}
-		reg.Timestamp, err = time.Parse("2006-01-02 15:04:05", ts)
+		err = rows.Scan(&reg.Name, &reg.Timestamp)
 		if err != nil {
 			return nil, err
 		}
@@ -283,6 +310,90 @@ WHERE
 	return num, nil
 }
 
+func GetNewClientNum(db *sql.DB) (int, error) {
+	const query = `
+SELECT
+	COUNT(DISTINCT user1)
+FROM
+	events
+WHERE	
+	user1 NOT IN (
+	        SELECT
+			DISTINCT user1
+	        FROM
+			events
+		WHERE
+			(event_type = 'ET_PROXY_POP_LOGIN' or event_type = 'ET_PROXY_IMAP_LOGIN') AND
+  			timestamp < DATE_ADD(NOW(), INTERVAL -1 DAY)
+	) AND
+		(event_type = 'ET_PROXY_POP_LOGIN' or event_type = 'ET_PROXY_IMAP_LOGIN') AND
+		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	rows, err := db.Query(query)
+	if err != nil {
+		return 0, err
+	}
+	var num int
+	if !rows.Next() {
+		return 0, fmt.Errorf("no data found")
+	}
+	err = rows.Scan(&num)
+	if err != nil {
+		return 0, nil
+	}
+	return num, nil
+}
+
+func GetSMTPMessagesSent(db *sql.DB) (int, error) {
+	const query = `
+SELECT
+	COUNT(*)
+FROM
+	events
+WHERE
+		event_type = 'ET_PROXY_SMTP_MESSAGE_SENT' AND
+		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	rows, err := db.Query(query)
+	if err != nil {
+		return 0, err
+	}
+	var num int
+	if !rows.Next() {
+		return 0, fmt.Errorf("no data found")
+	}
+	err = rows.Scan(&num)
+	if err != nil {
+		return 0, nil
+	}
+	return num, nil
+}
+
+func GetExternalMessagesSent(db *sql.DB) (int, error) {
+	const query = `
+SELECT
+	COUNT(*)
+FROM
+	events
+WHERE
+		event_type = 'ET_GATEWAY_EMAIL_MESSAGE_SENT' AND
+		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	rows, err := db.Query(query)
+	if err != nil {
+		return 0, err
+	}
+	var num int
+	if !rows.Next() {
+		return 0, fmt.Errorf("no data found")
+	}
+	err = rows.Scan(&num)
+	if err != nil {
+		return 0, nil
+	}
+	return num, nil
+}
+
 func GenerateReport(args *ReportArgs) (string, error) {
 	const reportTmplTxt = `Greetings humans!
 
@@ -294,15 +405,25 @@ In the last 24 hours, we had {{.RegNum}} new registrations.
 We also had {{.ClientNum}} clients actually using the service, which includes {{.IMAPClientNum}} IMAP clients
 and {{.POPClientNum}} POP clients.
 
+There were {{.NewClientNum}} new clients who actually used the service.
+
+There were {{.SMTPMessagesSent}} messages sent via SMTP.
+
+{{.ExternalMessagesSent}} messages were sent to external recipients.
+
 Here's the list of names that were registered:
 
 {{range .Registrations}}
-Name: {{.Name}} Time: {{.Timestamp}}
+Name: {{printf "%-20s" .Name}} Time: {{.Timestamp}}
 {{end}}
 
 Until next time,
 
 	Ubikom Report Generator
+
+P.S. 
+
+{{.Fortune}}
 `
 	reportTmpl, err := template.New("report").Parse(reportTmplTxt)
 	if err != nil {
@@ -314,4 +435,18 @@ Until next time,
 		return "", err
 	}
 	return b.String(), nil
+}
+
+func GetFortune() (string, error) {
+	cmd := exec.Command("bash", "-c", "fortune | cowsay")
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+
+	if err != nil {
+		return "", err
+	}
+	return out.String(), nil
 }
