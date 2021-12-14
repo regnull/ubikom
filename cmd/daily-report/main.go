@@ -495,7 +495,7 @@ func GetFortune() (string, error) {
 }
 
 func GetDiskInfo() (string, error) {
-	cmd := exec.Command("/bin/df", "-h")
+	cmd := exec.Command("bash", "-c", "/bin/df -h | grep -v loop")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
