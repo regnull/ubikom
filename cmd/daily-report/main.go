@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -34,6 +35,7 @@ type CmdArgs struct {
 	DBPassword       string
 	UbikomName       string
 	ReportRecipients []string
+	LogFile          string
 }
 
 type Registration struct {
@@ -42,6 +44,7 @@ type Registration struct {
 }
 
 type ReportArgs struct {
+	TotalRegNum              int
 	RegNum                   int
 	Registrations            []*Registration
 	IMAPClientNum            int
@@ -56,9 +59,6 @@ type ReportArgs struct {
 }
 
 func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05", NoColor: true})
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-
 	args := &CmdArgs{}
 	flag.StringVar(&args.DumpServiceURL, "dump-service-url", globals.PublicDumpServiceURL, "dump service URL")
 	flag.StringVar(&args.LookupServiceURL, "lookup-service-url", globals.PublicLookupServiceURL, "lookup service URL")
@@ -69,7 +69,28 @@ func main() {
 	flag.StringVar(&args.UbikomName, "ubikom-name", "", "ubikom name")
 	var recipients string
 	flag.StringVar(&recipients, "recipients", "", "report recipients")
+	flag.StringVar(&args.LogFile, "log-file", "", "log file")
 	flag.Parse()
+
+	var logWriter io.Writer
+	if args.LogFile != "" {
+		f, err := os.OpenFile(args.LogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			fmt.Printf("failed to open log file: %s\n", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		logWriter = f
+
+	} else {
+		logWriter = os.Stderr
+	}
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: logWriter, TimeFormat: "15:04:05", NoColor: true})
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+
+	argsCopy := *args
+	argsCopy.DBPassword = "*****"
+	log.Info().Interface("args", argsCopy).Msg("starting")
 
 	if len(recipients) > 0 {
 		args.ReportRecipients = strings.Split(recipients, ",")
@@ -104,6 +125,12 @@ func main() {
 	}
 
 	reportArgs := &ReportArgs{}
+
+	reportArgs.TotalRegNum, err = GetTotalRegistrations(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get total registrations")
+	}
+
 	reg, err := GetRegistrations(db)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get registration")
@@ -164,6 +191,7 @@ func main() {
 	// If there are no recipients, just print out the report.
 	if len(args.ReportRecipients) == 0 {
 		fmt.Printf("%s\n", report)
+		log.Info().Msg("done!")
 		return
 	}
 
@@ -174,6 +202,7 @@ func main() {
 			log.Fatal().Err(err).Msg("failed to send daily report")
 		}
 	}
+	log.Info().Msg("done!")
 }
 
 func ReadKey(keyFile string) (*easyecc.PrivateKey, string, error) {
@@ -246,6 +275,18 @@ ORDER BY
 	return res, nil
 }
 
+func GetTotalRegistrations(db *sql.DB) (int, error) {
+	const query = `
+SELECT 
+	COUNT(data1)
+FROM 
+	events
+WHERE
+	event_type = 'ET_NAME_REGISTRATION'
+`
+	return getNumberFromQuery(db, query)
+}
+
 func GetPOPClientNum(db *sql.DB) (int, error) {
 	const query = `
 SELECT 
@@ -256,19 +297,7 @@ WHERE
 	  event_type = 'ET_PROXY_POP_LOGIN' AND
 	  timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
-	rows, err := db.Query(query)
-	if err != nil {
-		return 0, err
-	}
-	var num int
-	if !rows.Next() {
-		return 0, fmt.Errorf("no data found")
-	}
-	err = rows.Scan(&num)
-	if err != nil {
-		return 0, nil
-	}
-	return num, nil
+	return getNumberFromQuery(db, query)
 }
 
 func GetIMAPClientNum(db *sql.DB) (int, error) {
@@ -281,19 +310,7 @@ WHERE
 	  event_type = 'ET_PROXY_IMAP_LOGIN' AND
 	  timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
-	rows, err := db.Query(query)
-	if err != nil {
-		return 0, err
-	}
-	var num int
-	if !rows.Next() {
-		return 0, fmt.Errorf("no data found")
-	}
-	err = rows.Scan(&num)
-	if err != nil {
-		return 0, nil
-	}
-	return num, nil
+	return getNumberFromQuery(db, query)
 }
 
 func GetClientNum(db *sql.DB) (int, error) {
@@ -307,19 +324,7 @@ WHERE
 	  	 event_type = 'ET_PROXY_IMAP_LOGIN') AND
 	  timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
-	rows, err := db.Query(query)
-	if err != nil {
-		return 0, err
-	}
-	var num int
-	if !rows.Next() {
-		return 0, fmt.Errorf("no data found")
-	}
-	err = rows.Scan(&num)
-	if err != nil {
-		return 0, nil
-	}
-	return num, nil
+	return getNumberFromQuery(db, query)
 }
 
 func GetNewClientNum(db *sql.DB) (int, error) {
@@ -341,19 +346,7 @@ WHERE
 		(event_type = 'ET_PROXY_POP_LOGIN' or event_type = 'ET_PROXY_IMAP_LOGIN') AND
 		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
-	rows, err := db.Query(query)
-	if err != nil {
-		return 0, err
-	}
-	var num int
-	if !rows.Next() {
-		return 0, fmt.Errorf("no data found")
-	}
-	err = rows.Scan(&num)
-	if err != nil {
-		return 0, nil
-	}
-	return num, nil
+	return getNumberFromQuery(db, query)
 }
 
 func GetSMTPMessagesSent(db *sql.DB) (int, error) {
@@ -366,19 +359,7 @@ WHERE
 		event_type = 'ET_PROXY_SMTP_MESSAGE_SENT' AND
 		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
-	rows, err := db.Query(query)
-	if err != nil {
-		return 0, err
-	}
-	var num int
-	if !rows.Next() {
-		return 0, fmt.Errorf("no data found")
-	}
-	err = rows.Scan(&num)
-	if err != nil {
-		return 0, nil
-	}
-	return num, nil
+	return getNumberFromQuery(db, query)
 }
 
 func GetExternalMessagesSent(db *sql.DB) (int, error) {
@@ -391,19 +372,7 @@ WHERE
 		event_type = 'ET_GATEWAY_EMAIL_MESSAGE_SENT' AND
 		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
-	rows, err := db.Query(query)
-	if err != nil {
-		return 0, err
-	}
-	var num int
-	if !rows.Next() {
-		return 0, fmt.Errorf("no data found")
-	}
-	err = rows.Scan(&num)
-	if err != nil {
-		return 0, nil
-	}
-	return num, nil
+	return getNumberFromQuery(db, query)
 }
 
 func GetExternalMessagesReceived(db *sql.DB) (int, error) {
@@ -416,19 +385,7 @@ WHERE
 		event_type = 'ET_GATEWAY_UBIKOM_MESSAGE_SENT' AND
 		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
-	rows, err := db.Query(query)
-	if err != nil {
-		return 0, err
-	}
-	var num int
-	if !rows.Next() {
-		return 0, fmt.Errorf("no data found")
-	}
-	err = rows.Scan(&num)
-	if err != nil {
-		return 0, nil
-	}
-	return num, nil
+	return getNumberFromQuery(db, query)
 }
 
 func GenerateReport(args *ReportArgs) (string, error) {
@@ -437,7 +394,9 @@ func GenerateReport(args *ReportArgs) (string, error) {
 This is Ubikom Report Generator, broadcasting live from Ubikom world headquaters, and boy,
 do I have some stats for you!
 
-In the last 24 hours, we had {{.RegNum}} new registrations.
+Names registered (all time): {{.TotalRegNum}}
+
+Names registered (past 24 hours): {{.RegNum}} 
 
 We also had {{.ClientNum}} clients actually using the service, which includes {{.IMAPClientNum}} IMAP clients
 and {{.POPClientNum}} POP clients.
@@ -450,7 +409,7 @@ There were {{.SMTPMessagesSent}} messages sent via SMTP.
 
 {{.ExternalMessagesReceived}} messages were received from external users.
 
-Here's the list of names that were registered:
+Here's the list of names that were registered (past 24 hours):
 
 {{range .Registrations}}
 Name: {{printf "%-20s" .Name}} Time: {{.Timestamp}}
@@ -481,29 +440,41 @@ P.S.
 }
 
 func GetFortune() (string, error) {
-	cmd := exec.Command("bash", "-c", "fortune | cowsay")
-
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	err := cmd.Run()
-
-	if err != nil {
-		return "", err
-	}
-	return out.String(), nil
+	cmd := exec.Command("bash", "-c", "/usr/games/fortune | /usr/games/cowsay")
+	return execute(cmd)
 }
 
 func GetDiskInfo() (string, error) {
 	cmd := exec.Command("bash", "-c", "/bin/df -h | grep -v loop")
+	return execute(cmd)
+}
 
-	var out bytes.Buffer
-	cmd.Stdout = &out
+func execute(cmd *exec.Cmd) (string, error) {
+	var outBuf bytes.Buffer
+	var errBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
 
 	err := cmd.Run()
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w, %s, %s", err, outBuf.String(), errBuf.String())
 	}
-	return out.String(), nil
+	return outBuf.String(), nil
+}
+
+func getNumberFromQuery(db *sql.DB, query string) (int, error) {
+	rows, err := db.Query(query)
+	if err != nil {
+		return 0, err
+	}
+	var num int
+	if !rows.Next() {
+		return 0, fmt.Errorf("no data found")
+	}
+	err = rows.Scan(&num)
+	if err != nil {
+		return 0, nil
+	}
+	return num, nil
 }
