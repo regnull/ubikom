@@ -88,12 +88,6 @@ func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentitySe
 }
 
 func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
-	if !s.rateLimiter.Allow() {
-		log.Warn().Msg("rate limit triggered")
-		w.WriteHeader(http.StatusTooManyRequests)
-		return
-	}
-
 	name := r.URL.Query().Get("name")
 	_, err := s.lookupClient.LookupName(r.Context(), &pb.LookupNameRequest{
 		Name: name,
@@ -132,6 +126,11 @@ type EasySetupRequest struct {
 
 func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	log.Debug().Str("origin", r.RemoteAddr).Msg("got registration request")
+	if !s.rateLimiter.Allow() {
+		log.Warn().Msg("rate limit triggered")
+		w.WriteHeader(http.StatusTooManyRequests)
+		return
+	}
 	name := ""
 	password := ""
 	useMainKey := true
