@@ -51,6 +51,7 @@ type ReportArgs struct {
 	POPClientNum             int
 	ClientNum                int
 	NewClientNum             int
+	TotalClientNum           int
 	SMTPMessagesSent         int
 	ExternalMessagesSent     int
 	ExternalMessagesReceived int
@@ -156,6 +157,11 @@ func main() {
 	reportArgs.NewClientNum, err = GetNewClientNum(db)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get new clients num")
+	}
+
+	reportArgs.TotalClientNum, err = GetTotalClientNum(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get total clients num")
 	}
 
 	reportArgs.SMTPMessagesSent, err = GetSMTPMessagesSent(db)
@@ -349,6 +355,19 @@ WHERE
 	return getNumberFromQuery(db, query)
 }
 
+func GetTotalClientNum(db *sql.DB) (int, error) {
+	const query = `
+SELECT 
+	COUNT(DISTINCT user1)
+FROM 
+	events
+WHERE
+	  (event_type = 'ET_PROXY_POP_LOGIN' OR 
+	  	 event_type = 'ET_PROXY_IMAP_LOGIN')
+`
+	return getNumberFromQuery(db, query)
+}
+
 func GetSMTPMessagesSent(db *sql.DB) (int, error) {
 	const query = `
 SELECT
@@ -396,12 +415,17 @@ do I have some stats for you!
 
 Names registered (all time): {{.TotalRegNum}}
 
-Names registered (past 24 hours): {{.RegNum}} 
+Names registered (past 24 hours): {{.RegNum}}
 
-We also had {{.ClientNum}} clients actually using the service, which includes {{.IMAPClientNum}} IMAP clients
-and {{.POPClientNum}} POP clients.
+Total actual clients (all time): {{.TotalClientNum}}
 
-There were {{.NewClientNum}} new clients who actually used the service.
+Actual clients (past 24 hours): {{.ClientNum}}
+
+Actual clients, POP (past 24 hours): {{.POPClientNum}}
+
+Actual clients, IMAP (past 24 hours): {{.IMAPClientNum}}
+
+New actual clients (past 24 hours): {{.NewClientNum}}
 
 There were {{.SMTPMessagesSent}} messages sent via SMTP.
 
