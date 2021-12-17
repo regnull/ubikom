@@ -257,7 +257,8 @@ func GetKeyFromNamePassword(ctx context.Context, name string, pass string,
 	}
 
 	// Try hash of the user name as salt first.
-	privateKey := easyecc.NewPrivateKeyFromPassword([]byte(pass), Hash256([]byte(n)))
+	privateKey := easyecc.NewPrivateKeyFromPassword([]byte(pass),
+		Hash256([]byte(strings.ToLower(n))))
 	res, err := lookupClient.LookupKey(ctx, &pb.LookupKeyRequest{
 		Key: privateKey.PublicKey().SerializeCompressed()})
 	if err == nil {
