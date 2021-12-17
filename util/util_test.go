@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -77,10 +78,13 @@ func Test_GetKeyFromNamePassword(t *testing.T) {
 	assert.NoError(err)
 	salt := saltArr[:]
 	name = base58.Encode(salt[:])
-	candidateKey := easyecc.NewPrivateKeyFromPassword([]byte(password), Hash256([]byte(name)))
+	candidateKey1 := easyecc.NewPrivateKeyFromPassword([]byte(password), Hash256([]byte(strings.ToLower(name))))
+	candidateKey2 := easyecc.NewPrivateKeyFromPassword([]byte(password), Hash256([]byte(name)))
 	expectedKey = easyecc.NewPrivateKeyFromPassword([]byte(password), salt)
 	lookup.On("LookupKey", ctx, &pb.LookupKeyRequest{
-		Key: candidateKey.PublicKey().SerializeCompressed()}).Return(nil, errors.New("not found"))
+		Key: candidateKey1.PublicKey().SerializeCompressed()}).Return(nil, errors.New("not found"))
+	lookup.On("LookupKey", ctx, &pb.LookupKeyRequest{
+		Key: candidateKey2.PublicKey().SerializeCompressed()}).Return(nil, errors.New("not found"))
 	lookup.On("LookupKey", ctx, &pb.LookupKeyRequest{
 		Key: expectedKey.PublicKey().SerializeCompressed()}).Return(&pb.LookupKeyResponse{}, nil)
 	actualKey, err = GetKeyFromNamePassword(ctx, name, password, lookup)
