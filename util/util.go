@@ -268,6 +268,19 @@ func GetKeyFromNamePassword(ctx context.Context, name string, pass string,
 		return privateKey, nil
 	}
 
+	// Try without lowercasing the user id, so that the clients who created
+	// the user id before can still work.
+	privateKey = easyecc.NewPrivateKeyFromPassword([]byte(pass),
+		Hash256([]byte(n)))
+	res, err = lookupClient.LookupKey(ctx, &pb.LookupKeyRequest{
+		Key: privateKey.PublicKey().SerializeCompressed()})
+	if err == nil {
+		if res.Disabled {
+			return nil, fmt.Errorf("the key is disabled")
+		}
+		return privateKey, nil
+	}
+
 	// We used to have user name as Base 58 representation of a random 8 byte number,
 	// try that.
 	salt := base58.Decode(name)
