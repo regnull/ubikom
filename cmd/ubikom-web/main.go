@@ -224,7 +224,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Create the email key.
 
-	salt := util.Hash256([]byte(name))
+	salt := util.Hash256([]byte(strings.ToLower(name)))
 	emailKey := easyecc.NewPrivateKeyFromPassword([]byte(password), salt)
 
 	// Register the email key.
@@ -309,19 +309,29 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	if useMainKey {
 		fmt.Fprintf(w, `{
 		"name": "%s",
+		"email": "%s@ubikom.cc",
 		"user_name": "%s", 
 		"server_url": "alpha.ubikom.cc",
+		"incoming_server_url": "imap.ubikom.cc",
+		"outgoing_server_url": "smtp.ubikom.cc",
+		"incoming_server_port": "993",
+		"outgoing_server_port": "495",
 		"key_mnemonic": [%s],
 		"key_id": "%s",
 		"password": "%s"
-}`, name, name, strings.Join(mnemonicQuoted, ", "), keyID, password)
+}`, name, name, name, strings.Join(mnemonicQuoted, ", "), keyID, password)
 	} else {
 		fmt.Fprintf(w, `{
 			"name": "%s",
+			"email": "%s@ubikom.cc",
 			"user_name": "%s", 
 			"server_url": "alpha.ubikom.cc",
+			"incoming_server_url": "imap.ubikom.cc",
+			"outgoing_server_url": "smtp.ubikom.cc",
+			"incoming_server_port": "993",
+			"outgoing_server_port": "495",
 			"password": "%s"
-	}`, name, name, password)
+	}`, name, name, name, password)
 	}
 }
 
