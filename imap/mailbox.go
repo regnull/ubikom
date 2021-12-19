@@ -307,6 +307,7 @@ func (m *Mailbox) ListMessages(uid bool, seqset *imap.SeqSet, items []imap.Fetch
 
 		// Make sure we return this message marked as recent only once.
 		if util.ContainsFlag(m2.Flags, imap.RecentFlag) {
+			msg.Flag = util.ClearFlag(msg.Flag, imap.RecentFlag)
 			err = m.db.SaveMessage(m.user, m.uid, msg, m.privateKey)
 			if err != nil {
 				m.logError(err).Msg("failed to save message")

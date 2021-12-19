@@ -315,6 +315,18 @@ func ContainsFlag(flags []string, flag string) bool {
 	return false
 }
 
+// Clear flag clears the specified flag from the flag set.
+func ClearFlag(flags []string, flag string) []string {
+	var newFlags []string
+	for _, f := range flags {
+		if f == flag {
+			continue
+		}
+		newFlags = append(newFlags, f)
+	}
+	return newFlags
+}
+
 // FileNameNoExtension returns file name without extension.
 func FileNameNoExtension(filePath string) string {
 	b := path.Base(filePath)

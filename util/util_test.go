@@ -100,6 +100,21 @@ func Test_NowUint32(t *testing.T) {
 	assert.True(now > 1636658188)
 }
 
+func Test_ClearFlag(t *testing.T) {
+	assert := assert.New(t)
+
+	flags := []string{"foo", "bar", "baz", "xyz"}
+	newFlags := ClearFlag(flags, "zzz")
+	assert.Equal(flags, newFlags)
+
+	newFlags = ClearFlag(flags, "baz")
+	assert.EqualValues(3, len(newFlags))
+	assert.Contains(newFlags, "foo")
+	assert.Contains(newFlags, "bar")
+	assert.Contains(newFlags, "xyz")
+	assert.NotContains(newFlags, "baz")
+}
+
 func Test_FileNameNoExtension(t *testing.T) {
 	assert := assert.New(t)
 
