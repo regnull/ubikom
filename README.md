@@ -1,6 +1,10 @@
 # Ubikom Project
 *Encrypted email service based on decentralized private identity.*
 
+## Using Ubikom Email Service
+
+Head over to [ubikom.cc](https://ubikom.cc) to create your identity and follow the instructions for email client setup.
+
 ## The Project
 
 With Ubikom project, you can communicate via email in a secure way, while using the existing email clients that you know and love.
