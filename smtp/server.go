@@ -12,6 +12,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	MAX_MESSAGE_BYTES = 128 * 1024 * 1024
+)
+
 type ServerOptions struct {
 	Domain                string
 	Port                  int
@@ -49,7 +53,7 @@ func NewServer(opts *ServerOptions) (*Server, error) {
 	server.Domain = opts.Domain
 	server.ReadTimeout = 10 * time.Second
 	server.WriteTimeout = 10 * time.Second
-	server.MaxMessageBytes = 1024 * 1024
+	server.MaxMessageBytes = MAX_MESSAGE_BYTES
 	server.MaxRecipients = 50
 	server.AllowInsecureAuth = true
 
