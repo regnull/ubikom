@@ -24,8 +24,8 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-var notificationMessage = `To: %s@x
-From: Ubikom Web <%s@x>
+var notificationMessage = `To: %s@ubikom.cc
+From: Ubikom Web <%s@ubikom.cc>
 Subject: New registration
 Date: %s
 Content-Type: text/plain; charset=utf-8; format=flowed
@@ -37,6 +37,79 @@ Rejoice! For a new user just registered via the Ubikom Web!
 The newly registered name is %s.
 
 That is all. Have a nice day!
+`
+
+// TODO: Put this in a file somewhere.
+var welcomeMessage = `To: %s@ubikom.cc
+From: Ubikom Web <%s@ubikom.cc>
+Subject: Welcome to Ubikom!
+Date: %s
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 8bit
+Content-Language: en-US
+MIME-Version: 1.0
+
+You've done it! You have successfully configured your email client,
+so now you are ready to start using Ubikom messaging system!
+
+Our goal is to provide safe, secure, and private communications to
+everyone, and everything. That's why it is impossible to send a
+message in Ubikom ecosystem without encryption and authentication.
+We encrypt every message with a unique key so only the intended
+recipient can read this message.
+
+We are open source, which means all our code is public. You can
+find it at https://github.com/regnull/ubikom. We don't spy on our
+users. This is not because we are so nice - it's because our system
+is designed in a way that makes it impossible. We don't have any
+backdoors.
+
+This also means that you, and only you, are responsible for your
+identity, which means your encryption key. The encryption key is
+derived from your user identifier and password. You must have a
+strong password! You can always change it at
+https://www.ubikom.cc/change_password.html. You are responsible
+for safeguarding your password. No one, not even us, will be
+able to help you if you lose your password, or it gets leaked.
+
+Few other things you would probably like to know:
+
+- Everything here is under active development. Things may,
+and will, change. We are striving to provide best, uninterrupted
+service, but we make no guarantees.
+
+- Don't spam other users. Spam elimination is one of our goals.
+
+- Messages are end-to-end encrypted between Ubikom users only.
+When you send a message to an outside user (i.e. anyone whose
+address is not @ubikom.cc), our gateway will decrypt the message
+and send it in the clear, because it's the only way we can work
+with legacy email. Act accordingly.
+
+- Every part of the system can be self-hosted by anyone, including
+you. If you run ubikom-proxy, for example, your password will
+never leave your possession. Email lgx@ubikom.cc for details.
+
+- We are actively working on decentralizing our identity registry,
+which means it will be likely hosted on a blockchain in future.
+Stay tuned.
+
+- Currently, we keep email messages on our proxy server for 90
+days. If you want to keep your messages longer, you should copy
+them to a local folder in your IMAP client. If you are using POP
+client, messages are already copied locally. You can also run
+your own proxy server and keep your messages for as long as you like.
+
+- Subscribe to @UbikomProject on Twitter for updates.
+
+Please contact lgx@ubikom.cc with any questions.
+
+Best regards,
+
+    Ubikom Web
+
+
+P.S. I'm a bot. I don't know how to reply to messages.
 `
 
 const (
@@ -259,7 +332,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	log.Info().Msg("name is registered")
+	log.Info().Str("name", name).Msg("name is registered")
 
 	// Register address.
 
@@ -302,6 +375,21 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		err = protoutil.SendEmail(r.Context(), s.privateKey, []byte(body), s.name, s.notificationName, s.lookupClient)
 		if err != nil {
 			log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending notification message")
+		}
+	}
+
+	if s.privateKey != nil && s.name != "" {
+		body := fmt.Sprintf(welcomeMessage, name, s.name,
+			time.Now().Format("02 Jan 06 15:04:05 -0700"))
+		body, err = mail.AddReceivedHeader(body, []string{"by Ubikom client"})
+		if err != nil {
+			log.Error().Err(err).Msg("error adding received header")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		err = protoutil.SendEmail(r.Context(), s.privateKey, []byte(body), s.name, name, s.lookupClient)
+		if err != nil {
+			log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending welcome message")
 		}
 	}
 
