@@ -2,7 +2,9 @@ package protoutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 
@@ -187,15 +189,16 @@ func DecryptMessage(ctx context.Context, lookupClient pb.LookupServiceClient, pr
 }
 
 // IdentityProof generates an identity proof that can be used in receive requests.
-func IdentityProof(key *easyecc.PrivateKey) *pb.Signed {
-	hash := util.Hash256([]byte("we need a bigger boat"))
+func IdentityProof(key *easyecc.PrivateKey, timestamp time.Time) *pb.Signed {
+	timestampStr := timestamp.Format(time.RFC3339)
+	hash := util.Hash256([]byte(timestampStr))
 	sig, err := key.Sign(hash)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to sign message")
 	}
 
 	signed := &pb.Signed{
-		Content: []byte("we need a bigger boat"),
+		Content: []byte(timestampStr),
 		Signature: &pb.Signature{
 			R: sig.R.Bytes(),
 			S: sig.S.Bytes(),
@@ -203,4 +206,19 @@ func IdentityProof(key *easyecc.PrivateKey) *pb.Signed {
 		Key: key.PublicKey().SerializeCompressed(),
 	}
 	return signed
+}
+
+// VerifyIdentity returns no error if the signed has the correct signature
+// and if it was signed within 10 seconds from now.
+func VerifyIdentity(signed *pb.Signed, now time.Time, allowedDeltaSeconds float64) error {
+	timestampStr := string(signed.Content)
+	timestamp, err := time.Parse(time.RFC3339, timestampStr)
+	if err != nil {
+		return err
+	}
+	d := now.Sub(timestamp)
+	if math.Abs(d.Seconds()) > allowedDeltaSeconds {
+		return errors.New("timestamp difference is too large")
+	}
+	return nil
 }

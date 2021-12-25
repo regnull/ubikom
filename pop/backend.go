@@ -143,7 +143,7 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 	count = 0
 	for {
 		res, err := b.dumpClient.Receive(ctx, &pb.ReceiveRequest{
-			IdentityProof: protoutil.IdentityProof(privateKey)})
+			IdentityProof: protoutil.IdentityProof(privateKey, time.Now())})
 		if util.ErrEqualCode(err, codes.NotFound) {
 			break
 		}

@@ -576,7 +576,7 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 	count := 0
 	for {
 		res, err := m.dumpClient.Receive(ctx, &pb.ReceiveRequest{
-			IdentityProof: protoutil.IdentityProof(m.privateKey)})
+			IdentityProof: protoutil.IdentityProof(m.privateKey, time.Now())})
 		if util.ErrEqualCode(err, codes.NotFound) {
 			if count == 0 {
 				log.Debug().Msg("no new messages")
