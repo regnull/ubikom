@@ -256,6 +256,8 @@ github.com/prometheus/procfs v0.0.0-20190507164030-5867b95ac084/go.mod h1:TjEm7z
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
 github.com/regnull/easyecc v0.1.4 h1:0X7r46iFRI7/pQN2ZjNtYmtOzHpu2MtGRftqaScInuA=
 github.com/regnull/easyecc v0.1.4/go.mod h1:w5fHwaq+q9ZQ1DW/H4111lTpc4mA7F70pzGRG+qmJ6g=
+github.com/regnull/easyecc v0.1.5 h1:CiQFI2gClbXr9wpVkxxZe/Apd4Krm6a3gtpZVBmd4Sg=
+github.com/regnull/easyecc v0.1.5/go.mod h1:w5fHwaq+q9ZQ1DW/H4111lTpc4mA7F70pzGRG+qmJ6g=
 github.com/regnull/popgun v0.2.1 h1:m2Gs7ChBzNdZuqveZDHJk9OumbzbxGooGgzQ2XhiFvc=
 github.com/regnull/popgun v0.2.1/go.mod h1:BMb9PrSmRMcwhZt9qcnh7vfyE5rVW1nbCgZ2SqSwaxw=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=

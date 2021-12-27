@@ -12,7 +12,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0
-	github.com/regnull/easyecc v0.1.4
+	github.com/regnull/easyecc v0.1.5
 	github.com/regnull/popgun v0.2.1
 	github.com/rs/zerolog v1.21.0
 	github.com/spf13/cobra v1.1.3
