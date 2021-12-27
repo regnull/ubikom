@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const maxAllowedIdentitySignatureDifferenceSeconds = 10.0
+const maxAllowedIdentitySignatureDifferenceSeconds = 10000000000.0
 
 type DumpServer struct {
 	pb.UnimplementedDMSDumpServiceServer
@@ -64,11 +64,11 @@ func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRes
 
 func (s *DumpServer) Receive(ctx context.Context, req *pb.ReceiveRequest) (*pb.ReceiveResponse, error) {
 	log.Debug().Msg("got receive request")
-	if err := protoutil.VerifyIdentity(req.GetIdentityProof(),
-		time.Now(), maxAllowedIdentitySignatureDifferenceSeconds); err != nil {
-		log.Warn().Msg("identity verification failed")
-		return nil, status.Error(codes.InvalidArgument, "identity verification failed")
 
+	if !protoutil.VerifySignature(req.GetIdentityProof().GetSignature(), req.GetIdentityProof().GetKey(),
+		req.GetIdentityProof().GetContent()) {
+		log.Warn().Msg("signature verification failed")
+		return nil, status.Error(codes.InvalidArgument, "bad signature")
 	}
 
 	msg, err := s.store.GetNext(req.GetIdentityProof().GetKey())
