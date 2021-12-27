@@ -90,7 +90,10 @@ func main() {
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
 
-	signed := protoutil.IdentityProof(privateKey, time.Now())
+	signed, err := protoutil.IdentityProof(privateKey, time.Now())
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to generate identity proof")
+	}
 
 	ctx := context.Background()
 	client := pb.NewDMSDumpServiceClient(dumpConn)

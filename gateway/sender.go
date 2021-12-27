@@ -81,8 +81,12 @@ func (s *Sender) poll(ctx context.Context) error {
 	var outgoingMessages []string
 	var messages []*pb.DMSMessage
 	for {
+		identityProof, err := protoutil.IdentityProof(s.privateKey, time.Now())
+		if err != nil {
+			return err
+		}
 		res, err := s.dumpClient.Receive(ctx,
-			&pb.ReceiveRequest{IdentityProof: protoutil.IdentityProof(s.privateKey, time.Now())})
+			&pb.ReceiveRequest{IdentityProof: identityProof})
 		if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
 			if len(messages) != 0 {
 				log.Info().Int("count", len(messages)).Msg("messages received")

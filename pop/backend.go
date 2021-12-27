@@ -142,8 +142,12 @@ func (b *Backend) Poll(ctx context.Context, user string) error {
 	// Read all remote messages.
 	count = 0
 	for {
+		identityProof, err := protoutil.IdentityProof(privateKey, time.Now())
+		if err != nil {
+			return err
+		}
 		res, err := b.dumpClient.Receive(ctx, &pb.ReceiveRequest{
-			IdentityProof: protoutil.IdentityProof(privateKey, time.Now())})
+			IdentityProof: identityProof})
 		if util.ErrEqualCode(err, codes.NotFound) {
 			break
 		}

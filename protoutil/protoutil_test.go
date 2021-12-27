@@ -27,7 +27,8 @@ func Test_VerifyIdentity(t *testing.T) {
 	key, err := easyecc.NewRandomPrivateKey()
 	assert.NoError(err)
 	ts := time.Now()
-	signed := IdentityProof(key, ts)
+	signed, err := IdentityProof(key, ts)
+	assert.NoError(err)
 	assert.NoError(VerifyIdentity(signed, ts, 10.0))
 
 	ts1 := ts.Add(time.Minute)

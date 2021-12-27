@@ -575,8 +575,12 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 	// Read all remote messages.
 	count := 0
 	for {
+		identityProof, err := protoutil.IdentityProof(m.privateKey, time.Now())
+		if err != nil {
+			return err
+		}
 		res, err := m.dumpClient.Receive(ctx, &pb.ReceiveRequest{
-			IdentityProof: protoutil.IdentityProof(m.privateKey, time.Now())})
+			IdentityProof: identityProof})
 		if util.ErrEqualCode(err, codes.NotFound) {
 			if count == 0 {
 				log.Debug().Msg("no new messages")

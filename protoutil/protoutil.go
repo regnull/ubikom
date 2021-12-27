@@ -1,7 +1,9 @@
 package protoutil
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math"
@@ -16,6 +18,12 @@ import (
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+)
+
+var (
+	ErrFailedToSignMessage         = errors.New("failed to sign message")
+	ErrSignatureVerificationFailed = errors.New("signature verification failed")
+	ErrTimeDifferenceTooLarge      = errors.New("time difference is too large")
 )
 
 // CreateSignedWithPOW creates a request signed with the given private key and generates POW of the given strength.
@@ -189,36 +197,42 @@ func DecryptMessage(ctx context.Context, lookupClient pb.LookupServiceClient, pr
 }
 
 // IdentityProof generates an identity proof that can be used in receive requests.
-func IdentityProof(key *easyecc.PrivateKey, timestamp time.Time) *pb.Signed {
-	timestampStr := timestamp.Format(time.RFC3339)
-	hash := util.Hash256([]byte(timestampStr))
+func IdentityProof(key *easyecc.PrivateKey, timestamp time.Time) (*pb.Signed, error) {
+	ts := timestamp.Unix()
+	var buf [8]byte
+	binary.PutVarint(buf[:], ts)
+	hash := util.Hash256(buf[:])
 	sig, err := key.Sign(hash)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to sign message")
+		return nil, ErrFailedToSignMessage
 	}
 
 	signed := &pb.Signed{
-		Content: []byte(timestampStr),
+		Content: buf[:],
 		Signature: &pb.Signature{
 			R: sig.R.Bytes(),
 			S: sig.S.Bytes(),
 		},
 		Key: key.PublicKey().SerializeCompressed(),
 	}
-	return signed
+	return signed, nil
 }
 
 // VerifyIdentity returns no error if the signed has the correct signature
 // and if it was signed within 10 seconds from now.
 func VerifyIdentity(signed *pb.Signed, now time.Time, allowedDeltaSeconds float64) error {
-	timestampStr := string(signed.Content)
-	timestamp, err := time.Parse(time.RFC3339, timestampStr)
+	if !VerifySignature(signed.Signature, signed.Key, signed.Content) {
+		return ErrSignatureVerificationFailed
+	}
+
+	ts, err := binary.ReadVarint(bytes.NewReader(signed.Content))
 	if err != nil {
 		return err
 	}
-	d := now.Sub(timestamp)
-	if math.Abs(d.Seconds()) > allowedDeltaSeconds {
-		return errors.New("timestamp difference is too large")
+
+	d := now.Unix() - ts
+	if math.Abs(float64(d)) > allowedDeltaSeconds {
+		return ErrTimeDifferenceTooLarge
 	}
 	return nil
 }
