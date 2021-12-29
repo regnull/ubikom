@@ -414,24 +414,15 @@ This is Ubikom Report Generator, broadcasting live from Ubikom world headquaters
 do I have some stats for you!
 
 Names registered (all time): {{.TotalRegNum}}
-
 Names registered (past 24 hours): {{.RegNum}}
-
 Total actual clients (all time): {{.TotalClientNum}}
-
 Actual clients (past 24 hours): {{.ClientNum}}
-
 Actual clients, POP (past 24 hours): {{.POPClientNum}}
-
 Actual clients, IMAP (past 24 hours): {{.IMAPClientNum}}
-
 New actual clients (past 24 hours): {{.NewClientNum}}
-
-There were {{.SMTPMessagesSent}} messages sent via SMTP.
-
-{{.ExternalMessagesSent}} messages were sent to external recipients.
-
-{{.ExternalMessagesReceived}} messages were received from external users.
+Messages sent via SMTP: {{.SMTPMessagesSent}}
+Messages sent to external recipients (via gateway): {{.ExternalMessagesSent}}
+Messages were received from external users: {{.ExternalMessagesReceived}}
 
 Here's the list of names that were registered (past 24 hours):
 
