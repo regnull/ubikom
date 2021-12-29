@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dchest/captcha"
 	"github.com/google/uuid"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/globals"
@@ -192,12 +193,24 @@ func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
 }
 
 type EasySetupRequest struct {
-	Name         string `json:"name"`
-	Password     string `json:"password"`
-	EmailKeyOnly bool   `json:"email_key_only"`
+	Name            string `json:"name"`
+	Password        string `json:"password"`
+	EmailKeyOnly    bool   `json:"email_key_only"`
+	CaptchaId       string `json:"captcha_id"`
+	CaptchaSolution string `json:"captcha_solution"`
 }
 
 func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		// This is a "pre-flight" request, see https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.Header().Add("Access-Control-Allow-Methods", "POST, GET")
+		w.Header().Add("Access-Control-Allow-Headers", "*")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 	log.Debug().Str("origin", r.RemoteAddr).Msg("got registration request")
 	if !s.rateLimiter.Allow() {
 		log.Warn().Msg("rate limit triggered")
@@ -206,6 +219,8 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	}
 	name := ""
 	password := ""
+	captchaId := ""
+	captchaSolution := ""
 	useMainKey := true
 	log.Debug().Str("method", r.Method).Msg("got method")
 	if r.Method == "POST" {
@@ -226,6 +241,8 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		name = req.Name
 		password = req.Password
 		useMainKey = !req.EmailKeyOnly
+		captchaId = req.CaptchaId
+		captchaSolution = req.CaptchaSolution
 	} else if r.Method == "OPTIONS" {
 		// This is a "pre-flight" request, see https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
 		w.Header().Add("Access-Control-Allow-Origin", "*")
@@ -241,7 +258,15 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Add("Access-Control-Allow-Origin", "*")
+	captchaOk := captcha.VerifyString(captchaId, captchaSolution)
+	log.Debug().Str("captcha_id", captchaId).
+		Str("captcha_solution", captchaSolution).Bool("ok", captchaOk).
+		Msg("captcha data")
+	if !captchaOk {
+		log.Warn().Msg("captcha verification failed")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 
 	if len(name) < minNameLength {
 		log.Warn().Str("name", name).Msg("name is too short")
@@ -503,6 +528,25 @@ func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
 	// delete(s.keys, keyID)
 }
 
+func (s *Server) HandleNewCaptcha(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		// This is a "pre-flight" request, see https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.Header().Add("Access-Control-Allow-Methods", "POST, GET")
+		w.Header().Add("Access-Control-Allow-Headers", "*")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Content-Type", "application/json")
+	id := captcha.New()
+	fmt.Fprintf(w, `{
+		"id": "%s"
+}`, id)
+	log.Debug().Str("id", id).Msg("processed new captcha request")
+}
+
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -560,6 +604,8 @@ func main() {
 	http.HandleFunc("/easySetup", server.HandleEasySetup)
 	http.HandleFunc("/getKey", server.HandleGetKey)
 	http.HandleFunc("/changePassword", server.HandleChangePassword)
+	http.HandleFunc("/new_captcha", server.HandleNewCaptcha)
+	http.Handle("/captcha/", captcha.Server(captcha.StdWidth, captcha.StdHeight))
 	log.Info().Int("port", args.Port).Msg("listening...")
 
 	if args.CertFile != "" && args.KeyFile != "" {
