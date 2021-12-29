@@ -211,7 +211,6 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Add("Access-Control-Allow-Origin", "*")
-	log.Debug().Str("origin", r.RemoteAddr).Msg("got registration request")
 	if !s.rateLimiter.Allow() {
 		log.Warn().Msg("rate limit triggered")
 		w.WriteHeader(http.StatusTooManyRequests)
