@@ -454,10 +454,16 @@ github.com/regnull/easyecc v0.1.4 h1:0X7r46iFRI7/pQN2ZjNtYmtOzHpu2MtGRftqaScInuA
 github.com/regnull/easyecc v0.1.4/go.mod h1:w5fHwaq+q9ZQ1DW/H4111lTpc4mA7F70pzGRG+qmJ6g=
 github.com/regnull/easyecc v0.1.5 h1:CiQFI2gClbXr9wpVkxxZe/Apd4Krm6a3gtpZVBmd4Sg=
 github.com/regnull/easyecc v0.1.5/go.mod h1:w5fHwaq+q9ZQ1DW/H4111lTpc4mA7F70pzGRG+qmJ6g=
+github.com/regnull/easyecc v0.1.6 h1:PxAzIO3Bbcsqo4LoMpACGqBNcoGTWYJYJwwljjGPgYk=
+github.com/regnull/easyecc v0.1.6/go.mod h1:zXi6H3kSIAnivxHI6sVqZO4HNbee/AFrGRuhJC4ovVU=
 github.com/regnull/popgun v0.2.1 h1:m2Gs7ChBzNdZuqveZDHJk9OumbzbxGooGgzQ2XhiFvc=
 github.com/regnull/popgun v0.2.1/go.mod h1:BMb9PrSmRMcwhZt9qcnh7vfyE5rVW1nbCgZ2SqSwaxw=
 github.com/regnull/ubchain v0.0.0-20211227220720-d61a5389564f h1:GlILPu0TAN4PWftPPA7stT2930Um/QmS4VJhhTD6+zE=
 github.com/regnull/ubchain v0.0.0-20211227220720-d61a5389564f/go.mod h1:2cBu/obUDHaRYK1zhkcMLGRNd073ewwE96MGYbIrBmE=
+github.com/regnull/ubchain v0.0.0-20211229011849-ab2400a982bb h1:RevmcV/tz5FMtUAt6ZHt84sH7DZzD+ouJVD9X5rgPLo=
+github.com/regnull/ubchain v0.0.0-20211229011849-ab2400a982bb/go.mod h1:2cBu/obUDHaRYK1zhkcMLGRNd073ewwE96MGYbIrBmE=
+github.com/regnull/ubchain v0.0.0-20211230021003-d7bab51fadf5 h1:8zl2l+4y2JVwa8+vFGyhdXmPOacKuoOSyYgc0gZ5ybY=
+github.com/regnull/ubchain v0.0.0-20211230021003-d7bab51fadf5/go.mod h1:2cBu/obUDHaRYK1zhkcMLGRNd073ewwE96MGYbIrBmE=
 github.com/retailnext/hllpp v1.0.1-0.20180308014038-101a6d2f8b52/go.mod h1:RDpi1RftBQPUCDRw6SmxeaREsAaRKnOclghuzp/WRzc=
 github.com/rjeczalik/notify v0.9.1 h1:CLCKso/QK1snAlnhNR/CNvNiFU2saUtjV0bx3EwNeCE=
 github.com/rjeczalik/notify v0.9.1/go.mod h1:rKwnCoCGeuQnwBtTSPL9Dad03Vh2n40ePRrjvIXnJho=

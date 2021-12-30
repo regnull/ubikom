@@ -20,14 +20,12 @@ import (
 
 func main() {
 	var (
-		nodeURL         string
-		contractAddress string
-		userName        string
-		password        string
-		LookupURL       string
+		nodeURL   string
+		userName  string
+		password  string
+		LookupURL string
 	)
 	flag.StringVar(&nodeURL, "node-url", "http://127.0.0.1:7545", "URL of the node to connect to")
-	flag.StringVar(&contractAddress, "contract-address", "", "contract address")
 	flag.StringVar(&userName, "user-name", "", "user name")
 	flag.StringVar(&password, "password", "", "account password")
 	flag.StringVar(&LookupURL, "lookup-url", globals.PublicLookupServiceURL, "lookup service URL")
@@ -35,10 +33,6 @@ func main() {
 
 	if userName == "" {
 		log.Fatal("--user-namemust be specified")
-	}
-
-	if contractAddress == "" {
-		log.Fatal("--contact-address must be specified")
 	}
 
 	if password == "" {
@@ -60,6 +54,9 @@ func main() {
 
 	ctx := context.Background()
 	privateKey, err := util.GetKeyFromNamePassword(ctx, userName, password, lookupClient)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Connect to the node.
 	client, err := ethclient.Dial(nodeURL)
@@ -107,12 +104,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	key := [32]byte{}
-	value := [32]byte{}
-	copy(key[:], []byte("hello"))
-	copy(value[:], []byte("world"))
-
-	tx, err := instance.Register(auth, privateKey.PublicKey().X().Bytes())
+	tx, err := instance.Register(auth, privateKey.PublicKey().SerializeCompressed())
 	if err != nil {
 		log.Fatal(err)
 	}

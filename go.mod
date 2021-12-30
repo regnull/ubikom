@@ -18,9 +18,9 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0
-	github.com/regnull/easyecc v0.1.5
+	github.com/regnull/easyecc v0.1.6
 	github.com/regnull/popgun v0.2.1
-	github.com/regnull/ubchain v0.0.0-20211227220720-d61a5389564f // indirect
+	github.com/regnull/ubchain v0.0.0-20211230021003-d7bab51fadf5 // indirect
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rs/zerolog v1.21.0
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
