@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/bc"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -14,8 +15,11 @@ var rootCmd = &cobra.Command{
 	Short: "ubikom-cli is a command line client for Ubikom",
 	Long:  `ubikom-cli allows you to run local and remote Ubikom commands`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
 	},
+}
+
+func init() {
+	rootCmd.AddCommand(bc.BCCmd)
 }
 
 func Execute() {
