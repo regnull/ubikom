@@ -426,8 +426,7 @@ Messages were received from external users: {{.ExternalMessagesReceived}}
 
 Here's the list of names that were registered (past 24 hours):
 
-{{range .Registrations}}
-Name: {{printf "%-20s" .Name}} Time: {{.Timestamp}}
+{{range .Registrations}}Name: {{printf "%-20s" .Name}} Time: {{.Timestamp}}
 {{end}}
 
 Until next time,
