@@ -16,6 +16,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const UPDATE_CHAN_SIZE = 100
+
 var ErrAccessDenied = errors.New("access denied")
 
 type Backend struct {
@@ -26,6 +28,7 @@ type Backend struct {
 	password     string
 	db           *db.Badger
 	eventSender  *event.Sender
+	updateChan   chan backend.Update
 }
 
 func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServiceClient,
@@ -38,7 +41,9 @@ func NewBackend(dumpClient pb.DMSDumpServiceClient, lookupClient pb.LookupServic
 		user:         user,
 		password:     password,
 		db:           db,
-		eventSender:  eventSender}
+		eventSender:  eventSender,
+		updateChan:   make(chan backend.Update, UPDATE_CHAN_SIZE),
+	}
 }
 
 func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, error) {
@@ -64,7 +69,7 @@ func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, erro
 		}
 	}
 	log.Debug().Bool("authorized", true).Msg("[IMAP] -> LOGIN")
-	u := NewUser(privateKey.PublicKey().Address(), b.db, privateKey, b.lookupClient, b.dumpClient)
+	u := NewUser(privateKey.PublicKey().Address(), b.db, privateKey, b.lookupClient, b.dumpClient, b.updateChan)
 
 	// Force polling for new messages (otherwise we will have to wait until client decides to do it).
 	inbox, err := u.GetMailbox("INBOX")
@@ -79,4 +84,9 @@ func (b *Backend) Login(_ *imap.ConnInfo, user, pass string) (backend.User, erro
 	}
 
 	return u, nil
+}
+
+// Updates implements BackendUpdater.
+func (b *Backend) Updates() <-chan backend.Update {
+	return b.updateChan
 }

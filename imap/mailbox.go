@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/backend"
 	"github.com/emersion/go-imap/backend/backendutil"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/imap/db"
@@ -39,18 +40,22 @@ type Mailbox struct {
 	dumpClient     pb.DMSDumpServiceClient
 	privateKey     *easyecc.PrivateKey
 	nextMessageUid uint32
+	updateChan     <-chan backend.Update
 }
 
 // NewMailbox creates a brand new mailbox.
 func NewMailbox(user string, name string, db *db.Badger, lookupClient pb.LookupServiceClient,
-	dumpClient pb.DMSDumpServiceClient, privateKey *easyecc.PrivateKey) (*Mailbox, error) {
+	dumpClient pb.DMSDumpServiceClient, privateKey *easyecc.PrivateKey,
+	updateChan <-chan backend.Update) (*Mailbox, error) {
 	mb := &Mailbox{
 		user:           user,
 		db:             db,
 		lookupClient:   lookupClient,
 		dumpClient:     dumpClient,
 		privateKey:     privateKey,
-		nextMessageUid: 1000}
+		nextMessageUid: 1000,
+		updateChan:     updateChan,
+	}
 	mb.name = name
 
 	uid, err := db.IncrementMailboxID(user, privateKey)

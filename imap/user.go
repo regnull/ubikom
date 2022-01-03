@@ -17,17 +17,21 @@ type User struct {
 	privateKey   *easyecc.PrivateKey
 	lookupClient pb.LookupServiceClient
 	dumpClient   pb.DMSDumpServiceClient
+	updateChan   <-chan backend.Update
 }
 
 func NewUser(name string, db *db.Badger, privateKey *easyecc.PrivateKey,
-	lookupClient pb.LookupServiceClient, dumpClient pb.DMSDumpServiceClient) *User {
+	lookupClient pb.LookupServiceClient, dumpClient pb.DMSDumpServiceClient,
+	updateChan <-chan backend.Update) *User {
 	log.Debug().Str("name", name).Msg("[IMAP] creating new user")
 	return &User{
 		name:         name,
 		db:           db,
 		privateKey:   privateKey,
 		lookupClient: lookupClient,
-		dumpClient:   dumpClient}
+		dumpClient:   dumpClient,
+		updateChan:   updateChan,
+	}
 }
 
 func (u *User) Username() string {
@@ -91,7 +95,7 @@ func (u *User) CreateMailbox(name string) error {
 	u.logEnter("CreateMailbox")
 	defer u.logExit("CreateMailbox")
 
-	mb, err := NewMailbox(u.name, name, u.db, u.lookupClient, u.dumpClient, u.privateKey)
+	mb, err := NewMailbox(u.name, name, u.db, u.lookupClient, u.dumpClient, u.privateKey, u.updateChan)
 	if err != nil {
 		return err
 	}

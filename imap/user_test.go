@@ -13,7 +13,7 @@ import (
 func Test_NewUser(t *testing.T) {
 	assert := assert.New(t)
 
-	u := NewUser("bob", nil, nil, nil, nil)
+	u := NewUser("bob", nil, nil, nil, nil, nil)
 	assert.EqualValues("bob", u.Username())
 }
 
@@ -26,7 +26,7 @@ func Test_ListMailboxes(t *testing.T) {
 	assert.NoError(err)
 	defer cleanup()
 
-	u := NewUser("bob", b, privateKey, nil, nil)
+	u := NewUser("bob", b, privateKey, nil, nil, nil)
 	mailboxes, err := u.ListMailboxes(false)
 	assert.NoError(err)
 
@@ -85,7 +85,7 @@ func Test_RenameMailbox(t *testing.T) {
 	assert.NoError(err)
 	defer cleanup()
 
-	u := NewUser("bob", b, privateKey, nil, nil)
+	u := NewUser("bob", b, privateKey, nil, nil, nil)
 	assert.NoError(u.CreateMailbox("foo"))
 
 	assert.NoError(u.RenameMailbox("foo", "bar"))
@@ -107,7 +107,7 @@ func Test_Logout(t *testing.T) {
 	assert.NoError(err)
 	defer cleanup()
 
-	u := NewUser("bob", b, privateKey, nil, nil)
+	u := NewUser("bob", b, privateKey, nil, nil, nil)
 	assert.NoError(u.CreateMailbox("foo"))
 
 	// It doesn't do anything. We haven't crashed. That's great.

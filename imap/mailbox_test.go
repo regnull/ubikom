@@ -20,7 +20,7 @@ func Test_NewMailbox(t *testing.T) {
 	badger, cleanup, err := db.CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
-	mb, err := NewMailbox("foo", "bar", badger, nil, nil, privateKey)
+	mb, err := NewMailbox("foo", "bar", badger, nil, nil, privateKey, nil)
 	assert.NoError(err)
 	assert.NoError(mb.Save())
 	assert.EqualValues("foo", mb.User())
@@ -38,7 +38,7 @@ func Test_MailboxSubscribed(t *testing.T) {
 	badger, cleanup, err := db.CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
-	mb, err := NewMailbox("foo", "bar", badger, nil, nil, privateKey)
+	mb, err := NewMailbox("foo", "bar", badger, nil, nil, privateKey, nil)
 	assert.NoError(err)
 	assert.NoError(mb.Save())
 
@@ -61,7 +61,7 @@ func Test_MailboxInfo(t *testing.T) {
 	badger, cleanup, err := db.CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
-	mb, err := NewMailbox("foo", "bar", badger, nil, nil, privateKey)
+	mb, err := NewMailbox("foo", "bar", badger, nil, nil, privateKey, nil)
 	assert.NoError(err)
 	assert.NoError(mb.Save())
 
@@ -80,7 +80,7 @@ func Test_MailboxStatus(t *testing.T) {
 	badger, cleanup, err := db.CreateTestBadgerStore()
 	assert.NoError(err)
 	defer cleanup()
-	mb, err := NewMailbox("foo", "bar", badger, nil, nil, privateKey)
+	mb, err := NewMailbox("foo", "bar", badger, nil, nil, privateKey, nil)
 	assert.NoError(err)
 	assert.NoError(mb.Save())
 
