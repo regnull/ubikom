@@ -12,6 +12,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	registerGasLimit = uint64(300000)
+)
+
 // Blockchain represents Ethereum blockchain.
 type Blockchain struct {
 	client          *ethclient.Client
@@ -37,7 +41,7 @@ func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (s
 	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
 
 	// Recommended gas limit.
-	gasLimit := uint64(300000)
+	gasLimit := registerGasLimit
 
 	// Get gas price.
 	gasPrice, err := b.client.SuggestGasPrice(ctx)
