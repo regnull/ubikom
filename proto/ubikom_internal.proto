@@ -97,6 +97,9 @@ enum EventType {
     ET_GATEWAY_EMAIL_MESSAGE_RECEIVED = 2002;
     ET_GATEWAY_UBIKOM_MESSAGE_SENT = 2003;
     ET_GATEWAY_EMAIL_MESSAGE_SENT = 2004;
+
+    // Web events.
+    ET_PAGE_SERVED = 3001;
 }
 
 message Event {

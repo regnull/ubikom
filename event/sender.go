@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
@@ -131,6 +132,19 @@ func (s *Sender) GatewayUbikomMessageSend(ctx context.Context, from, to string) 
 		Message:   "Gateway sent message to internal user",
 		Component: s.component,
 		User2:     to}
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
+}
+
+func (s *Sender) WebPageServed(ctx context.Context, page string, userName string, userAddress string, userAgent string) error {
+	event := &pb.Event{
+		Id:        uuid.New().String(),
+		Timestamp: uint64(util.NowMs()),
+		EventType: pb.EventType_ET_PAGE_SERVED,
+		User1:     userName,
+		Message:   "Web page was served",
+		Component: fmt.Sprintf("%s/%s", s.component, page),
+		User2:     userAddress,
+		Data1:     userAgent}
 	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
 }
 

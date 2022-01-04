@@ -13,6 +13,7 @@ import (
 	"github.com/dchest/captcha"
 	"github.com/google/uuid"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/event"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
@@ -144,6 +145,7 @@ type Server struct {
 	notificationName string
 	powStrength      int
 	rateLimiter      *rate.Limiter
+	eventSender      *event.Sender
 }
 
 func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentityServiceClient,
@@ -158,12 +160,17 @@ func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentitySe
 		notificationName: notificationName,
 		powStrength:      powStrength,
 		rateLimiter:      rate.NewLimiter(rate.Every(time.Hour), rateLimitPerHour),
+		eventSender:      event.NewSender("ubikom-event-processor", "ubikom-web", "web", privateKey, lookupClient),
 	}
 }
 
 func (s *Server) HandleNameLookup(w http.ResponseWriter, r *http.Request) {
+	err := s.eventSender.WebPageServed(r.Context(), "name_lookup", "", "", r.UserAgent())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to send event")
+	}
 	name := r.URL.Query().Get("name")
-	_, err := s.lookupClient.LookupName(r.Context(), &pb.LookupNameRequest{
+	_, err = s.lookupClient.LookupName(r.Context(), &pb.LookupNameRequest{
 		Name: name,
 	})
 
@@ -445,6 +452,12 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 			"password": "%s"
 	}`, name, name, name, password)
 	}
+
+	err = s.eventSender.WebPageServed(r.Context(), "easy_setup", name,
+		emailKey.PublicKey().Address(), r.UserAgent())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to send event")
+	}
 }
 
 type ChangePasswordRequest struct {
@@ -508,6 +521,12 @@ func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Disable old key, maybe.
 
+	err = s.eventSender.WebPageServed(r.Context(), "change_password",
+		req.Name, newKey.PublicKey().Address(), r.UserAgent())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to send event")
+	}
+
 	log.Info().Msg("name is registered")
 }
 
@@ -544,6 +563,11 @@ func (s *Server) HandleNewCaptcha(w http.ResponseWriter, r *http.Request) {
 		"id": "%s"
 }`, id)
 	log.Debug().Str("id", id).Msg("processed new captcha request")
+
+	err := s.eventSender.WebPageServed(r.Context(), "new_captcha", "", "", r.UserAgent())
+	if err != nil {
+		log.Error().Err(err).Msg("failed to send event")
+	}
 }
 
 func main() {
