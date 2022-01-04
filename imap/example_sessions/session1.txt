@@ -1,0 +1,488 @@
+* OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT AUTH=PLAIN] IMAP4rev1 Service Ready
+* OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT AUTH=PLAIN] IMAP4rev1 Service Ready
+97 authenticate PLAIN
++
+62 authenticate PLAIN
++
+62 OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT] AUTHENTICATE completed
+97 OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT] AUTHENTICATE completed
+98 list "" "*"                                              <== List all mailboxes (6.3.8) (reference name, mailbox name)
+63 select "INBOX"
+* LIST (\HasNoChildren) "/" INBOX                           <== List responses are untagged
+* LIST (\HasChildren \Noselect) "/" "[Gmail]"
+* LIST (\All \HasNoChildren) "/" "[Gmail]/All Mail"
+* LIST (\Drafts \HasNoChildren) "/" "[Gmail]/Drafts"
+* LIST (\HasNoChildren \Important) "/" "[Gmail]/Important"
+* LIST (\HasNoChildren \Sent) "/" "[Gmail]/Sent Mail"
+* LIST (\HasNoChildren \Junk) "/" "[Gmail]/Spam"
+* LIST (\Flagged \HasNoChildren) "/" "[Gmail]/Starred"
+* LIST (\HasNoChildren \Trash) "/" "[Gmail]/Trash"
+98 OK LIST completed
+99 lsub "" "*"                                              <== List subscribed mailboxes
+* LSUB (\HasNoChildren) "/" INBOX
+* LSUB (\HasChildren \Noselect) "/" "[Gmail]"
+* LSUB (\All \HasNoChildren) "/" "[Gmail]/All Mail"
+* LSUB (\Drafts \HasNoChildren) "/" "[Gmail]/Drafts"
+* LSUB (\HasNoChildren \Important) "/" "[Gmail]/Important"
+* LSUB (\HasNoChildren \Sent) "/" "[Gmail]/Sent Mail"
+* LSUB (\HasNoChildren \Junk) "/" "[Gmail]/Spam"
+* LSUB (\Flagged \HasNoChildren) "/" "[Gmail]/Starred"
+* LSUB (\HasNoChildren \Trash) "/" "[Gmail]/Trash"
+99 OK LSUB completed
+100 list "" "INBOX"
+* FLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing)   <== Response to select?
+* OK [PERMANENTFLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing \*)] Flags permitted.
+* OK [UIDVALIDITY 1] UIDs valid
+* 6 EXISTS                                                                  <== Definitely response to select
+* 0 RECENT
+* OK [UIDNEXT 8] Predicted next UID
+63 OK [READ-WRITE] SELECT completed
+64 UID fetch 1:* (FLAGS)                    <== Search messages in INBOX
+* LIST (\HasNoChildren) "/" INBOX
+100 OK LIST completed
+* 1 FETCH (UID 2 FLAGS (\Deleted \Seen))    <=== Search returns 
+* 2 FETCH (UID 3 FLAGS (\Deleted \Seen))
+* 3 FETCH (UID 4 FLAGS (\Seen))
+* 4 FETCH (UID 5 FLAGS (\Seen))
+* 5 FETCH (UID 6 FLAGS (\Seen))
+* 6 FETCH (UID 7 FLAGS (\Seen))
+64 OK UID FETCH completed
+
+[It ignores the first two, 2 and 3 because they are deleted, and gets the details for the rest.]
+
+65 UID fetch 4:7 (UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To)])
+* 3 FETCH (UID 4 RFC822.SIZE 11994 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {282}
+Date: Tue, 04 Jan 2022 18:12:15 GMT
+Message-ID: <vYNhbH8ubwUgfTDmXrIcog@notifications.google.com>
+Subject: Critical security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000c776b305d4c5935b"
+
+)
+* 4 FETCH (UID 5 RFC822.SIZE 11706 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {273}
+Date: Tue, 04 Jan 2022 18:12:59 GMT
+Message-ID: <G-gIIRFVG-8Gz9z7v3ULqA@notifications.google.com>
+Subject: Security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="00000000000066207e05d4c5966c"
+
+)
+* 5 FETCH (UID 6 RFC822.SIZE 33360 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {420}
+Date: Tue, 04 Jan 2022 10:14:02 -0800
+Reply-To: The Google team <google-noreply@google.com>
+Message-ID: <5bccb3db237a73bb283340cf054d2a724a39b453-20079894-110945932@google.com>
+Subject: Take the next step on your Mac by confirming your Google Account
+ settings
+From: The Google team <google-noreply@google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="0000000000001cdda305d4c59af3"
+
+)
+* 6 FETCH (UID 7 RFC822.SIZE 11735 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {282}
+Date: Tue, 04 Jan 2022 18:15:24 GMT
+Message-ID: <Cknz5ceajua0qLX5i1Xbgg@notifications.google.com>
+Subject: Critical security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="0000000000000501b005d4c59ffc"
+
+)
+65 OK UID FETCH completed
+66 UID fetch 6,7 (UID RFC822.SIZE BODY.PEEK[])
+* 5 FETCH (UID 6 RFC822.SIZE 33360 BODY[] {33360}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7250727oon;
+[... more headers ...]
+Content-Type: multipart/alternative; boundary="0000000000001cdda305d4c59af3"
+
+--0000000000001cdda305d4c59af3
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[ ... more body ...]
+
+* 6 FETCH (UID 7 RFC822.SIZE 11735 BODY[] {11735}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7251433oon;
+[... more headers ...]
+
+--0000000000000501b005d4c59ffc
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+66 OK UID FETCH completed
+67 UID fetch 4,5 (UID RFC822.SIZE BODY.PEEK[])
+* 3 FETCH (UID 4 RFC822.SIZE 11994 BODY[] {11994}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7249931oon;
+[... more headers ...]
+
+--000000000000c776b305d4c5935b
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+* 4 FETCH (UID 5 RFC822.SIZE 11706 BODY[] {11706}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7250276oon;
+[... more headers ...]
+
+--00000000000066207e05d4c5966c
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+67 OK UID FETCH completed
+
+68 noop
+68 OK NOOP completed
+
+69 UID fetch 8:* (FLAGS)
+* 6 FETCH (UID 7 FLAGS (\Seen))
+69 OK UID FETCH completed
+
+101 STATUS "[Gmail]/Important" (UIDNEXT MESSAGES UNSEEN RECENT)
+* STATUS "[Gmail]/Important" (UIDNEXT 7 MESSAGES 6 UNSEEN 0 RECENT 0)
+101 OK STATUS completed
+
+* OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT AUTH=PLAIN] IMAP4rev1 Service Ready
+6 authenticate PLAIN
++
+6 OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT] AUTHENTICATE completed
+
+7 select "[Gmail]/Important"
+* FLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing)
+* OK [PERMANENTFLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing \*)] Flags permitted.
+* OK [UIDVALIDITY 9] UIDs valid
+* 6 EXISTS
+* 0 RECENT
+* OK [UIDNEXT 7] Predicted next UID
+7 OK [READ-WRITE] SELECT completed
+
+8 UID fetch 1:* (FLAGS)
+* 1 FETCH (UID 1 FLAGS (\Seen))
+* 2 FETCH (UID 2 FLAGS (\Seen))
+* 3 FETCH (UID 3 FLAGS (\Seen))
+* 4 FETCH (UID 4 FLAGS (\Seen))
+* 5 FETCH (UID 5 FLAGS (\Seen))
+* 6 FETCH (UID 6 FLAGS ())
+8 OK UID FETCH completed
+
+9 UID fetch 3:6 (UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To)])
+* 3 FETCH (UID 3 RFC822.SIZE 11994 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {282}
+Date: Tue, 04 Jan 2022 18:12:15 GMT
+Message-ID: <vYNhbH8ubwUgfTDmXrIcog@notifications.google.com>
+Subject: Critical security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000c776b305d4c5935b"
+
+)   <=== ??? It's a part of IMAP standard.
+* 4 FETCH (UID 4 RFC822.SIZE 11706 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {273}
+Date: Tue, 04 Jan 2022 18:12:59 GMT
+Message-ID: <G-gIIRFVG-8Gz9z7v3ULqA@notifications.google.com>
+Subject: Security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="00000000000066207e05d4c5966c"
+
+)
+* 5 FETCH (UID 5 RFC822.SIZE 11735 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {282}
+Date: Tue, 04 Jan 2022 18:15:24 GMT
+Message-ID: <Cknz5ceajua0qLX5i1Xbgg@notifications.google.com>
+Subject: Critical security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="0000000000000501b005d4c59ffc"
+
+)
+* 6 FETCH (UID 6 RFC822.SIZE 4695 FLAGS () BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {299}
+From: Leonid Gorkin <regnull@gmail.com>
+Date: Tue, 4 Jan 2022 13:16:34 -0500
+Message-ID: <CAAjzdxVnnxPKajQUS_=kUciq25pYjQqU2Xy3ebwdFZTa=c8bMA@mail.gmail.com>
+Subject: How are you doing buddy?
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000d09a0c05d4c5a3e6"
+
+)
+9 OK UID FETCH completed
+10 UID fetch 3,4:6 (UID RFC822.SIZE BODY.PEEK[])
+* 3 FETCH (UID 3 RFC822.SIZE 11994 BODY[] {11994}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7249931oon;
+        Tue, 4 Jan 2022 10:12:16 -0800 (PST)
+[... more headers...]
+
+--000000000000c776b305d4c5935b
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+* 4 FETCH (UID 4 RFC822.SIZE 11706 BODY[] {11706}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7250276oon;
+        Tue, 4 Jan 2022 10:13:00 -0800 (PST)
+[... more headers ...]
+
+--00000000000066207e05d4c5966c
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+* 5 FETCH (UID 5 RFC822.SIZE 11735 BODY[] {11735}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7251433oon;
+        Tue, 4 Jan 2022 10:15:25 -0800 (PST)
+[... more headers ...]
+
+--0000000000000501b005d4c59ffc
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+* 6 FETCH (UID 6 RFC822.SIZE 4695 BODY[] {4695}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7252185oon;
+        Tue, 4 Jan 2022 10:16:46 -0800 (PST)
+[... more headers ...]
+--000000000000d09a0c05d4c5a3e6
+Content-Type: text/plain; charset="UTF-8"
+
+yo
+
+--000000000000d09a0c05d4c5a3e6
+Content-Type: text/html; charset="UTF-8"
+
+<div dir="ltr">yo</div>
+
+--000000000000d09a0c05d4c5a3e6--
+)
+10 OK UID FETCH completed
+
+102 STATUS "[Gmail]/All Mail" (UIDNEXT MESSAGES UNSEEN RECENT)
+* STATUS "[Gmail]/All Mail" (UIDNEXT 9 MESSAGES 7 UNSEEN 0 RECENT 0)
+102 OK STATUS completed
+
+* OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT AUTH=PLAIN] IMAP4rev1 Service Ready
+74 authenticate PLAIN
++
+74 OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT] AUTHENTICATE completed
+
+75 select "[Gmail]/All Mail"
+* FLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing)
+* OK [PERMANENTFLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing \*)] Flags permitted.
+* 0 RECENT
+* OK [UIDNEXT 9] Predicted next UID
+* OK [UIDVALIDITY 12] UIDs valid
+* 7 EXISTS
+75 OK [READ-WRITE] SELECT completed
+
+76 UID fetch 1:* (FLAGS)
+* 1 FETCH (UID 2 FLAGS (\Seen))
+* 2 FETCH (UID 3 FLAGS (\Seen))
+* 3 FETCH (UID 4 FLAGS (\Seen))
+* 4 FETCH (UID 5 FLAGS (\Seen))
+* 5 FETCH (UID 6 FLAGS (\Seen))
+* 6 FETCH (UID 7 FLAGS (\Seen))
+* 7 FETCH (UID 8 FLAGS ())
+76 OK UID FETCH completed
+
+77 UID fetch 2:8 (UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (From To Cc Bcc Subject Date Message-ID Priority X-Priority References Newsgroups In-Reply-To Content-Type Reply-To)])
+* 1 FETCH (UID 2 RFC822.SIZE 11995 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {282}
+Date: Sun, 21 Nov 2021 13:40:02 GMT
+Message-ID: <61fBnHt-nh5U7aGWUwc8ew@notifications.google.com>
+Subject: Critical security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="00000000000038a3e005d14ca518"
+
+)
+* 2 FETCH (UID 3 RFC822.SIZE 11789 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {282}
+Date: Sun, 21 Nov 2021 13:43:51 GMT
+Message-ID: <atiqhGmdIP6eqdz2HzYBrg@notifications.google.com>
+Subject: Critical security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000dfc66205d14cb266"
+
+)
+* 3 FETCH (UID 4 RFC822.SIZE 11994 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {282}
+Date: Tue, 04 Jan 2022 18:12:15 GMT
+Message-ID: <vYNhbH8ubwUgfTDmXrIcog@notifications.google.com>
+Subject: Critical security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000c776b305d4c5935b"
+
+)
+* 4 FETCH (UID 5 RFC822.SIZE 11706 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {273}
+Date: Tue, 04 Jan 2022 18:12:59 GMT
+Message-ID: <G-gIIRFVG-8Gz9z7v3ULqA@notifications.google.com>
+Subject: Security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="00000000000066207e05d4c5966c"
+
+)
+* 5 FETCH (UID 6 RFC822.SIZE 33360 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {420}
+Date: Tue, 04 Jan 2022 10:14:02 -0800
+Reply-To: The Google team <google-noreply@google.com>
+Message-ID: <5bccb3db237a73bb283340cf054d2a724a39b453-20079894-110945932@google.com>
+Subject: Take the next step on your Mac by confirming your Google Account
+ settings
+From: The Google team <google-noreply@google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="0000000000001cdda305d4c59af3"
+
+)
+* 6 FETCH (UID 7 RFC822.SIZE 11735 FLAGS (\Seen) BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {282}
+Date: Tue, 04 Jan 2022 18:15:24 GMT
+Message-ID: <Cknz5ceajua0qLX5i1Xbgg@notifications.google.com>
+Subject: Critical security alert
+From: Google <no-reply@accounts.google.com>
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="0000000000000501b005d4c59ffc"
+
+)
+* 7 FETCH (UID 8 RFC822.SIZE 4695 FLAGS () BODY[HEADER.FIELDS (FROM TO CC BCC SUBJECT DATE MESSAGE-ID PRIORITY X-PRIORITY REFERENCES NEWSGROUPS IN-REPLY-TO CONTENT-TYPE REPLY-TO)] {299}
+From: Leonid Gorkin <regnull@gmail.com>
+Date: Tue, 4 Jan 2022 13:16:34 -0500
+Message-ID: <CAAjzdxVnnxPKajQUS_=kUciq25pYjQqU2Xy3ebwdFZTa=c8bMA@mail.gmail.com>
+Subject: How are you doing buddy?
+To: nullr3g@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000d09a0c05d4c5a3e6"
+
+)
+77 OK UID FETCH completed
+
+78 UID fetch 6,7:8 (UID RFC822.SIZE BODY.PEEK[])
+* 5 FETCH (UID 6 RFC822.SIZE 33360 BODY[] {33360}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7250727oon;
+        Tue, 4 Jan 2022 10:14:03 -0800 (PST)
+[... more headers ...]
+
+--0000000000001cdda305d4c59af3
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+
+* 6 FETCH (UID 7 RFC822.SIZE 11735 BODY[] {11735}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7251433oon;
+        Tue, 4 Jan 2022 10:15:25 -0800 (PST)
+[... more headers ...]
+
+--0000000000000501b005d4c59ffc
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+
+* 7 FETCH (UID 8 RFC822.SIZE 4695 BODY[] {4695}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7252185oon;
+        Tue, 4 Jan 2022 10:16:46 -0800 (PST)
+[... more headers ...]
+
+--000000000000d09a0c05d4c5a3e6
+Content-Type: text/plain; charset="UTF-8"
+
+yo
+
+--000000000000d09a0c05d4c5a3e6
+Content-Type: text/html; charset="UTF-8"
+
+<div dir="ltr">yo</div>
+
+--000000000000d09a0c05d4c5a3e6--
+)
+78 OK UID FETCH completed
+79 UID fetch 2,3:5 (UID RFC822.SIZE BODY.PEEK[])
+* 1 FETCH (UID 2 RFC822.SIZE 11995 BODY[] {11995}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a05:7000:2ec2:0:0:0:0 with SMTP id fb2csp4954004mab;
+        Sun, 21 Nov 2021 05:40:03 -0800 (PST)
+[... more headers ...]
+
+--00000000000038a3e005d14ca518
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+* 2 FETCH (UID 3 RFC822.SIZE 11789 BODY[] {11789}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a05:7000:2ec2:0:0:0:0 with SMTP id fb2csp4957658mab;
+        Sun, 21 Nov 2021 05:43:52 -0800 (PST)
+[... more headers ...]
+
+--000000000000dfc66205d14cb266
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+* 3 FETCH (UID 4 RFC822.SIZE 11994 BODY[] {11994}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7249931oon;
+        Tue, 4 Jan 2022 10:12:16 -0800 (PST)
+[... more headers ...]
+
+--000000000000c776b305d4c5935b
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+* 4 FETCH (UID 5 RFC822.SIZE 11706 BODY[] {11706}
+Delivered-To: nullr3g@gmail.com
+Received: by 2002:a4a:acca:0:0:0:0:0 with SMTP id c10csp7250276oon;
+        Tue, 4 Jan 2022 10:13:00 -0800 (PST)
+[... more headers ...]
+
+--00000000000066207e05d4c5966c
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+[... more body ...]
+
+79 OK UID FETCH completed
+
+103 STATUS "[Gmail]/Drafts" (UIDNEXT MESSAGES UNSEEN RECENT)
+* STATUS "[Gmail]/Drafts" (MESSAGES 0 UNSEEN 0 RECENT 0 UIDNEXT 1)
+103 OK STATUS completed
+
+* OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT AUTH=PLAIN] IMAP4rev1 Service Ready
+32 authenticate PLAIN
++
+32 OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR CHILDREN UNSELECT MOVE APPENDLIMIT] AUTHENTICATE completed
+33 select "[Gmail]/Drafts"
+* FLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing)
+* OK [PERMANENTFLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing \*)] Flags permitted.
+* OK [UIDNEXT 1] Predicted next UID
+* OK [UIDVALIDITY 6] UIDs valid
+* 0 EXISTS
+* 0 RECENT
+33 OK [READ-WRITE] SELECT completed
+104 STATUS "[Gmail]/Starred" (UIDNEXT MESSAGES UNSEEN RECENT)
+* STATUS "[Gmail]/Starred" (UIDNEXT 1 MESSAGES 0 UNSEEN 0 RECENT 0)
+104 OK STATUS completed
+34 select "[Gmail]/Starred"
+* FLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing)
+* OK [PERMANENTFLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing \*)] Flags permitted.
+* OK [UIDNEXT 1] Predicted next UID
+* OK [UIDVALIDITY 4] UIDs valid
+* 0 EXISTS
+* 0 RECENT
+34 OK [READ-WRITE] SELECT completed
+105 STATUS "[Gmail]/Sent Mail" (UIDNEXT MESSAGES UNSEEN RECENT)
+* STATUS "[Gmail]/Sent Mail" (RECENT 0 UIDNEXT 1 MESSAGES 0 UNSEEN 0)
+105 OK STATUS completed
+35 select "[Gmail]/Sent Mail"
+* FLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing)
+* OK [PERMANENTFLAGS (\Answered \Flagged \Draft \Deleted \Seen $NotPhishing $Phishing \*)] Flags permitted.
+* OK [UIDVALIDITY 5] UIDs valid
+* 0 EXISTS
+* 0 RECENT
+* OK [UIDNEXT 1] Predicted next UID
+35 OK [READ-WRITE] SELECT completed
