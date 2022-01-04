@@ -40,13 +40,13 @@ type Mailbox struct {
 	dumpClient     pb.DMSDumpServiceClient
 	privateKey     *easyecc.PrivateKey
 	nextMessageUid uint32
-	updateChan     <-chan backend.Update
+	updateChan     chan<- backend.Update
 }
 
 // NewMailbox creates a brand new mailbox.
 func NewMailbox(user string, name string, db *db.Badger, lookupClient pb.LookupServiceClient,
 	dumpClient pb.DMSDumpServiceClient, privateKey *easyecc.PrivateKey,
-	updateChan <-chan backend.Update) (*Mailbox, error) {
+	updateChan chan<- backend.Update) (*Mailbox, error) {
 	mb := &Mailbox{
 		user:           user,
 		db:             db,
@@ -566,7 +566,13 @@ func (m *Mailbox) Poll() error {
 	if m.IsInbox() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		err := m.getMessageFromDumpServer(ctx)
+		count, err := m.getMessagesFromDumpServer(ctx)
+		if count > 0 {
+			err = m.notifyStatusChange()
+			if err != nil {
+				m.logError(err).Msg("failed to notify about mailbox status change")
+			}
+		}
 		if err != nil {
 			m.logError(err).Msg("failed to get messages from dump server")
 			return err
@@ -575,14 +581,31 @@ func (m *Mailbox) Poll() error {
 	return nil
 }
 
-func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
+func (m *Mailbox) notifyStatusChange() error {
+	// Disabled for now.
+	return nil
+
+	m.logDebug().Msg("sending async mailbox status notification")
+	status, err := m.Status([]imap.StatusItem{imap.StatusMessages, imap.StatusRecent})
+	if err != nil {
+		return err
+	}
+
+	m.updateChan <- backend.MailboxUpdate{
+		Update:        backend.NewUpdate(m.user, m.name),
+		MailboxStatus: status,
+	}
+	return nil
+}
+
+func (m *Mailbox) getMessagesFromDumpServer(ctx context.Context) (int, error) {
 	log.Debug().Str("user", m.user).Str("mailbox", m.name).Msg("getting messages from dump server")
 	// Read all remote messages.
 	count := 0
 	for {
 		identityProof, err := protoutil.IdentityProof(m.privateKey, time.Now())
 		if err != nil {
-			return err
+			return count, err
 		}
 		res, err := m.dumpClient.Receive(ctx, &pb.ReceiveRequest{
 			IdentityProof: identityProof})
@@ -596,21 +619,20 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 		}
 		if err != nil {
 			m.logError(err).Msg("failed to receive message")
-			return fmt.Errorf("failed to receive message: %w", err)
+			return count, fmt.Errorf("failed to receive message: %w", err)
 		}
-		count++
 		log.Debug().Str("user", m.user).Str("mailbox", m.name).Msg("got new message")
 		msg := res.GetMessage()
 		msgid, err := m.db.IncrementMessageID(m.user, m.name, m.privateKey)
 		if err != nil {
 			m.logError(err).Msg("failed go get next message id")
-			return err
+			return count, err
 		}
 
 		content, err := m.decryptMessage(ctx, m.privateKey, msg)
 		if err != nil {
 			m.logError(err).Msg("failed to decrypt message")
-			return err
+			return count, err
 		}
 
 		message := &Message{
@@ -623,11 +645,12 @@ func (m *Mailbox) getMessageFromDumpServer(ctx context.Context) error {
 		err = m.db.SaveMessage(m.user, db.INBOX_UID, message.ToProto(), m.privateKey)
 		if err != nil {
 			m.logError(err).Msg("failed to save message")
-			return err
+			return count, err
 		}
+		count++
 	}
 	log.Debug().Int("count", count).Msg("total messages")
-	return nil
+	return count, nil
 }
 
 func (m *Mailbox) decryptMessage(ctx context.Context, privateKey *easyecc.PrivateKey, msg *pb.DMSMessage) ([]byte, error) {

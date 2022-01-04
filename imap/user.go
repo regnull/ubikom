@@ -17,12 +17,12 @@ type User struct {
 	privateKey   *easyecc.PrivateKey
 	lookupClient pb.LookupServiceClient
 	dumpClient   pb.DMSDumpServiceClient
-	updateChan   <-chan backend.Update
+	updateChan   chan<- backend.Update
 }
 
 func NewUser(name string, db *db.Badger, privateKey *easyecc.PrivateKey,
 	lookupClient pb.LookupServiceClient, dumpClient pb.DMSDumpServiceClient,
-	updateChan <-chan backend.Update) *User {
+	updateChan chan<- backend.Update) *User {
 	log.Debug().Str("name", name).Msg("[IMAP] creating new user")
 	return &User{
 		name:         name,
