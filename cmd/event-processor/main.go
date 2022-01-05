@@ -148,9 +148,13 @@ func main() {
 
 			ts := util.TimeFromMs(int64(event.Timestamp))
 			tsStr := ts.Format("2006-01-02 15:04:05")
+			trunkatedData := event.GetData1()
+			if len(trunkatedData) > 128 {
+				trunkatedData = trunkatedData[:128]
+			}
 			stmt := "INSERT INTO events (id, timestamp, event_type, user1, user2, message, data1, component, flags) VALUES " +
 				fmt.Sprintf("('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', 0);", event.GetId(), tsStr, event.GetEventType().String(),
-					strings.ToLower(event.GetUser1()), strings.ToLower(event.GetUser2()), event.GetMessage(), event.GetData1(), event.GetComponent())
+					strings.ToLower(event.GetUser1()), strings.ToLower(event.GetUser2()), event.GetMessage(), trunkatedData, event.GetComponent())
 			_, err = db.Exec(stmt)
 			if err != nil {
 				log.Fatal().Err(err).Msg("error executing insert statement")

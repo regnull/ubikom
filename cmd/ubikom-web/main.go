@@ -401,7 +401,6 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Error().Err(err).Msg("error adding received header")
 			w.WriteHeader(http.StatusInternalServerError)
-			return
 		}
 		err = protoutil.SendEmail(r.Context(), s.privateKey, []byte(body), s.name, s.notificationName, s.lookupClient)
 		if err != nil {
@@ -416,7 +415,6 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Error().Err(err).Msg("error adding received header")
 			w.WriteHeader(http.StatusInternalServerError)
-			return
 		}
 		err = protoutil.SendEmail(r.Context(), s.privateKey, []byte(body), s.name, name, s.lookupClient)
 		if err != nil {
