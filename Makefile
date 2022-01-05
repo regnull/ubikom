@@ -22,11 +22,7 @@ genproto:
 server-stop:
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-server
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-dump
-	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-proxy
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-web
-
-dev-proxy-stop: 
-	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-proxy-dev
 
 mail-server-stop:
 	ssh -i $(MAIL_SSH_KEY) ubuntu@$(MAIL_SERVER_ADR) sudo supervisorctl stop ubikom-gateway
@@ -35,7 +31,6 @@ upload:
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-server ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-server
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-dump ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-dump
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-cli ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-cli
-	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-proxy ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-proxy
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-web ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-web
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/dbexport ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/dbexport
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/dbimport ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/dbimport
@@ -43,20 +38,13 @@ upload:
 	scp -i $(SSH_KEY) $(ROOT_DIR)config/ubikom-server.conf ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom.conf
 	scp -i $(SSH_KEY) $(ROOT_DIR)config/supervisor/* ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/supervisor
 
-upload-dev-proxy:
-	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-proxy ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-proxy-dev
-
 mail-upload:
 	scp -i $(MAIL_SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-gateway ubuntu@$(MAIL_SERVER_ADR):~/ubikom/ubikom-gateway
 
 server-start:
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-server
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-dump
-	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-proxy
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-web
-
-dev-proxy-start:
-	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-proxy-dev
 
 mail-server-start:
 	ssh -i $(MAIL_SSH_KEY) ubuntu@$(MAIL_SERVER_ADR) sudo supervisorctl start ubikom-gateway
@@ -70,7 +58,4 @@ test:
 cover:
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out
-
-compile-diag:
-	java -jar tools/plantuml.jar -o ../doc diagram
 
