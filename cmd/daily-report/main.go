@@ -46,6 +46,11 @@ type Registration struct {
 type ReportArgs struct {
 	TotalRegNum              int
 	RegNum                   int
+	CompleteRegNum           int
+	MacRegNum                int
+	IPhoneRegNum             int
+	WindowsRegNum            int
+	LinuxRegNum              int
 	Registrations            []*Registration
 	IMAPClientNum            int
 	POPClientNum             int
@@ -134,10 +139,40 @@ func main() {
 
 	reg, err := GetRegistrations(db)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get registration")
+		log.Fatal().Err(err).Msg("failed to get registrations")
 	}
 	reportArgs.RegNum = len(reg)
 	reportArgs.Registrations = reg
+
+	completeRegNum, err := GetNumberOfCompletedRegistrations(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get completed registrations")
+	}
+	reportArgs.CompleteRegNum = completeRegNum
+
+	macRegNum, err := GetNumberOfMacRegistrations(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get mac registrations")
+	}
+	reportArgs.MacRegNum = macRegNum
+
+	iPhoneRegNum, err := GetNumberOfiPhoneRegistrations(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get iphone registrations")
+	}
+	reportArgs.IPhoneRegNum = iPhoneRegNum
+
+	windowsRegNum, err := GetNumberOfWindowsRegistrations(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get windows registrations")
+	}
+	reportArgs.WindowsRegNum = windowsRegNum
+
+	linuxRegNum, err := GetNumberOfLinuxRegistrations(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get linux registrations")
+	}
+	reportArgs.LinuxRegNum = linuxRegNum
 
 	reportArgs.IMAPClientNum, err = GetIMAPClientNum(db)
 	if err != nil {
@@ -407,6 +442,80 @@ WHERE
 	return getNumberFromQuery(db, query)
 }
 
+func GetNumberOfCompletedRegistrations(db *sql.DB) (int, error) {
+	const query = `
+SELECT
+	COUNT(*)
+FROM
+	events
+WHERE
+	event_type = 'ET_PAGE_SERVED' AND
+	component = 'web/easy_setup' AND
+	timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	return getNumberFromQuery(db, query)
+}
+
+func GetNumberOfMacRegistrations(db *sql.DB) (int, error) {
+	const query = `
+SELECT
+	COUNT(*)
+FROM
+	events
+WHERE
+	event_type = 'ET_PAGE_SERVED' AND
+	component = 'web/easy_setup' AND
+	data1 LIKE '%(Macintosh;%' AND
+	timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	return getNumberFromQuery(db, query)
+}
+
+func GetNumberOfiPhoneRegistrations(db *sql.DB) (int, error) {
+	const query = `
+SELECT
+	COUNT(*)
+FROM
+	events
+WHERE
+	event_type = 'ET_PAGE_SERVED' AND
+	component = 'web/easy_setup' AND
+	(data1 LIKE '%(iPhone;%' OR data1 LIKE '%(iPad;%') AND
+	timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	return getNumberFromQuery(db, query)
+}
+
+func GetNumberOfWindowsRegistrations(db *sql.DB) (int, error) {
+	const query = `
+SELECT
+	COUNT(*)
+FROM
+	events
+WHERE
+		event_type = 'ET_PAGE_SERVED' AND
+		component = 'web/easy_setup' AND
+		data1 LIKE '%(Windows%' AND
+		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	return getNumberFromQuery(db, query)
+}
+
+func GetNumberOfLinuxRegistrations(db *sql.DB) (int, error) {
+	const query = `
+SELECT
+	COUNT(*)
+FROM
+	events
+WHERE
+		event_type = 'ET_PAGE_SERVED' AND
+		component = 'web/easy_setup' AND
+		data1 LIKE '%(Linux;%' AND
+		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	return getNumberFromQuery(db, query)
+}
+
 func GenerateReport(args *ReportArgs) (string, error) {
 	const reportTmplTxt = `Greetings humans!
 
@@ -415,6 +524,11 @@ do I have some stats for you!
 
 Names registered (all time): {{.TotalRegNum}}
 Names registered (past 24 hours): {{.RegNum}}
+Completed registrations (past 24 hours): {{.CompleteRegNum}}
+Names registered (past 24 hours) on Mac: {{.MacRegNum}}
+Names registered (past 24 hours) on iPhone/iPad: {{.IPhoneRegNum}}
+Names registered (past 24 hours) on Windows: {{.WindowsRegNum}}
+Names registered (past 24 hours) on Linux: {{.LinuxRegNum}}
 Total actual clients (all time): {{.TotalClientNum}}
 Actual clients (past 24 hours): {{.ClientNum}}
 Actual clients, POP (past 24 hours): {{.POPClientNum}}
@@ -478,7 +592,9 @@ func execute(cmd *exec.Cmd) (string, error) {
 }
 
 func getNumberFromQuery(db *sql.DB, query string) (int, error) {
-	rows, err := db.Query(query)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return 0, err
 	}
