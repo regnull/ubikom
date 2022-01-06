@@ -50,7 +50,7 @@ type ReportArgs struct {
 	MacRegNum                int
 	IPhoneRegNum             int
 	WindowsRegNum            int
-	LinuxRegNum              int
+	AndroidRegNum            int
 	Registrations            []*Registration
 	IMAPClientNum            int
 	POPClientNum             int
@@ -168,11 +168,11 @@ func main() {
 	}
 	reportArgs.WindowsRegNum = windowsRegNum
 
-	linuxRegNum, err := GetNumberOfLinuxRegistrations(db)
+	androidRegNum, err := GetNumberOfAndroidRegistrations(db)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get linux registrations")
 	}
-	reportArgs.LinuxRegNum = linuxRegNum
+	reportArgs.AndroidRegNum = androidRegNum
 
 	reportArgs.IMAPClientNum, err = GetIMAPClientNum(db)
 	if err != nil {
@@ -501,7 +501,7 @@ WHERE
 	return getNumberFromQuery(db, query)
 }
 
-func GetNumberOfLinuxRegistrations(db *sql.DB) (int, error) {
+func GetNumberOfAndroidRegistrations(db *sql.DB) (int, error) {
 	const query = `
 SELECT
 	COUNT(*)
@@ -510,7 +510,7 @@ FROM
 WHERE
 		event_type = 'ET_PAGE_SERVED' AND
 		component = 'web/easy_setup' AND
-		data1 LIKE '%(Linux;%' AND
+		data1 LIKE '%(Linux; Android%' AND
 		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
 	return getNumberFromQuery(db, query)
@@ -528,7 +528,7 @@ Completed registrations (past 24 hours): {{.CompleteRegNum}}
 Names registered (past 24 hours) on Mac: {{.MacRegNum}}
 Names registered (past 24 hours) on iPhone/iPad: {{.IPhoneRegNum}}
 Names registered (past 24 hours) on Windows: {{.WindowsRegNum}}
-Names registered (past 24 hours) on Linux: {{.LinuxRegNum}}
+Names registered (past 24 hours) on Android: {{.AndroidRegNum}}
 Total actual clients (all time): {{.TotalClientNum}}
 Actual clients (past 24 hours): {{.ClientNum}}
 Actual clients, POP (past 24 hours): {{.POPClientNum}}
