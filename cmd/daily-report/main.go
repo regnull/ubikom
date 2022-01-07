@@ -510,7 +510,7 @@ FROM
 WHERE
 		event_type = 'ET_PAGE_SERVED' AND
 		component = 'web/easy_setup' AND
-		data1 LIKE '%(Linux; Android%' AND
+		(data1 LIKE '%(Linux; Android%' OR data1 LIKE '%(Android%') AND
 		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
 	return getNumberFromQuery(db, query)
