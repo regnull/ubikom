@@ -171,7 +171,7 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	if err != nil {
 		return fmt.Errorf("failed to send message: %w", err)
 	}
-	log.Info().Msg("sent message successfully")
+	log.Debug().Msg("sent message successfully")
 	return nil
 }
 
