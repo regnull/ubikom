@@ -18,9 +18,11 @@ import (
 func init() {
 	deployKeyRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 
+	deployNameRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 	deployNameRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
 
 	deployCmd.AddCommand(deployKeyRegistryCmd)
+	deployCmd.AddCommand(deployNameRegistryCmd)
 
 	BCCmd.AddCommand(deployCmd)
 }
@@ -64,9 +66,9 @@ var deployKeyRegistryCmd = &cobra.Command{
 }
 
 var deployNameRegistryCmd = &cobra.Command{
-	Use:   "key-registry",
-	Short: "Deploy key registry",
-	Long:  "Deploy key registry",
+	Use:   "name-registry",
+	Short: "Deploy name registry",
+	Long:  "Deploy name registry",
 	Run: func(cmd *cobra.Command, args []string) {
 		key, err := LoadKeyFromFlag(cmd, "key")
 		if err != nil {
