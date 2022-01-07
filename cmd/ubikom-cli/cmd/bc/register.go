@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/regnull/ubchain/keyregistry"
+	"github.com/regnull/ubchain/gocontract"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -94,7 +94,7 @@ var registerKeyCmd = &cobra.Command{
 		auth.GasLimit = gasLimit
 		auth.GasPrice = gasPrice
 
-		instance, err := keyregistry.NewKeyregistry(common.HexToAddress(contractAddress), client)
+		instance, err := gocontract.NewKeyRegistry(common.HexToAddress(contractAddress), client)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get contract instance")
 		}

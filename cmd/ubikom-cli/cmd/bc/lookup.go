@@ -1,12 +1,11 @@
 package bc
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/regnull/ubchain/keyregistry"
+	"github.com/regnull/ubchain/gocontract"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -51,19 +50,28 @@ var lookupKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to connect to blockchain node")
 		}
 
-		instance, err := keyregistry.NewKeyregistry(common.HexToAddress(contractAddress), client)
+		instance, err := gocontract.NewKeyRegistry(common.HexToAddress(contractAddress), client)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get contract instance")
 		}
 
-		res, err := instance.Registry(nil, key.PublicKey().SerializeCompressed())
+		registered, err := instance.Registered(nil, key.PublicKey().SerializeCompressed())
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to lookup public key")
+			log.Fatal().Err(err).Msg("failed to query the key")
 		}
-		b, err := json.MarshalIndent(res, "", "  ")
+
+		disabled, err := instance.Disabled(nil, key.PublicKey().SerializeCompressed())
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to marshal JSON")
+			log.Fatal().Err(err).Msg("failed to query the key")
 		}
-		fmt.Printf("%s\n", string(b))
+
+		owner, err := instance.Owner(nil, key.PublicKey().SerializeCompressed())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to query the key")
+		}
+
+		fmt.Printf("registered: %b\n", registered)
+		fmt.Printf("disabled: %b\n", disabled)
+		fmt.Printf("owner: %s\n", owner.Hex())
 	},
 }

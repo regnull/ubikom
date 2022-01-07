@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
-	"github.com/regnull/ubchain/keyregistry"
+	"github.com/regnull/ubchain/gocontract"
 	"github.com/rs/zerolog/log"
 )
 
@@ -65,7 +65,7 @@ func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (s
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 
-	instance, err := keyregistry.NewKeyregistry(b.contractAddress, b.client)
+	instance, err := gocontract.NewKeyRegistry(b.contractAddress, b.client)
 	if err != nil {
 		return "", err
 	}

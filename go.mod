@@ -20,7 +20,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/regnull/easyecc v0.1.6
 	github.com/regnull/popgun v0.2.1
-	github.com/regnull/ubchain v0.0.0-20211230021003-d7bab51fadf5 // indirect
+	github.com/regnull/ubchain v0.0.0-20220101171918-3e7f76e11ec4 // indirect
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rs/zerolog v1.21.0
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
