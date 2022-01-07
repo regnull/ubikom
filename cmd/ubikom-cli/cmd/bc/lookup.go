@@ -6,13 +6,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/ubchain/gocontract"
+	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 func init() {
 	lookupKeyCmd.Flags().String("key", "", "key to authorize the transaction")
-	lookupKeyCmd.Flags().String("contract-address", "", "contract address")
+	lookupKeyCmd.Flags().String("contract-address", globals.KeyRegistryContractAddress, "contract address")
 
 	lookupCmd.AddCommand(lookupKeyCmd)
 

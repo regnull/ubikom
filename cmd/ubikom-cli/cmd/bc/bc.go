@@ -1,16 +1,13 @@
 package bc
 
 import (
+	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
-const (
-	defaultNodeURL = "http://18.223.40.196:8545"
-)
-
 func init() {
-	BCCmd.PersistentFlags().String("node-url", defaultNodeURL, "blockchain node location")
+	BCCmd.PersistentFlags().String("node-url", globals.BlockchainNodeURL, "blockchain node location")
 }
 
 var BCCmd = &cobra.Command{

@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/ubchain/gocontract"
+	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -16,7 +17,7 @@ import (
 func init() {
 	registerKeyCmd.Flags().String("key", "", "key to authorize the transaction")
 	registerKeyCmd.Flags().String("reg-key", "", "key to register")
-	registerKeyCmd.Flags().String("contract-address", "", "contract address")
+	registerKeyCmd.Flags().String("contract-address", globals.KeyRegistryContractAddress, "contract address")
 
 	registerCmd.AddCommand(registerKeyCmd)
 

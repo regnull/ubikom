@@ -14,6 +14,7 @@ func init() {
 	getBalanceCmd.Flags().String("address", "", "get balance for this address")
 
 	getCmd.AddCommand(getBalanceCmd)
+	getCmd.AddCommand(getBlockCmd)
 
 	BCCmd.AddCommand(getCmd)
 }
@@ -58,5 +59,30 @@ var getBalanceCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get balance")
 		}
 		fmt.Printf("Balance: %d\n", balance)
+	},
+}
+
+var getBlockCmd = &cobra.Command{
+	Use:   "block",
+	Short: "Get latest block number",
+	Long:  "Get latest block number",
+	Run: func(cmd *cobra.Command, args []string) {
+		nodeURL, err := cmd.Flags().GetString("node-url")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get node URL")
+		}
+
+		// Connect to the node.
+		client, err := ethclient.Dial(nodeURL)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to connect to blockchain node")
+		}
+
+		ctx := context.Background()
+		num, err := client.BlockNumber(ctx)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get latest block number")
+		}
+		fmt.Printf("%d\n", num)
 	},
 }
