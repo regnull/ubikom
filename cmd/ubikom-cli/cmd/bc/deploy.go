@@ -21,8 +21,13 @@ func init() {
 	deployNameRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 	deployNameRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
 
+	deployConnectorRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
+	deployConnectorRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
+	deployConnectorRegistryCmd.Flags().String("name-registry-address", "", "name registry contract address")
+
 	deployCmd.AddCommand(deployKeyRegistryCmd)
 	deployCmd.AddCommand(deployNameRegistryCmd)
+	deployCmd.AddCommand(deployConnectorRegistryCmd)
 
 	BCCmd.AddCommand(deployCmd)
 }
@@ -94,6 +99,56 @@ var deployNameRegistryCmd = &cobra.Command{
 		txAddr, tx, err := deploy(nodeURL, key, func(auth *bind.TransactOpts,
 			client *ethclient.Client) (common.Address, *types.Transaction, error) {
 			txAddr, tx, _, err := gocontract.DeployNameRegistry(auth, client, keyRegistryAddr)
+			return txAddr, tx, err
+		})
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to deploy")
+		}
+
+		fmt.Printf("contract address: %s\n", txAddr.Hex())
+		fmt.Printf("tx: %s\n", tx.Hash().Hex())
+	},
+}
+
+var deployConnectorRegistryCmd = &cobra.Command{
+	Use:   "connector-registry",
+	Short: "Deploy connector registry",
+	Long:  "Deploy connector registry",
+	Run: func(cmd *cobra.Command, args []string) {
+		key, err := LoadKeyFromFlag(cmd, "key")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load key")
+		}
+
+		nodeURL, err := cmd.Flags().GetString("node-url")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get node URL")
+		}
+
+		keyRegistryAddress, err := cmd.Flags().GetString("key-registry-address")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get key registry address")
+		}
+
+		if keyRegistryAddress == "" {
+			log.Fatal().Msg("--key-registry-address must be specified")
+		}
+
+		nameRegistryAddress, err := cmd.Flags().GetString("name-registry-address")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get name registry address")
+		}
+
+		if nameRegistryAddress == "" {
+			log.Fatal().Msg("--name-registry-address must be specified")
+		}
+
+		keyRegistryAddr := common.HexToAddress(keyRegistryAddress)
+		nameRegistryAddr := common.HexToAddress(nameRegistryAddress)
+
+		txAddr, tx, err := deploy(nodeURL, key, func(auth *bind.TransactOpts,
+			client *ethclient.Client) (common.Address, *types.Transaction, error) {
+			txAddr, tx, _, err := gocontract.DeployConnectorRegistry(auth, client, keyRegistryAddr, nameRegistryAddr)
 			return txAddr, tx, err
 		})
 		if err != nil {

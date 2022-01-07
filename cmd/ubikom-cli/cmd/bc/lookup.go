@@ -70,8 +70,8 @@ var lookupKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to query the key")
 		}
 
-		fmt.Printf("registered: %b\n", registered)
-		fmt.Printf("disabled: %b\n", disabled)
+		fmt.Printf("registered: %t\n", registered)
+		fmt.Printf("disabled: %t\n", disabled)
 		fmt.Printf("owner: %s\n", owner.Hex())
 	},
 }
