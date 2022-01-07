@@ -17,6 +17,7 @@ import (
 
 func init() {
 	deployKeyRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
+	deployKeyRegistryCmd.Flags().Uint64("gas-limit", 300000, "gas limit")
 
 	deployNameRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 	deployNameRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
@@ -56,7 +57,12 @@ var deployKeyRegistryCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 
-		txAddr, tx, err := deploy(nodeURL, key, func(auth *bind.TransactOpts,
+		gasLimit, err := cmd.Flags().GetUint64("gas-limit")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get gas limit")
+		}
+
+		txAddr, tx, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
 			client *ethclient.Client) (common.Address, *types.Transaction, error) {
 			txAddr, tx, _, err := gocontract.DeployKeyRegistry(auth, client)
 			return txAddr, tx, err
@@ -85,6 +91,11 @@ var deployNameRegistryCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 
+		gasLimit, err := cmd.Flags().GetUint64("gas-limit")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get gas limit")
+		}
+
 		keyRegistryAddress, err := cmd.Flags().GetString("key-registry-address")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get key registry address")
@@ -96,7 +107,7 @@ var deployNameRegistryCmd = &cobra.Command{
 
 		keyRegistryAddr := common.HexToAddress(keyRegistryAddress)
 
-		txAddr, tx, err := deploy(nodeURL, key, func(auth *bind.TransactOpts,
+		txAddr, tx, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
 			client *ethclient.Client) (common.Address, *types.Transaction, error) {
 			txAddr, tx, _, err := gocontract.DeployNameRegistry(auth, client, keyRegistryAddr)
 			return txAddr, tx, err
@@ -125,6 +136,11 @@ var deployConnectorRegistryCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 
+		gasLimit, err := cmd.Flags().GetUint64("gas-limit")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get gas limit")
+		}
+
 		keyRegistryAddress, err := cmd.Flags().GetString("key-registry-address")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get key registry address")
@@ -146,7 +162,7 @@ var deployConnectorRegistryCmd = &cobra.Command{
 		keyRegistryAddr := common.HexToAddress(keyRegistryAddress)
 		nameRegistryAddr := common.HexToAddress(nameRegistryAddress)
 
-		txAddr, tx, err := deploy(nodeURL, key, func(auth *bind.TransactOpts,
+		txAddr, tx, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
 			client *ethclient.Client) (common.Address, *types.Transaction, error) {
 			txAddr, tx, _, err := gocontract.DeployConnectorRegistry(auth, client, keyRegistryAddr, nameRegistryAddr)
 			return txAddr, tx, err
@@ -160,7 +176,7 @@ var deployConnectorRegistryCmd = &cobra.Command{
 	},
 }
 
-func deploy(nodeURL string, key *easyecc.PrivateKey,
+func deploy(nodeURL string, key *easyecc.PrivateKey, gasLimit uint64,
 	deployFunc func(*bind.TransactOpts,
 		*ethclient.Client) (common.Address, *types.Transaction, error)) (common.Address, *types.Transaction, error) {
 	// Connect to the node.
@@ -177,9 +193,6 @@ func deploy(nodeURL string, key *easyecc.PrivateKey,
 		return common.Address{}, nil, err
 	}
 	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
-
-	// Recommended gas limit.
-	gasLimit := uint64(300000)
 
 	// Get gas price.
 	gasPrice, err := client.SuggestGasPrice(ctx)
