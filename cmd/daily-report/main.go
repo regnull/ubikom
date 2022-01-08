@@ -43,6 +43,11 @@ type Registration struct {
 	Timestamp string
 }
 
+type CountByOS struct {
+	OS    string
+	Count int
+}
+
 type ReportArgs struct {
 	TotalRegNum              int
 	RegNum                   int
@@ -52,6 +57,7 @@ type ReportArgs struct {
 	WindowsRegNum            int
 	AndroidRegNum            int
 	Registrations            []*Registration
+	DroppedOff               []*CountByOS
 	IMAPClientNum            int
 	POPClientNum             int
 	ClientNum                int
@@ -212,6 +218,11 @@ func main() {
 	reportArgs.ExternalMessagesReceived, err = GetExternalMessagesReceived(db)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get external messages received")
+	}
+
+	reportArgs.DroppedOff, err = DroppedOffAfterRegistration(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get dropped off")
 	}
 
 	reportArgs.Fortune, err = GetFortune()
@@ -376,9 +387,9 @@ FROM
 	events
 WHERE	
 	user1 NOT IN (
-	        SELECT
+	    SELECT
 			DISTINCT user1
-	        FROM
+	    FROM
 			events
 		WHERE
 			(event_type = 'ET_PROXY_POP_LOGIN' or event_type = 'ET_PROXY_IMAP_LOGIN') AND
@@ -516,29 +527,108 @@ WHERE
 	return getNumberFromQuery(db, query)
 }
 
+func DroppedOffAfterRegistration(db *sql.DB) ([]*CountByOS, error) {
+	const query = `
+SELECT 
+	IF
+	(
+		data1 REGEXP 'Windows', 'Windows',
+			IF
+		 	(
+		  		data1 REGEXP 'Macintosh', 'Mac',
+				IF
+				(
+			 		data1 REGEXP 'Android', 'Android',
+				   	IF (data1 REGEXP 'iPhone' OR data1 REGEXP 'iPad', 'iPhone/iPad', 'Other')
+				)
+		 	)
+	) AS os, COUNT(*) AS count
+FROM 
+	events 
+WHERE 
+	event_type = 'ET_PAGE_SERVED' AND 
+	component = 'web/easy_setup' AND 
+	timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW() AND
+	user2 NOT IN 
+	(
+		SELECT 
+			DISTINCT user1 
+		FROM 
+			events 
+		WHERE  
+			user1 NOT IN 
+			(     
+				SELECT 
+					DISTINCT user1     
+				FROM 
+					events 
+				WHERE 
+					(
+						event_type = 'ET_PROXY_POP_LOGIN' OR 
+						event_type = 'ET_PROXY_IMAP_LOGIN'
+					) AND   
+					timestamp < DATE_ADD(NOW(), INTERVAL -1 DAY) 
+			) 
+			AND 
+			(
+				event_type = 'ET_PROXY_POP_LOGIN' OR 
+				event_type = 'ET_PROXY_IMAP_LOGIN'
+			) AND 
+			timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+	)
+GROUP BY 
+	os
+`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	var res []*CountByOS
+	for rows.Next() {
+		var c CountByOS
+		err = rows.Scan(&c.OS, &c.Count)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, &c)
+	}
+	return res, nil
+}
+
 func GenerateReport(args *ReportArgs) (string, error) {
 	const reportTmplTxt = `Greetings humans!
 
 This is Ubikom Report Generator, broadcasting live from Ubikom world headquaters, and boy,
 do I have some stats for you!
 
-Names registered (all time): {{.TotalRegNum}}
-Names registered (past 24 hours): {{.RegNum}}
-Completed registrations (past 24 hours): {{.CompleteRegNum}}
-Names registered (past 24 hours) on Mac: {{.MacRegNum}}
-Names registered (past 24 hours) on iPhone/iPad: {{.IPhoneRegNum}}
-Names registered (past 24 hours) on Windows: {{.WindowsRegNum}}
-Names registered (past 24 hours) on Android: {{.AndroidRegNum}}
-Total actual clients (all time): {{.TotalClientNum}}
-Actual clients (past 24 hours): {{.ClientNum}}
-Actual clients, POP (past 24 hours): {{.POPClientNum}}
-Actual clients, IMAP (past 24 hours): {{.IMAPClientNum}}
-New actual clients (past 24 hours): {{.NewClientNum}}
-Messages sent via SMTP: {{.SMTPMessagesSent}}
-Messages sent to external recipients (via gateway): {{.ExternalMessagesSent}}
-Messages were received from external users: {{.ExternalMessagesReceived}}
+=== Daily stats:
 
-Here's the list of names that were registered (past 24 hours):
+{{printf "%-35s" "Names registered:"}}{{.RegNum}}
+{{printf "%-35s" "Completed registrations:"}}{{.CompleteRegNum}}
+{{printf "%-35s" "Names registered on Mac:"}}{{.MacRegNum}}
+{{printf "%-35s" "Names registered on iPhone/iPad:"}}{{.IPhoneRegNum}}
+{{printf "%-35s" "Names registered on Windows:"}}{{.WindowsRegNum}}
+{{printf "%-35s" "Names registered on Android:"}}{{.AndroidRegNum}}
+{{printf "%-35s" "Actual clients:"}}{{.ClientNum}}
+{{printf "%-35s" "Actual clients, POP:"}}{{.POPClientNum}}
+{{printf "%-35s" "Actual clients, IMAP:"}}{{.IMAPClientNum}}
+{{printf "%-35s" "New actual clients:"}}{{.NewClientNum}}
+{{printf "%-35s" "Messages sent via SMTP:"}}{{.SMTPMessagesSent}}
+{{printf "%-35s" "Messages sent via gateway:"}}{{.ExternalMessagesSent}}
+{{printf "%-35s" "Messages from external users:"}}{{.ExternalMessagesReceived}}
+
+=== All time stats:
+
+{{printf "%-35s" "Names registered:"}}{{.TotalRegNum}}
+{{printf "%-35s" "Actual clients:"}}{{.TotalClientNum}}
+
+=== Dropped off after registration:
+Those are the newly registered users who haven't configured their clients.
+
+{{range .DroppedOff}}{{printf "%-20s" .OS}} {{.Count}}
+{{end}}
+
+=== Names registered
 
 {{range .Registrations}}Name: {{printf "%-20s" .Name}} Time: {{.Timestamp}}
 {{end}}
@@ -551,7 +641,7 @@ P.S.
 
 {{.Fortune}}
 
---- Disk Space ---
+=== Disk Space
 
 {{.DiskInfo}}
 `
