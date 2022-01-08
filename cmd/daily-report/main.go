@@ -61,6 +61,7 @@ type ReportArgs struct {
 	IMAPClientNum            int
 	POPClientNum             int
 	ClientNum                int
+	WeeklyClientNum          int
 	NewClientNum             int
 	TotalClientNum           int
 	SMTPMessagesSent         int
@@ -192,7 +193,12 @@ func main() {
 
 	reportArgs.ClientNum, err = GetClientNum(db)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get pop clients num")
+		log.Fatal().Err(err).Msg("failed to get client num")
+	}
+
+	reportArgs.WeeklyClientNum, err = GetWeeklyClientNum(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get weekly client num")
 	}
 
 	reportArgs.NewClientNum, err = GetNewClientNum(db)
@@ -375,6 +381,20 @@ WHERE
 	  (event_type = 'ET_PROXY_POP_LOGIN' OR 
 	  	 event_type = 'ET_PROXY_IMAP_LOGIN') AND
 	  timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	return getNumberFromQuery(db, query)
+}
+
+func GetWeeklyClientNum(db *sql.DB) (int, error) {
+	const query = `
+SELECT 
+	COUNT(DISTINCT user1)
+FROM 
+	events
+WHERE
+	  (event_type = 'ET_PROXY_POP_LOGIN' OR 
+	  	 event_type = 'ET_PROXY_IMAP_LOGIN') AND
+	  timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -7 DAY) AND NOW()
 `
 	return getNumberFromQuery(db, query)
 }
@@ -617,6 +637,10 @@ do I have some stats for you!
 {{printf "%-35s" "Messages sent via gateway:"}}{{.ExternalMessagesSent}}
 {{printf "%-35s" "Messages from external users:"}}{{.ExternalMessagesReceived}}
 
+=== Weekly stats:
+
+{{printf "%-35s" "Actual clients:"}}{{.WeeklyClientNum}}
+
 === All time stats:
 
 {{printf "%-35s" "Names registered:"}}{{.TotalRegNum}}
@@ -625,12 +649,12 @@ do I have some stats for you!
 === Dropped off after registration:
 Those are the newly registered users who haven't configured their clients.
 
-{{range .DroppedOff}}{{printf "%-20s" .OS}} {{.Count}}
+{{range .DroppedOff}}{{printf "%-35s" .OS}} {{.Count}}
 {{end}}
 
 === Names registered
 
-{{range .Registrations}}Name: {{printf "%-20s" .Name}} Time: {{.Timestamp}}
+{{range .Registrations}}{{printf "%-35s" .Name}} {{.Timestamp}}
 {{end}}
 
 Until next time,
