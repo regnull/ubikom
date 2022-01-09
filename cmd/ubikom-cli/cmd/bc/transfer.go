@@ -4,16 +4,24 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
+	"path"
 
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/regnull/easyecc"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 func init() {
 	transferCmd.Flags().String("key", "", "key to authorize the transaction")
+	transferCmd.Flags().String("keystore-key", "", "keystore key to authorize the transaction")
+	transferCmd.Flags().String("keystore-password", "", "password to unlock the keystore key")
+	transferCmd.Flags().String("keystore-path", "", "keystore path")
 	transferCmd.Flags().String("to", "", "receiver's account")
 	transferCmd.Flags().Uint64("gas-limit", 21000, "gas limit")
 	transferCmd.Flags().String("value", "", "value to transfer")
@@ -31,9 +39,54 @@ var transferCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 
-		key, err := LoadKeyFromFlag(cmd, "key")
+		var ks *keystore.KeyStore
+		var accountFrom accounts.Account
+		var accountAddress common.Address
+		var key *easyecc.PrivateKey
+		keystoreKey, err := cmd.Flags().GetString("keystore-key")
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load key")
+			log.Fatal().Err(err).Msg("failed to get keystore key")
+		}
+
+		if keystoreKey != "" {
+			// Use the key from the keystore.
+
+			keystoreDir, err := cmd.Flags().GetString("keystore-path")
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to get keystore path")
+			}
+
+			if keystoreDir == "" {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					log.Fatal().Err(err).Msg("failed to get home directory")
+				}
+				// TODO: Support this for other OSes.
+				keystoreDir = path.Join(homeDir, "Library/Ethereum/keystore")
+			}
+
+			keystorePassword, err := cmd.Flags().GetString("keystore-password")
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to get keystore password")
+			}
+
+			ks = keystore.NewKeyStore(keystoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
+			accountFrom, err = ks.Find(accounts.Account{Address: common.HexToAddress(keystoreKey)})
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to find the originator's account")
+			}
+			err = ks.Unlock(accountFrom, keystorePassword)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to unlock the account")
+			}
+			accountAddress = accountFrom.Address
+
+		} else {
+			key, err = LoadKeyFromFlag(cmd, "key")
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to load key")
+			}
+			accountAddress = common.HexToAddress(key.PublicKey().EthereumAddress())
 		}
 
 		to, err := cmd.Flags().GetString("to")
@@ -48,7 +101,7 @@ var transferCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to connect to node")
 		}
 		// Get nonce.
-		nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(key.PublicKey().EthereumAddress()))
+		nonce, err := client.PendingNonceAt(ctx, accountAddress)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get nonce")
 		}
@@ -90,7 +143,15 @@ var transferCmd = &cobra.Command{
 		}
 		fmt.Printf("chain ID: %d\n", chainID)
 
-		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), key.ToECDSA())
+		var signedTx *types.Transaction
+		// Depending on what kind of a key we have, sign either using keystore key,
+		// or easyecc private key.
+		if ks != nil {
+			signedTx, err = ks.SignTx(accountFrom, tx, chainID)
+		} else {
+			signedTx, err = types.SignTx(tx, types.NewEIP155Signer(chainID), key.ToECDSA())
+		}
+
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to sign transaction")
 		}
