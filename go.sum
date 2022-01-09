@@ -475,6 +475,14 @@ github.com/regnull/ubchain v0.0.0-20211230021003-d7bab51fadf5 h1:8zl2l+4y2JVwa8+
 github.com/regnull/ubchain v0.0.0-20211230021003-d7bab51fadf5/go.mod h1:2cBu/obUDHaRYK1zhkcMLGRNd073ewwE96MGYbIrBmE=
 github.com/regnull/ubchain v0.0.0-20220101171918-3e7f76e11ec4 h1:ckZW6EuHVkcnJtjqQ1lHXmwgswkacFGx++JY7tMg9V0=
 github.com/regnull/ubchain v0.0.0-20220101171918-3e7f76e11ec4/go.mod h1:Dez721LwsCXK+37UP2FqJynQ5ch46W5HOl6dkiAEXaM=
+github.com/regnull/ubchain v0.0.0-20220108232157-56ce519241ba h1:yBp3qnZHvikNasA0M44DiWDF0eQtfM1+q/vueNZqF20=
+github.com/regnull/ubchain v0.0.0-20220108232157-56ce519241ba/go.mod h1:Dez721LwsCXK+37UP2FqJynQ5ch46W5HOl6dkiAEXaM=
+github.com/regnull/ubchain v0.0.0-20220108233320-b0ecbc03f167 h1:yVUH20QjJFgvKU2lRsxw6eX82N6uQSoTY5WApsOPaA0=
+github.com/regnull/ubchain v0.0.0-20220108233320-b0ecbc03f167/go.mod h1:Dez721LwsCXK+37UP2FqJynQ5ch46W5HOl6dkiAEXaM=
+github.com/regnull/ubchain v0.0.0-20220108233931-aff05419d290 h1:Ujt4tqcbtjRKmFDjIZYaX7NvUQKi9wemC1YfAz5cJ6g=
+github.com/regnull/ubchain v0.0.0-20220108233931-aff05419d290/go.mod h1:Dez721LwsCXK+37UP2FqJynQ5ch46W5HOl6dkiAEXaM=
+github.com/regnull/ubchain v0.0.0-20220109124324-9782e5f1ae38 h1:jBTGPBKrM58Iv66HutD3lmKErIdPNYHyPE+KqX+0U7U=
+github.com/regnull/ubchain v0.0.0-20220109124324-9782e5f1ae38/go.mod h1:Dez721LwsCXK+37UP2FqJynQ5ch46W5HOl6dkiAEXaM=
 github.com/retailnext/hllpp v1.0.1-0.20180308014038-101a6d2f8b52/go.mod h1:RDpi1RftBQPUCDRw6SmxeaREsAaRKnOclghuzp/WRzc=
 github.com/rjeczalik/notify v0.9.1 h1:CLCKso/QK1snAlnhNR/CNvNiFU2saUtjV0bx3EwNeCE=
 github.com/rjeczalik/notify v0.9.1/go.mod h1:rKwnCoCGeuQnwBtTSPL9Dad03Vh2n40ePRrjvIXnJho=

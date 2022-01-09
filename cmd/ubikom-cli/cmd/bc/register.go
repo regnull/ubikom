@@ -104,7 +104,6 @@ var registerKeyCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to register key")
 		}
-
 		fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
 	},
 }

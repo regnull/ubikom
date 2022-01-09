@@ -17,7 +17,7 @@ import (
 
 func init() {
 	deployKeyRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
-	deployKeyRegistryCmd.Flags().Uint64("gas-limit", 300000, "gas limit")
+	deployKeyRegistryCmd.Flags().Uint64("gas-limit", 1000000, "gas limit")
 
 	deployNameRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 	deployNameRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")

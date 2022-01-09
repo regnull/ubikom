@@ -37,21 +37,24 @@ var lookupKeyCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
+
 		key, err := LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
+
 		contractAddress, err := cmd.Flags().GetString("contract-address")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
+
 		// Connect to the node.
 		client, err := ethclient.Dial(nodeURL)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to connect to blockchain node")
 		}
 
-		instance, err := gocontract.NewKeyRegistry(common.HexToAddress(contractAddress), client)
+		instance, err := gocontract.NewKeyRegistryCaller(common.HexToAddress(contractAddress), client)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get contract instance")
 		}
