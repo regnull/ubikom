@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -8,11 +9,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dchest/captcha"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/bc"
 	"github.com/regnull/ubikom/event"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/mail"
@@ -123,17 +127,21 @@ const (
 )
 
 type CmdArgs struct {
-	Port               int
-	LookupServiceURL   string
-	IdentityServiceURL string
-	Timeout            time.Duration
-	CertFile           string
-	KeyFile            string
-	UbikomKeyFile      string
-	UbikomName         string
-	NotificationName   string
-	PowStrength        int
-	RateLimitPerHour   int
+	Port                             int
+	LookupServiceURL                 string
+	IdentityServiceURL               string
+	Timeout                          time.Duration
+	CertFile                         string
+	KeyFile                          string
+	UbikomKeyFile                    string
+	UbikomName                       string
+	NotificationName                 string
+	PowStrength                      int
+	RateLimitPerHour                 int
+	BlockchainNodeURL                string
+	KeyRegistryContractAddress       string
+	NameRegistryContractAddress      string
+	ConnectorRegistryContractAddress string
 }
 
 type Server struct {
@@ -146,11 +154,12 @@ type Server struct {
 	powStrength      int
 	rateLimiter      *rate.Limiter
 	eventSender      *event.Sender
+	blockchain       *bc.Blockchain
 }
 
 func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentityServiceClient,
 	privateKey *easyecc.PrivateKey, name string, notificationName string, powStrength int,
-	rateLimitPerHour int) *Server {
+	rateLimitPerHour int, blockhain *bc.Blockchain) *Server {
 	return &Server{
 		lookupClient:     lookupClient,
 		identityClient:   identityClient,
@@ -161,6 +170,7 @@ func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentitySe
 		powStrength:      powStrength,
 		rateLimiter:      rate.NewLimiter(rate.Every(time.Hour), rateLimitPerHour),
 		eventSender:      event.NewSender("ubikom-event-processor", "ubikom-web", "web", privateKey, lookupClient),
+		blockchain:       blockhain,
 	}
 }
 
@@ -333,12 +343,35 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Register the email key.
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if s.blockchain != nil {
+			tx, err := s.blockchain.RegisterKey(r.Context(), emailKey.PublicKey())
+			if err != nil {
+				log.Error().Err(err).Msg("failed to register key on blockchain")
+				return
+			}
+			log.Debug().Str("tx", tx).Msg("key registered")
+			ctx1, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+			defer cancel()
+			block, err := s.blockchain.WaitForConfirmation(ctx1, tx)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to get register key confirmation")
+			} else {
+				log.Debug().Uint64("block", block).Msg("tx confirmed")
+			}
+		}
+	}()
+
 	err = protoutil.RegisterKey(r.Context(), s.identityClient, emailKey, s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register the email key")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	wg.Wait()
 	log.Info().Msg("email key is registered")
 
 	if useMainKey {
@@ -357,15 +390,58 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Register name.
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if s.blockchain != nil {
+			tx, err := s.blockchain.RegisterName(r.Context(), emailKey.PublicKey(), name)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to register name on blockchain")
+				return
+			}
+			log.Debug().Str("tx", tx).Msg("name registered")
+			ctx1, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+			defer cancel()
+			block, err := s.blockchain.WaitForConfirmation(ctx1, tx)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to get register name confirmation")
+			} else {
+				log.Debug().Uint64("block", block).Msg("tx confirmed")
+			}
+		}
+	}()
+
 	err = protoutil.RegisterName(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register name")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	wg.Wait()
 	log.Info().Str("name", name).Msg("name is registered")
 
 	// Register address.
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if s.blockchain != nil {
+			tx, err := s.blockchain.RegisterConnector(r.Context(), name, "PL_DMS", dumpAddress)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to register connector on blockchain")
+				return
+			}
+			log.Debug().Str("tx", tx).Msg("connector registered")
+			ctx1, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+			defer cancel()
+			block, err := s.blockchain.WaitForConfirmation(ctx1, tx)
+			if err != nil {
+				log.Error().Err(err).Msg("failed to get register connector confirmation")
+			} else {
+				log.Debug().Uint64("block", block).Msg("tx confirmed")
+			}
+		}
+	}()
 
 	err = protoutil.RegisterAddress(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, dumpAddress, s.powStrength)
 	if err != nil {
@@ -373,6 +449,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	wg.Wait()
 	log.Info().Msg("address is registered")
 
 	var mnemonicQuoted []string
@@ -584,6 +661,10 @@ func main() {
 	flag.StringVar(&args.NotificationName, "notification-name", "", "where to send notifications")
 	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength")
 	flag.IntVar(&args.RateLimitPerHour, "rate-limit-per-hour", defaultRateLimitPerHour, "rate limit per hour for identity creation")
+	flag.StringVar(&args.BlockchainNodeURL, "bc-node-url", globals.BlockchainNodeURL, "blockchain node URL")
+	flag.StringVar(&args.KeyRegistryContractAddress, "key-registry-contract-address", globals.KeyRegistryContractAddress, "key registry contract address")
+	flag.StringVar(&args.NameRegistryContractAddress, "name-registry-contract-address", globals.NameRegistryContractAddress, "name registry contract address")
+	flag.StringVar(&args.ConnectorRegistryContractAddress, "connector-registry-contract-address", globals.ConnectorRegistryContractAddress, "connector registry contract address")
 	flag.Parse()
 
 	opts := []grpc.DialOption{
@@ -618,8 +699,20 @@ func main() {
 		}
 	}
 
+	var blockchain *bc.Blockchain
+	// Connect to the node.
+	bcClient, err := ethclient.Dial(args.BlockchainNodeURL)
+	if err == nil {
+		log.Debug().Str("node-url", args.BlockchainNodeURL).Msg("connected to blockchain node")
+		blockchain = bc.NewBlockchain(bcClient, args.KeyRegistryContractAddress,
+			args.NameRegistryContractAddress, args.ConnectorRegistryContractAddress, privateKey)
+	}
+	if err != nil {
+		log.Error().Err(err).Msg("cannot connect to blockchain")
+	}
+
 	server := NewServer(lookupClient, identityClient, privateKey, args.UbikomName,
-		args.NotificationName, args.PowStrength, args.RateLimitPerHour)
+		args.NotificationName, args.PowStrength, args.RateLimitPerHour, blockchain)
 
 	http.HandleFunc("/lookupName", server.HandleNameLookup)
 	http.HandleFunc("/easySetup", server.HandleEasySetup)

@@ -2,7 +2,9 @@ package bc
 
 import (
 	"context"
+	"errors"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -16,19 +18,29 @@ const (
 	registerGasLimit = uint64(300000)
 )
 
+var (
+	ErrTxNotFound = errors.New("transaction not found")
+)
+
 // Blockchain represents Ethereum blockchain.
 type Blockchain struct {
-	client          *ethclient.Client
-	contractAddress common.Address
-	privateKey      *easyecc.PrivateKey
+	client                           *ethclient.Client
+	keyRegistryContractAddress       common.Address
+	nameRegistryContractAddres       common.Address
+	connectorRegistryContractAddress common.Address
+	privateKey                       *easyecc.PrivateKey
 }
 
 // NewBlockchain returns a new blockchain.
-func NewBlockchain(client *ethclient.Client, contractAddress string, privateKey *easyecc.PrivateKey) *Blockchain {
+func NewBlockchain(client *ethclient.Client, keyRegistryContractAddress string,
+	nameRegistryContractAddress string, connectorRegistryContractAddress string,
+	privateKey *easyecc.PrivateKey) *Blockchain {
 	return &Blockchain{
-		client:          client,
-		contractAddress: common.HexToAddress(contractAddress),
-		privateKey:      privateKey}
+		client:                           client,
+		keyRegistryContractAddress:       common.HexToAddress(keyRegistryContractAddress),
+		nameRegistryContractAddres:       common.HexToAddress(nameRegistryContractAddress),
+		connectorRegistryContractAddress: common.HexToAddress(connectorRegistryContractAddress),
+		privateKey:                       privateKey}
 }
 
 // RegisterKey registers a new key.
@@ -65,7 +77,7 @@ func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (s
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 
-	instance, err := gocontract.NewKeyRegistry(b.contractAddress, b.client)
+	instance, err := gocontract.NewKeyRegistry(b.keyRegistryContractAddress, b.client)
 	if err != nil {
 		return "", err
 	}
@@ -76,4 +88,150 @@ func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (s
 	}
 
 	return tx.Hash().Hex(), nil
+}
+
+func (b *Blockchain) RegisterName(ctx context.Context, key *easyecc.PublicKey, name string) (string, error) {
+	nonce, err := b.client.PendingNonceAt(ctx,
+		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
+	if err != nil {
+		return "", err
+	}
+	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
+
+	// Recommended gas limit.
+	gasLimit := registerGasLimit
+
+	// Get gas price.
+	gasPrice, err := b.client.SuggestGasPrice(ctx)
+	if err != nil {
+		return "", err
+	}
+	log.Debug().Str("gas-price", gasPrice.String()).Msg("got gas price")
+
+	chainID, err := b.client.NetworkID(ctx)
+	if err != nil {
+		return "", err
+	}
+	log.Debug().Str("chain-id", chainID.String()).Msg("got chain ID")
+
+	auth, err := bind.NewKeyedTransactorWithChainID(b.privateKey.ToECDSA(), chainID)
+	if err != nil {
+		return "", err
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0) // in wei
+	auth.GasLimit = gasLimit
+	auth.GasPrice = gasPrice
+
+	instance, err := gocontract.NewNameRegistry(b.nameRegistryContractAddres, b.client)
+	if err != nil {
+		return "", err
+	}
+
+	tx, err := instance.Register(auth, name, key.SerializeCompressed())
+	if err != nil {
+		return "", err
+	}
+
+	return tx.Hash().Hex(), nil
+}
+
+func (b *Blockchain) RegisterConnector(ctx context.Context, name string, protocol string, location string) (string, error) {
+	nonce, err := b.client.PendingNonceAt(ctx,
+		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
+	if err != nil {
+		return "", err
+	}
+	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
+
+	// Recommended gas limit.
+	gasLimit := registerGasLimit
+
+	// Get gas price.
+	gasPrice, err := b.client.SuggestGasPrice(ctx)
+	if err != nil {
+		return "", err
+	}
+	log.Debug().Str("gas-price", gasPrice.String()).Msg("got gas price")
+
+	chainID, err := b.client.NetworkID(ctx)
+	if err != nil {
+		return "", err
+	}
+	log.Debug().Str("chain-id", chainID.String()).Msg("got chain ID")
+
+	auth, err := bind.NewKeyedTransactorWithChainID(b.privateKey.ToECDSA(), chainID)
+	if err != nil {
+		return "", err
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0) // in wei
+	auth.GasLimit = gasLimit
+	auth.GasPrice = gasPrice
+
+	instance, err := gocontract.NewConnectorRegistry(b.connectorRegistryContractAddress, b.client)
+	if err != nil {
+		return "", err
+	}
+
+	tx, err := instance.Register(auth, name, protocol, location)
+	if err != nil {
+		return "", err
+	}
+
+	return tx.Hash().Hex(), nil
+}
+
+func (b *Blockchain) WaitForConfirmation(ctx context.Context, tx string) (uint64, error) {
+	ticker := time.NewTicker(time.Second * 10)
+	for {
+		select {
+		case <-ticker.C:
+			block, err := b.findTx(ctx, 10, tx)
+			if err == ErrTxNotFound {
+				continue
+			}
+			if err != nil {
+				return 0, err
+			}
+			return block, nil
+		case <-ctx.Done():
+			return 0, ErrTxNotFound
+		}
+	}
+}
+
+func (b *Blockchain) findTx(ctx context.Context, maxBlocks uint, tx string) (uint64, error) {
+	log.Debug().Str("tx", tx).Msg("find transaction")
+	head, err := b.client.BlockByNumber(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	blockNumber := head.Number()
+	log.Debug().Uint64("last-block", blockNumber.Uint64()).Msg("got last block")
+
+	count := uint(0)
+	for {
+		count++
+		log.Debug().Uint64("block", blockNumber.Uint64()).Msg("scanning block...")
+		block, err := b.client.BlockByNumber(ctx, blockNumber)
+		if err != nil {
+			return 0, err
+		}
+
+		for _, tx1 := range block.Transactions() {
+			log.Debug().Str("tx1", tx1.Hash().Hex()).Str("tx", tx).Msg("comparing...")
+			if tx1.Hash().Hex() == tx {
+				log.Debug().Msg("found!")
+				return block.Number().Uint64(), nil
+			}
+		}
+		blockNumber.Sub(blockNumber, big.NewInt(1))
+		if blockNumber.Cmp(big.NewInt(0)) <= 0 {
+			return 0, ErrTxNotFound
+		}
+		if count == maxBlocks {
+			return 0, ErrTxNotFound
+		}
+	}
 }
