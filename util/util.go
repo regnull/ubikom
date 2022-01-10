@@ -245,16 +245,21 @@ func StripDomainName(s string) string {
 	return n
 }
 
+// GenerateCanonicalKeyFromNamePassword generates a canonical key from name and password.
+// Notice that many currently registered keys are not canonical (they were generated from
+// Base-58 encoded salt, or without lowercasing the name).
+func GenerateCanonicalKeyFromNamePassword(name, password string) *easyecc.PrivateKey {
+	n := StripDomainName(name)
+
+	return easyecc.NewPrivateKeyFromPassword([]byte(password),
+		Hash256([]byte(strings.ToLower(n))))
+}
+
 // GetKeyFromNameAndPassword attempts to construct a private key from name and password and verify it with
 // key lookup service.
 func GetKeyFromNamePassword(ctx context.Context, name string, pass string,
 	lookupClient pb.LookupServiceClient) (*easyecc.PrivateKey, error) {
-	n := strings.Trim(name, " ")
-
-	// Strip @domain from the string, if any.
-	if i := strings.Index(n, "@"); i != -1 {
-		n = n[:i]
-	}
+	n := StripDomainName(name)
 
 	// Try hash of the user name as salt first.
 	privateKey := easyecc.NewPrivateKeyFromPassword([]byte(pass),
