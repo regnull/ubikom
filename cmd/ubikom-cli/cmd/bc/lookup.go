@@ -124,7 +124,7 @@ var lookupNameCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to query the key")
 		}
 
-		fmt.Printf("registered: %x\n", key)
+		fmt.Printf("key: %x\n", key)
 	},
 }
 

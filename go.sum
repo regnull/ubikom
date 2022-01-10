@@ -483,6 +483,8 @@ github.com/regnull/ubchain v0.0.0-20220108233931-aff05419d290 h1:Ujt4tqcbtjRKmFD
 github.com/regnull/ubchain v0.0.0-20220108233931-aff05419d290/go.mod h1:Dez721LwsCXK+37UP2FqJynQ5ch46W5HOl6dkiAEXaM=
 github.com/regnull/ubchain v0.0.0-20220109124324-9782e5f1ae38 h1:jBTGPBKrM58Iv66HutD3lmKErIdPNYHyPE+KqX+0U7U=
 github.com/regnull/ubchain v0.0.0-20220109124324-9782e5f1ae38/go.mod h1:Dez721LwsCXK+37UP2FqJynQ5ch46W5HOl6dkiAEXaM=
+github.com/regnull/ubchain v0.0.0-20220110140104-4cc39b5321ce h1:8jIVpCTIcdm3nPjofCmzSO1mbjq6lJ91G0Y/UcY7nWA=
+github.com/regnull/ubchain v0.0.0-20220110140104-4cc39b5321ce/go.mod h1:Dez721LwsCXK+37UP2FqJynQ5ch46W5HOl6dkiAEXaM=
 github.com/retailnext/hllpp v1.0.1-0.20180308014038-101a6d2f8b52/go.mod h1:RDpi1RftBQPUCDRw6SmxeaREsAaRKnOclghuzp/WRzc=
 github.com/rjeczalik/notify v0.9.1 h1:CLCKso/QK1snAlnhNR/CNvNiFU2saUtjV0bx3EwNeCE=
 github.com/rjeczalik/notify v0.9.1/go.mod h1:rKwnCoCGeuQnwBtTSPL9Dad03Vh2n40ePRrjvIXnJho=

@@ -22,7 +22,7 @@ func init() {
 	registerKeyCmd.Flags().String("contract-address", globals.KeyRegistryContractAddress, "contract address")
 
 	registerNameCmd.Flags().String("key", "", "key to authorize the transaction")
-	registerKeyCmd.Flags().String("reg-key", "", "key to register")
+	registerNameCmd.Flags().String("reg-key", "", "key to register")
 	registerNameCmd.Flags().String("name", "", "name to register")
 	registerNameCmd.Flags().String("contract-address", globals.KeyRegistryContractAddress, "contract address")
 
