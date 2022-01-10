@@ -28,7 +28,7 @@ func init() {
 
 	registerConnectorCmd.Flags().String("key", "", "key to authorize the transaction")
 	registerConnectorCmd.Flags().String("name", "", "name")
-	registerConnectorCmd.Flags().String("protocol", "", "protocol")
+	registerConnectorCmd.Flags().String("protocol", "PL_DMS", "protocol")
 	registerConnectorCmd.Flags().String("location", "", "location to register for this name/protocol")
 
 	registerCmd.AddCommand(registerKeyCmd)
@@ -153,6 +153,12 @@ var registerConnectorCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get protocol")
 		}
+
+		// This is the only allowed protocol for now.
+		if protocol != "PL_DMS" {
+			log.Fatal().Err(err).Msg("invalid protocol")
+		}
+
 		location, err := cmd.Flags().GetString("location")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get location")
