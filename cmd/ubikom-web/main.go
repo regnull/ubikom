@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/dchest/captcha"
@@ -343,35 +342,12 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Register the email key.
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if s.blockchain != nil {
-			tx, err := s.blockchain.RegisterKey(r.Context(), emailKey.PublicKey())
-			if err != nil {
-				log.Error().Err(err).Msg("failed to register key on blockchain")
-				return
-			}
-			log.Debug().Str("tx", tx).Msg("key registered")
-			ctx1, cancel := context.WithTimeout(r.Context(), 60*time.Second)
-			defer cancel()
-			block, err := s.blockchain.WaitForConfirmation(ctx1, tx)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to get register key confirmation")
-			} else {
-				log.Debug().Uint64("block", block).Msg("tx confirmed")
-			}
-		}
-	}()
-
 	err = protoutil.RegisterKey(r.Context(), s.identityClient, emailKey, s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register the email key")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	wg.Wait()
 	log.Info().Msg("email key is registered")
 
 	if useMainKey {
@@ -390,58 +366,15 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Register name.
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if s.blockchain != nil {
-			tx, err := s.blockchain.RegisterName(r.Context(), emailKey.PublicKey(), name)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to register name on blockchain")
-				return
-			}
-			log.Debug().Str("tx", tx).Msg("name registered")
-			ctx1, cancel := context.WithTimeout(r.Context(), 60*time.Second)
-			defer cancel()
-			block, err := s.blockchain.WaitForConfirmation(ctx1, tx)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to get register name confirmation")
-			} else {
-				log.Debug().Uint64("block", block).Msg("tx confirmed")
-			}
-		}
-	}()
-
 	err = protoutil.RegisterName(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register name")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	wg.Wait()
 	log.Info().Str("name", name).Msg("name is registered")
 
 	// Register address.
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if s.blockchain != nil {
-			tx, err := s.blockchain.RegisterConnector(r.Context(), name, "PL_DMS", dumpAddress)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to register connector on blockchain")
-				return
-			}
-			log.Debug().Str("tx", tx).Msg("connector registered")
-			ctx1, cancel := context.WithTimeout(r.Context(), 60*time.Second)
-			defer cancel()
-			block, err := s.blockchain.WaitForConfirmation(ctx1, tx)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to get register connector confirmation")
-			} else {
-				log.Debug().Uint64("block", block).Msg("tx confirmed")
-			}
-		}
-	}()
 
 	err = protoutil.RegisterAddress(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, dumpAddress, s.powStrength)
 	if err != nil {
@@ -449,8 +382,9 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	wg.Wait()
 	log.Info().Msg("address is registered")
+
+	go s.doBlockchainRegistration(context.Background(), emailKey.PublicKey(), name)
 
 	var mnemonicQuoted []string
 	var keyID string
@@ -645,8 +579,59 @@ func (s *Server) HandleNewCaptcha(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) doBlockchainRegistration(ctx context.Context, publicKey *easyecc.PublicKey, name string) {
+	log.Info().Msg("starting blockchain registration")
+	if s.blockchain == nil {
+		return
+	}
+	keyTx, err := s.blockchain.RegisterKey(ctx, publicKey)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to register key on blockchain")
+		return
+	}
+	log.Debug().Str("tx", keyTx).Msg("key registered")
+
+	nameTx, err := s.blockchain.RegisterName(ctx, publicKey, name)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to register name on blockchain")
+	}
+	log.Debug().Str("tx", nameTx).Msg("name registered")
+
+	connectorTx, err := s.blockchain.RegisterConnector(ctx, name, "PL_DMS", dumpAddress)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to register connector on blockchain")
+	}
+	log.Debug().Str("tx", connectorTx).Msg("connector registered")
+
+	ctx1, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	block, err := s.blockchain.WaitForConfirmation(ctx1, keyTx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get register key confirmation")
+	} else {
+		log.Debug().Str("tx", keyTx).Uint64("block", block).Msg("tx confirmed")
+	}
+
+	block, err = s.blockchain.WaitForConfirmation(ctx1, nameTx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get register name confirmation")
+	} else {
+		log.Debug().Str("tx", nameTx).Uint64("block", block).Msg("tx confirmed")
+	}
+
+	block, err = s.blockchain.WaitForConfirmation(ctx1, connectorTx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get register connector confirmation")
+	} else {
+		log.Debug().Str("tx", connectorTx).Uint64("block", block).Msg("tx confirmed")
+	}
+
+	log.Info().Msg("blockchain registration is done")
+}
+
 func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "01/02 15:04:05"})
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
 	var args CmdArgs

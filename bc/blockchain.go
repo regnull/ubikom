@@ -185,6 +185,14 @@ func (b *Blockchain) RegisterConnector(ctx context.Context, name string, protoco
 func (b *Blockchain) WaitForConfirmation(ctx context.Context, tx string) (uint64, error) {
 	ticker := time.NewTicker(time.Second * 10)
 	for {
+		block, err := b.findTx(ctx, 10, tx)
+		if err == nil {
+			return block, nil
+		}
+		if err != nil && err != ErrTxNotFound {
+			return 0, err
+		}
+
 		select {
 		case <-ticker.C:
 			block, err := b.findTx(ctx, 10, tx)
@@ -202,27 +210,22 @@ func (b *Blockchain) WaitForConfirmation(ctx context.Context, tx string) (uint64
 }
 
 func (b *Blockchain) findTx(ctx context.Context, maxBlocks uint, tx string) (uint64, error) {
-	log.Debug().Str("tx", tx).Msg("find transaction")
 	head, err := b.client.BlockByNumber(ctx, nil)
 	if err != nil {
 		return 0, err
 	}
 	blockNumber := head.Number()
-	log.Debug().Uint64("last-block", blockNumber.Uint64()).Msg("got last block")
 
 	count := uint(0)
 	for {
 		count++
-		log.Debug().Uint64("block", blockNumber.Uint64()).Msg("scanning block...")
 		block, err := b.client.BlockByNumber(ctx, blockNumber)
 		if err != nil {
 			return 0, err
 		}
 
 		for _, tx1 := range block.Transactions() {
-			log.Debug().Str("tx1", tx1.Hash().Hex()).Str("tx", tx).Msg("comparing...")
 			if tx1.Hash().Hex() == tx {
-				log.Debug().Msg("found!")
 				return block.Number().Uint64(), nil
 			}
 		}
