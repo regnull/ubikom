@@ -34,6 +34,7 @@ func init() {
 
 	registerCmd.AddCommand(registerKeyCmd)
 	registerCmd.AddCommand(registerNameCmd)
+	registerCmd.AddCommand(registerConnectorCmd)
 
 	BCCmd.AddCommand(registerCmd)
 }
@@ -179,6 +180,7 @@ var registerConnectorCmd = &cobra.Command{
 					log.Fatal().Err(err).Msg("failed to get contract instance")
 				}
 
+				log.Debug().Str("name", name).Str("protocol", protocol).Str("location", location).Msg("registering")
 				tx, err := instance.Register(auth, name, protocol, location)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to register name")

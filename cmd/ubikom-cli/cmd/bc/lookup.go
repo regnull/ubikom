@@ -18,12 +18,12 @@ func init() {
 
 	lookupNameCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
 
-	lookupConnectorCmd.Flags().String("name", "", "name to look up")
 	lookupConnectorCmd.Flags().String("protocol", "PL_DMS", "protocol to look up")
 	lookupConnectorCmd.Flags().String("contract-address", globals.ConnectorRegistryContractAddress, "contract address")
 
 	lookupCmd.AddCommand(lookupKeyCmd)
 	lookupCmd.AddCommand(lookupNameCmd)
+	lookupCmd.AddCommand(lookupConnectorCmd)
 
 	BCCmd.AddCommand(lookupCmd)
 }
@@ -145,10 +145,11 @@ var lookupConnectorCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load name")
+		if len(args) < 1 {
+			log.Fatal().Err(err).Msg("name must be specified")
 		}
+
+		name := args[0]
 
 		protocol, err := cmd.Flags().GetString("protocol")
 		if err != nil {
@@ -174,11 +175,12 @@ var lookupConnectorCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get contract instance")
 		}
 
+		log.Debug().Str("name", name).Str("protocol", protocol).Msg("about to look up")
 		location, err := instance.GetLocation(nil, name, protocol)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to query the key")
 		}
 
-		fmt.Printf("location: %x\n", location)
+		fmt.Printf("location: %s\n", location)
 	},
 }
