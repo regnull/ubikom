@@ -17,7 +17,6 @@ import (
 
 func init() {
 	deployKeyRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
-	deployKeyRegistryCmd.Flags().Uint64("gas-limit", 1000000, "gas limit")
 
 	deployNameRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 	deployNameRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
@@ -25,6 +24,8 @@ func init() {
 	deployConnectorRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 	deployConnectorRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
 	deployConnectorRegistryCmd.Flags().String("name-registry-address", "", "name registry contract address")
+
+	deployCmd.PersistentFlags().Uint64("gas-limit", 1000000, "gas limit")
 
 	deployCmd.AddCommand(deployKeyRegistryCmd)
 	deployCmd.AddCommand(deployNameRegistryCmd)
