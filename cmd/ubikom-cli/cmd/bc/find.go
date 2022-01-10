@@ -11,7 +11,6 @@ import (
 )
 
 func init() {
-	findTxCmd.Flags().String("tx", "", "transaction hash")
 	findTxCmd.Flags().Uint("max-blocks", 100, "maximum blocks to scan")
 
 	findCmd.AddCommand(findTxCmd)
@@ -38,12 +37,14 @@ var findTxCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 
-		tx, err := cmd.Flags().GetString("tx")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get transaction")
+		if len(args) < 1 {
+			log.Fatal().Msg("transaction must be specified")
 		}
+
+		tx := args[0]
+
 		if tx == "" {
-			log.Fatal().Msg("--tx must be specified")
+			log.Fatal().Msg("transaction must be specified")
 		}
 
 		maxBlocks, err := cmd.Flags().GetUint("max-blocks")
@@ -76,7 +77,14 @@ var findTxCmd = &cobra.Command{
 			found := false
 			for _, tx1 := range block.Transactions() {
 				if tx1.Hash().Hex() == tx {
-					fmt.Printf("found in block %d\n", block.Number())
+					fmt.Printf("block: %d\n", block.Number())
+					fmt.Printf("cost: %d\n", tx1.Cost())
+					fmt.Printf("data: %x\n", tx1.Data())
+					fmt.Printf("gas: %d\n", tx1.Gas())
+					fmt.Printf("gas price: %d\n", tx1.GasPrice())
+					fmt.Printf("nonce: %d\n", tx1.Nonce())
+					fmt.Printf("to: %s\n", tx1.To().Hash().Hex())
+					fmt.Printf("value: %d\n", tx1.Value())
 					found = true
 				}
 			}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/regnull/easyecc"
 	"github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
@@ -15,7 +16,6 @@ func init() {
 	lookupKeyCmd.Flags().String("key", "", "key to authorize the transaction")
 	lookupKeyCmd.Flags().String("contract-address", globals.KeyRegistryContractAddress, "contract address")
 
-	lookupNameCmd.Flags().String("name", "", "name to look up")
 	lookupNameCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
 
 	lookupConnectorCmd.Flags().String("name", "", "name to look up")
@@ -98,10 +98,11 @@ var lookupNameCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load name")
+		if len(args) < 1 {
+			log.Fatal().Msg("name must be specified")
 		}
+
+		name := args[0]
 
 		contractAddress, err := cmd.Flags().GetString("contract-address")
 		if err != nil {
@@ -124,7 +125,13 @@ var lookupNameCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to query the key")
 		}
 
-		fmt.Printf("key: %x\n", key)
+		publicKey, err := easyecc.NewPublicFromSerializedCompressed(key)
+		if err != nil {
+			log.Fatal().Err(err).Msg("invalid key returned")
+		}
+
+		fmt.Printf("key (compressed): 0x%x\n", key)
+		fmt.Printf("address: %s\n", publicKey.EthereumAddress())
 	},
 }
 

@@ -24,12 +24,13 @@ func init() {
 	registerNameCmd.Flags().String("key", "", "key to authorize the transaction")
 	registerNameCmd.Flags().String("reg-key", "", "key to register")
 	registerNameCmd.Flags().String("name", "", "name to register")
-	registerNameCmd.Flags().String("contract-address", globals.KeyRegistryContractAddress, "contract address")
+	registerNameCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
 
 	registerConnectorCmd.Flags().String("key", "", "key to authorize the transaction")
 	registerConnectorCmd.Flags().String("name", "", "name")
 	registerConnectorCmd.Flags().String("protocol", "PL_DMS", "protocol")
 	registerConnectorCmd.Flags().String("location", "", "location to register for this name/protocol")
+	registerConnectorCmd.Flags().String("contract-address", globals.ConnectorRegistryContractAddress, "contract address")
 
 	registerCmd.AddCommand(registerKeyCmd)
 	registerCmd.AddCommand(registerNameCmd)
