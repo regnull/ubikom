@@ -225,9 +225,10 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password strin
 		return fmt.Errorf("error getting key on blockchain: %w", err)
 	}
 	if len(key) == 33 {
-		log.Debug().Str("user", name).Msg("name is already registered")
+		log.Debug().Str("user", name).Msg("name is already registered on blockchain")
 		return nil
 	}
+	log.Debug().Str("user", name).Msg("registering user on blockchain")
 
 	privateKey := util.GenerateCanonicalKeyFromNamePassword(name, password)
 	keyTx, err := b.RegisterKey(ctx, privateKey.PublicKey())
