@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -218,6 +219,7 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password strin
 	if err != nil {
 		return fmt.Errorf("error getting name registry on blockchain: %w", err)
 	}
+	name = strings.ToLower(util.StripDomainName(name))
 	key, err := nameRegCaller.GetKey(nil, name)
 	if err != nil {
 		return fmt.Errorf("error getting key on blockchain: %w", err)
