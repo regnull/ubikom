@@ -11,8 +11,6 @@ import (
 )
 
 func init() {
-	getBalanceCmd.Flags().String("address", "", "get balance for this address")
-
 	getCmd.AddCommand(getBalanceCmd)
 	getCmd.AddCommand(getBlockCmd)
 
@@ -38,13 +36,10 @@ var getBalanceCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 
-		address, err := cmd.Flags().GetString("address")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get address")
-		}
-		if address == "" {
+		if len(args) < 1 {
 			log.Fatal().Msg("address is required")
 		}
+		address := args[0]
 
 		// Connect to the node.
 		client, err := ethclient.Dial(nodeURL)
