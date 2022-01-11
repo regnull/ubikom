@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubchain/gocontract"
+	"github.com/regnull/ubikom/globals"
+	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 )
 
@@ -207,6 +209,59 @@ func (b *Blockchain) WaitForConfirmation(ctx context.Context, tx string) (uint64
 			return 0, ErrTxNotFound
 		}
 	}
+}
+
+func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password string) error {
+	log.Info().Str("user", name).Msg("checking user blockchain registration")
+	nameRegCaller, err := gocontract.NewNameRegistry(b.connectorRegistryContractAddress, b.client)
+	if err != nil {
+		return err
+	}
+	key, err := nameRegCaller.GetKey(nil, name)
+	if err != nil {
+		return err
+	}
+	if len(key) == 33 {
+		log.Debug().Str("user", name).Msg("name is already registered")
+		return nil
+	}
+
+	privateKey := util.GenerateCanonicalKeyFromNamePassword(name, password)
+	keyTx, err := b.RegisterKey(ctx, privateKey.PublicKey())
+	if err != nil {
+		return err
+	}
+	log.Debug().Str("tx", keyTx).Msg("key is registered")
+	nameTx, err := b.RegisterName(ctx, privateKey.PublicKey(), name)
+	if err != nil {
+		return err
+	}
+	log.Debug().Str("tx", nameTx).Msg("name is registered")
+	connectorTx, err := b.RegisterConnector(ctx, name, "PL_DMS", globals.PublicDumpServiceURL)
+	if err != nil {
+		return err
+	}
+	log.Debug().Str("tx", connectorTx).Msg("connector is registered")
+
+	ctx1, cancel := context.WithTimeout(ctx, time.Second*60)
+	defer cancel()
+
+	block, err := b.WaitForConfirmation(ctx1, keyTx)
+	if err != nil {
+		return err
+	}
+	log.Debug().Str("tx", keyTx).Uint64("block", block).Msg("key registration tx confirmed")
+	block, err = b.WaitForConfirmation(ctx1, nameTx)
+	if err != nil {
+		return err
+	}
+	log.Debug().Str("tx", nameTx).Uint64("block", block).Msg("name registration tx confirmed")
+	block, err = b.WaitForConfirmation(ctx1, connectorTx)
+	if err != nil {
+		return err
+	}
+	log.Debug().Str("tx", connectorTx).Uint64("block", block).Msg("connector registration tx confirmed")
+	return nil
 }
 
 func (b *Blockchain) findTx(ctx context.Context, maxBlocks uint, tx string) (uint64, error) {
