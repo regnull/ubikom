@@ -510,8 +510,7 @@ func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	salt := util.Hash256([]byte(req.Name))
 	key := easyecc.NewPrivateKeyFromPassword([]byte(req.Password), salt)
-
-	newKey := easyecc.NewPrivateKeyFromPassword([]byte(req.NewPassword), salt)
+	newKey := util.GenerateCanonicalKeyFromNamePassword(req.Name, req.NewPassword)
 
 	err = protoutil.RegisterKey(r.Context(), s.identityClient, newKey, s.powStrength)
 	if err != nil {
