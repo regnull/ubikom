@@ -29,7 +29,6 @@ upload:
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/dbexport ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/dbexport
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/dbimport ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/dbimport
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/snap-print ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/snap-print
-	scp -i $(SSH_KEY) $(ROOT_DIR)config/ubikom-server.conf ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom.conf
 	scp -i $(SSH_KEY) $(ROOT_DIR)config/supervisor/* ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/supervisor
 
 server-start:
