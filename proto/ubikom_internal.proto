@@ -112,3 +112,14 @@ message Event {
     string data1 = 7;
     string component = 8;
 }
+
+message CopyMailboxesRequest {
+    bytes oldKey = 1;
+    bytes newKey = 2;
+}
+
+message CopyMailboxesResponse {}
+
+service ProxyService {
+    rpc CopyMailboxes(CopyMailboxesRequest) returns(CopyMailboxesResponse);
+}
