@@ -29,6 +29,26 @@ func RegisterKey(ctx context.Context, client pb.IdentityServiceClient, key *easy
 	return nil
 }
 
+func DisableKey(ctx context.Context, client pb.IdentityServiceClient, key *easyecc.PrivateKey, powStrength int) error {
+	registerKeyReq := &pb.KeyDisableRequest{
+		Key: key.PublicKey().SerializeCompressed()}
+	reqBytes, err := proto.Marshal(registerKeyReq)
+	if err != nil {
+		return err
+	}
+
+	req, err := CreateSignedWithPOW(key, reqBytes, powStrength)
+	if err != nil {
+		return err
+	}
+
+	_, err = client.DisableKey(ctx, req)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func RegisterChildKey(ctx context.Context, client pb.IdentityServiceClient, key *easyecc.PrivateKey,
 	childKey *easyecc.PublicKey, powStrength int) error {
 	registerKeyReq := &pb.KeyRelationshipRegistrationRequest{

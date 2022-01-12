@@ -129,6 +129,7 @@ type CmdArgs struct {
 	Port                             int
 	LookupServiceURL                 string
 	IdentityServiceURL               string
+	ProxyManagementServiceURL        string
 	Timeout                          time.Duration
 	CertFile                         string
 	KeyFile                          string
@@ -144,32 +145,35 @@ type CmdArgs struct {
 }
 
 type Server struct {
-	lookupClient     pb.LookupServiceClient
-	identityClient   pb.IdentityServiceClient
-	keys             map[string][]byte
-	privateKey       *easyecc.PrivateKey
-	name             string
-	notificationName string
-	powStrength      int
-	rateLimiter      *rate.Limiter
-	eventSender      *event.Sender
-	blockchain       *bc.Blockchain
+	lookupClient          pb.LookupServiceClient
+	identityClient        pb.IdentityServiceClient
+	proxyManagementClient pb.ProxyServiceClient
+	keys                  map[string][]byte
+	privateKey            *easyecc.PrivateKey
+	name                  string
+	notificationName      string
+	powStrength           int
+	rateLimiter           *rate.Limiter
+	eventSender           *event.Sender
+	blockchain            *bc.Blockchain
 }
 
 func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentityServiceClient,
+	proxyManagementClient pb.ProxyServiceClient,
 	privateKey *easyecc.PrivateKey, name string, notificationName string, powStrength int,
 	rateLimitPerHour int, blockhain *bc.Blockchain) *Server {
 	return &Server{
-		lookupClient:     lookupClient,
-		identityClient:   identityClient,
-		keys:             make(map[string][]byte),
-		privateKey:       privateKey,
-		name:             name,
-		notificationName: notificationName,
-		powStrength:      powStrength,
-		rateLimiter:      rate.NewLimiter(rate.Every(time.Hour), rateLimitPerHour),
-		eventSender:      event.NewSender("ubikom-event-processor", "ubikom-web", "web", privateKey, lookupClient),
-		blockchain:       blockhain,
+		lookupClient:          lookupClient,
+		identityClient:        identityClient,
+		proxyManagementClient: proxyManagementClient,
+		keys:                  make(map[string][]byte),
+		privateKey:            privateKey,
+		name:                  name,
+		notificationName:      notificationName,
+		powStrength:           powStrength,
+		rateLimiter:           rate.NewLimiter(rate.Every(time.Hour), rateLimitPerHour),
+		eventSender:           event.NewSender("ubikom-event-processor", "ubikom-web", "web", privateKey, lookupClient),
+		blockchain:            blockhain,
 	}
 }
 
@@ -508,8 +512,15 @@ func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	salt := util.Hash256([]byte(req.Name))
-	key := easyecc.NewPrivateKeyFromPassword([]byte(req.Password), salt)
+	log.Info().Str("user", req.Name).Msg("received change password request")
+
+	key, err := util.GetKeyFromNamePassword(r.Context(), req.Name, req.Password, s.lookupClient)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get private key")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	newKey := util.GenerateCanonicalKeyFromNamePassword(req.Name, req.NewPassword)
 
 	err = protoutil.RegisterKey(r.Context(), s.identityClient, newKey, s.powStrength)
@@ -520,22 +531,42 @@ func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info().Msg("new key is registered")
 
+	if s.proxyManagementClient != nil {
+		req := &pb.CopyMailboxesRequest{
+			OldKey: key.Secret().Bytes(),
+			NewKey: newKey.Secret().Bytes(),
+		}
+		_, err := s.proxyManagementClient.CopyMailboxes(r.Context(), req)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to copy mailboxes")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		log.Info().Msg("mailboxes are copied")
+	} else {
+		log.Warn().Msg("not connected to proxy management service, will not copy mailboxes")
+	}
+
 	err = protoutil.RegisterName(r.Context(), s.identityClient, key, newKey.PublicKey(), req.Name, s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register name")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	log.Info().Str("name", req.Name).Msg("name registration changed")
 
-	// TODO: Disable old key, maybe.
+	err = protoutil.DisableKey(r.Context(), s.identityClient, key, s.powStrength)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to disable the old key")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	err = s.eventSender.WebPageServed(r.Context(), "change_password",
 		req.Name, newKey.PublicKey().Address(), r.UserAgent())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to send event")
 	}
-
-	log.Info().Msg("name is registered")
 }
 
 func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
@@ -649,6 +680,7 @@ func main() {
 	flag.StringVar(&args.KeyRegistryContractAddress, "key-registry-contract-address", globals.KeyRegistryContractAddress, "key registry contract address")
 	flag.StringVar(&args.NameRegistryContractAddress, "name-registry-contract-address", globals.NameRegistryContractAddress, "name registry contract address")
 	flag.StringVar(&args.ConnectorRegistryContractAddress, "connector-registry-contract-address", globals.ConnectorRegistryContractAddress, "connector registry contract address")
+	flag.StringVar(&args.ProxyManagementServiceURL, "proxy-management-service-url", "", "proxy management service url")
 	flag.Parse()
 
 	opts := []grpc.DialOption{
@@ -675,6 +707,20 @@ func main() {
 
 	identityClient := pb.NewIdentityServiceClient(identityConn)
 
+	var proxyManagementClient pb.ProxyServiceClient
+
+	if args.ProxyManagementServiceURL != "" {
+		log.Info().Str("url", args.ProxyManagementServiceURL).Msg("connecting to proxy management service")
+		proxyManagementConn, err := grpc.Dial(args.ProxyManagementServiceURL, opts...)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to connect to the proxy management service")
+		}
+
+		proxyManagementClient = pb.NewProxyServiceClient(proxyManagementConn)
+	} else {
+		log.Info().Msg("running without connection to proxy management service")
+	}
+
 	var privateKey *easyecc.PrivateKey
 	if args.UbikomKeyFile != "" {
 		privateKey, err = easyecc.NewPrivateKeyFromFile(args.UbikomKeyFile, "")
@@ -695,7 +741,7 @@ func main() {
 		log.Error().Err(err).Msg("cannot connect to blockchain")
 	}
 
-	server := NewServer(lookupClient, identityClient, privateKey, args.UbikomName,
+	server := NewServer(lookupClient, identityClient, proxyManagementClient, privateKey, args.UbikomName,
 		args.NotificationName, args.PowStrength, args.RateLimitPerHour, blockchain)
 
 	http.HandleFunc("/lookupName", server.HandleNameLookup)
