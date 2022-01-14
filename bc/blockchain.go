@@ -30,7 +30,7 @@ var (
 type Blockchain struct {
 	client                           *ethclient.Client
 	keyRegistryContractAddress       common.Address
-	nameRegistryContractAddres       common.Address
+	nameRegistryContractAddress      common.Address
 	connectorRegistryContractAddress common.Address
 	privateKey                       *easyecc.PrivateKey
 }
@@ -42,7 +42,7 @@ func NewBlockchain(client *ethclient.Client, keyRegistryContractAddress string,
 	return &Blockchain{
 		client:                           client,
 		keyRegistryContractAddress:       common.HexToAddress(keyRegistryContractAddress),
-		nameRegistryContractAddres:       common.HexToAddress(nameRegistryContractAddress),
+		nameRegistryContractAddress:      common.HexToAddress(nameRegistryContractAddress),
 		connectorRegistryContractAddress: common.HexToAddress(connectorRegistryContractAddress),
 		privateKey:                       privateKey}
 }
@@ -127,7 +127,7 @@ func (b *Blockchain) RegisterName(ctx context.Context, key *easyecc.PublicKey, n
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 
-	instance, err := gocontract.NewNameRegistry(b.nameRegistryContractAddres, b.client)
+	instance, err := gocontract.NewNameRegistry(b.nameRegistryContractAddress, b.client)
 	if err != nil {
 		return "", err
 	}
@@ -215,7 +215,7 @@ func (b *Blockchain) WaitForConfirmation(ctx context.Context, tx string) (uint64
 
 func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password string) error {
 	log.Info().Str("user", name).Msg("checking user blockchain registration")
-	nameRegCaller, err := gocontract.NewNameRegistry(b.nameRegistryContractAddres, b.client)
+	nameRegCaller, err := gocontract.NewNameRegistry(b.nameRegistryContractAddress, b.client)
 	if err != nil {
 		return fmt.Errorf("error getting name registry on blockchain: %w", err)
 	}
@@ -268,13 +268,25 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password strin
 	return nil
 }
 
-func (b *Blockchain) GetKey(ctx context.Context, key *easyecc.PublicKey) (bool, error) {
+func (b *Blockchain) IsKeyRegistered(ctx context.Context, key *easyecc.PublicKey) (bool, error) {
 	keyRegCaller, err := gocontract.NewKeyRegistry(b.keyRegistryContractAddress, b.client)
 	if err != nil {
 		return false, fmt.Errorf("error getting key registry on blockchain: %w", err)
 	}
 
 	return keyRegCaller.Registered(nil, key.SerializeCompressed())
+}
+
+func (b *Blockchain) GetKeyByName(ctx context.Context, name string) (*easyecc.PublicKey, error) {
+	nameRegCaller, err := gocontract.NewNameRegistry(b.nameRegistryContractAddress, b.client)
+	if err != nil {
+		return nil, fmt.Errorf("error getting name registry on blockchain: %w", err)
+	}
+	bb, err := nameRegCaller.GetKey(nil, name)
+	if err != nil {
+		return nil, fmt.Errorf("error getting key by name: %w", err)
+	}
+	return easyecc.NewPublicFromSerializedCompressed(bb)
 }
 
 func (b *Blockchain) findTx(ctx context.Context, maxBlocks uint, tx string) (uint64, error) {
