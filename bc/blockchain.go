@@ -268,6 +268,15 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password strin
 	return nil
 }
 
+func (b *Blockchain) GetKey(ctx context.Context, key *easyecc.PublicKey) (bool, error) {
+	keyRegCaller, err := gocontract.NewKeyRegistry(b.keyRegistryContractAddress, b.client)
+	if err != nil {
+		return false, fmt.Errorf("error getting key registry on blockchain: %w", err)
+	}
+
+	return keyRegCaller.Registered(nil, key.SerializeCompressed())
+}
+
 func (b *Blockchain) findTx(ctx context.Context, maxBlocks uint, tx string) (uint64, error) {
 	head, err := b.client.BlockByNumber(ctx, nil)
 	if err != nil {
