@@ -142,6 +142,7 @@ var lookupNameCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("name lookup request failed")
 		}
+		fmt.Printf("%0x\n", res.GetKey())
 		fmt.Printf("%s\n", base58.Encode(res.GetKey()))
 	},
 }
