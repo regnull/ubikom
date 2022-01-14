@@ -286,6 +286,9 @@ func (b *Blockchain) GetKeyByName(ctx context.Context, name string) (*easyecc.Pu
 	if err != nil {
 		return nil, fmt.Errorf("error getting key by name: %w", err)
 	}
+	if len(bb) != 33 {
+		return nil, nil
+	}
 	return easyecc.NewPublicFromSerializedCompressed(bb)
 }
 
