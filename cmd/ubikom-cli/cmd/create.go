@@ -79,18 +79,9 @@ var createKeyCmd = &cobra.Command{
 			}
 			var salt []byte
 			if saltStr != "" {
+				saltStr = strings.ToLower(saltStr)
 				salt = util.Hash256([]byte(saltStr))
-				//salt = base58.Decode(saltStr)
-			} else {
-				// TODO: fix this.
-				// var saltArr [8]byte
-				// _, err := rand.Read(saltArr[:])
-				// if err != nil {
-				// 	log.Fatal().Err(err).Msg("failed to generate salt")
-				// }
-				// salt = saltArr[:]
 			}
-			//fmt.Printf("salt: %s\n", base58.Encode(salt[:]))
 			privateKey = easyecc.NewPrivateKeyFromPassword([]byte(fromPassword), salt[:])
 		} else if fromMnemonic {
 			var words []string

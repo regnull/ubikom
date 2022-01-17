@@ -1,8 +1,10 @@
 package bc
 
 import (
+	"encoding/hex"
 	"fmt"
 
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
@@ -13,7 +15,8 @@ import (
 )
 
 func init() {
-	lookupKeyCmd.Flags().String("key", "", "key to authorize the transaction")
+	lookupKeyCmd.Flags().String("key", "", "key to look up")
+	lookupKeyCmd.Flags().String("key-hex", "", "key to look up (overrides --key)")
 	lookupKeyCmd.Flags().String("contract-address", globals.KeyRegistryContractAddress, "contract address")
 
 	lookupNameCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
@@ -46,9 +49,24 @@ var lookupKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 
-		key, err := LoadKeyFromFlag(cmd, "key")
+		var publicKey []byte
+
+		keyHex, err := cmd.Flags().GetString("key-hex")
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load key")
+			log.Fatal().Err(err).Msg("failed to get hex key")
+		}
+
+		if keyHex != "" {
+			publicKey, err = hex.DecodeString(keyHex)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to decode hex key")
+			}
+		} else {
+			key, err := LoadKeyFromFlag(cmd, "key")
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to load key")
+			}
+			publicKey = key.PublicKey().SerializeCompressed()
 		}
 
 		contractAddress, err := cmd.Flags().GetString("contract-address")
@@ -67,17 +85,17 @@ var lookupKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get contract instance")
 		}
 
-		registered, err := instance.Registered(nil, key.PublicKey().SerializeCompressed())
+		registered, err := instance.Registered(nil, publicKey)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to query the key")
 		}
 
-		disabled, err := instance.Disabled(nil, key.PublicKey().SerializeCompressed())
+		disabled, err := instance.Disabled(nil, publicKey)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to query the key")
 		}
 
-		owner, err := instance.Owner(nil, key.PublicKey().SerializeCompressed())
+		owner, err := instance.Owner(nil, publicKey)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to query the key")
 		}
@@ -125,13 +143,19 @@ var lookupNameCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to query the key")
 		}
 
+		if len(key) == 0 {
+			fmt.Printf("name is not registered\n")
+		}
+
 		publicKey, err := easyecc.NewPublicFromSerializedCompressed(key)
 		if err != nil {
 			log.Fatal().Err(err).Msg("invalid key returned")
 		}
 
-		fmt.Printf("key (compressed): 0x%x\n", key)
-		fmt.Printf("address: %s\n", publicKey.EthereumAddress())
+		fmt.Printf("hex: %x\n", key)
+		fmt.Printf("base58: %s\n", base58.Encode(key))
+		fmt.Printf("btc addr: %s\n", publicKey.Address())
+		fmt.Printf("eth addr: %s\n", publicKey.EthereumAddress())
 	},
 }
 

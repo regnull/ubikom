@@ -94,6 +94,53 @@ func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (s
 	return tx.Hash().Hex(), nil
 }
 
+func (b *Blockchain) ChangeKeyOwner(ctx context.Context, key *easyecc.PublicKey,
+	owner common.Address) (string, error) {
+	nonce, err := b.client.PendingNonceAt(ctx,
+		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
+	if err != nil {
+		return "", err
+	}
+	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
+
+	// Recommended gas limit.
+	gasLimit := registerGasLimit
+
+	// Get gas price.
+	gasPrice, err := b.client.SuggestGasPrice(ctx)
+	if err != nil {
+		return "", err
+	}
+	log.Debug().Str("gas-price", gasPrice.String()).Msg("got gas price")
+
+	chainID, err := b.client.NetworkID(ctx)
+	if err != nil {
+		return "", err
+	}
+	log.Debug().Str("chain-id", chainID.String()).Msg("got chain ID")
+
+	auth, err := bind.NewKeyedTransactorWithChainID(b.privateKey.ToECDSA(), chainID)
+	if err != nil {
+		return "", err
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0) // in wei
+	auth.GasLimit = gasLimit
+	auth.GasPrice = gasPrice
+
+	instance, err := gocontract.NewKeyRegistry(b.keyRegistryContractAddress, b.client)
+	if err != nil {
+		return "", err
+	}
+
+	tx, err := instance.ChangeOwner(auth, key.SerializeCompressed(), owner)
+	if err != nil {
+		return "", err
+	}
+
+	return tx.Hash().Hex(), nil
+}
+
 func (b *Blockchain) RegisterName(ctx context.Context, key *easyecc.PublicKey, name string) (string, error) {
 	nonce, err := b.client.PendingNonceAt(ctx,
 		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))

@@ -17,8 +17,12 @@ genproto:
 	cd proto; protoc --go-grpc_out=$(GO_PROTO_DIR) *.proto
 
 server-stop:
-	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-server
+	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-proxy
+	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-web
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-dump
+	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-server
+
+web-stop:
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl stop ubikom-web
 
 upload:
@@ -31,9 +35,16 @@ upload:
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/snap-print ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/snap-print
 	scp -i $(SSH_KEY) $(ROOT_DIR)config/supervisor/* ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/supervisor
 
+web-upload:
+	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-web ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-web
+
 server-start:
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-server
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-dump
+	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-web
+	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-proxy
+
+web-start:
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-web
 
 build:

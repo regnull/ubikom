@@ -142,8 +142,14 @@ var lookupNameCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("name lookup request failed")
 		}
-		fmt.Printf("%0x\n", res.GetKey())
-		fmt.Printf("%s\n", base58.Encode(res.GetKey()))
+		publicKey, err := easyecc.NewPublicFromSerializedCompressed(res.GetKey())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to parse key")
+		}
+		fmt.Printf("hex: %0x\n", res.GetKey())
+		fmt.Printf("base58: %s\n", base58.Encode(res.GetKey()))
+		fmt.Printf("btc addr: %s\n", publicKey.Address())
+		fmt.Printf("eth addr: %s\n", publicKey.EthereumAddress())
 	},
 }
 

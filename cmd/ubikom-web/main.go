@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/dchest/captcha"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/regnull/easyecc"
@@ -123,6 +124,7 @@ const (
 	minNameLength           = 3
 	minPasswordLength       = 6
 	defaultRateLimitPerHour = 200
+	defaultKeyOwner         = "0x24fa5B1d7FBe98A9316101E311F0c409791EaA76"
 )
 
 type CmdArgs struct {
@@ -621,6 +623,13 @@ func (s *Server) doBlockchainRegistration(ctx context.Context, publicKey *easyec
 	}
 	log.Debug().Str("tx", keyTx).Msg("key registered")
 
+	// Change the key owner
+	ownerAddr := common.HexToAddress(defaultKeyOwner)
+	changeOwnerTx, err := s.blockchain.ChangeKeyOwner(ctx, publicKey, ownerAddr)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to change the key owner")
+	}
+
 	nameTx, err := s.blockchain.RegisterName(ctx, publicKey, name)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register name on blockchain")
@@ -641,6 +650,13 @@ func (s *Server) doBlockchainRegistration(ctx context.Context, publicKey *easyec
 		log.Error().Err(err).Msg("failed to get register key confirmation")
 	} else {
 		log.Debug().Str("tx", keyTx).Uint64("block", block).Msg("tx confirmed")
+	}
+
+	block, err = s.blockchain.WaitForConfirmation(ctx1, changeOwnerTx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get change key owner confirmation")
+	} else {
+		log.Debug().Str("tx", changeOwnerTx).Uint64("block", block).Msg("tx confirmed")
 	}
 
 	block, err = s.blockchain.WaitForConfirmation(ctx1, nameTx)
