@@ -2,6 +2,7 @@ package bc
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubchain/gocontract"
@@ -258,6 +260,21 @@ func (b *Blockchain) WaitForConfirmation(ctx context.Context, tx string) (uint64
 			return 0, ErrTxNotFound
 		}
 	}
+}
+
+func (b *Blockchain) GetReceipt(ctx context.Context, tx string) (*types.Receipt, error) {
+	if len(tx) < 10 {
+		return nil, fmt.Errorf("invalid transaction")
+	}
+	hash, err := hex.DecodeString(tx[2:])
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := b.client.TransactionReceipt(ctx, common.BytesToHash(hash))
+	if err != nil {
+		return nil, err
+	}
+	return receipt, nil
 }
 
 func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password string) error {

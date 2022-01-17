@@ -612,6 +612,8 @@ func (s *Server) HandleNewCaptcha(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) doBlockchainRegistration(ctx context.Context, publicKey *easyecc.PublicKey, name string) {
+	name = strings.Trim(strings.ToLower(name), " ")
+
 	log.Info().Msg("starting blockchain registration")
 	if s.blockchain == nil {
 		return
@@ -622,13 +624,6 @@ func (s *Server) doBlockchainRegistration(ctx context.Context, publicKey *easyec
 		return
 	}
 	log.Debug().Str("tx", keyTx).Msg("key registered")
-
-	// Change the key owner
-	ownerAddr := common.HexToAddress(defaultKeyOwner)
-	changeOwnerTx, err := s.blockchain.ChangeKeyOwner(ctx, publicKey, ownerAddr)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to change the key owner")
-	}
 
 	nameTx, err := s.blockchain.RegisterName(ctx, publicKey, name)
 	if err != nil {
@@ -642,6 +637,13 @@ func (s *Server) doBlockchainRegistration(ctx context.Context, publicKey *easyec
 	}
 	log.Debug().Str("tx", connectorTx).Msg("connector registered")
 
+	ownerAddr := common.HexToAddress(defaultKeyOwner)
+	changeOwnerTx, err := s.blockchain.ChangeKeyOwner(ctx, publicKey, ownerAddr)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to change the key owner")
+	}
+	log.Debug().Str("tx", changeOwnerTx).Msg("key owner changed")
+
 	ctx1, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
@@ -651,12 +653,11 @@ func (s *Server) doBlockchainRegistration(ctx context.Context, publicKey *easyec
 	} else {
 		log.Debug().Str("tx", keyTx).Uint64("block", block).Msg("tx confirmed")
 	}
-
-	block, err = s.blockchain.WaitForConfirmation(ctx1, changeOwnerTx)
+	receipt, err := s.blockchain.GetReceipt(ctx1, keyTx)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get change key owner confirmation")
+		log.Error().Err(err).Msg("failed to get register key receipt")
 	} else {
-		log.Debug().Str("tx", changeOwnerTx).Uint64("block", block).Msg("tx confirmed")
+		log.Debug().Str("tx", keyTx).Interface("receipt", receipt).Msg("got receipt")
 	}
 
 	block, err = s.blockchain.WaitForConfirmation(ctx1, nameTx)
@@ -665,12 +666,37 @@ func (s *Server) doBlockchainRegistration(ctx context.Context, publicKey *easyec
 	} else {
 		log.Debug().Str("tx", nameTx).Uint64("block", block).Msg("tx confirmed")
 	}
+	receipt, err = s.blockchain.GetReceipt(ctx1, nameTx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get register name receipt")
+	} else {
+		log.Debug().Str("tx", nameTx).Interface("receipt", receipt).Msg("got receipt")
+	}
 
 	block, err = s.blockchain.WaitForConfirmation(ctx1, connectorTx)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get register connector confirmation")
 	} else {
 		log.Debug().Str("tx", connectorTx).Uint64("block", block).Msg("tx confirmed")
+	}
+	receipt, err = s.blockchain.GetReceipt(ctx1, connectorTx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get register connector receipt")
+	} else {
+		log.Debug().Str("tx", connectorTx).Interface("receipt", receipt).Msg("got receipt")
+	}
+
+	block, err = s.blockchain.WaitForConfirmation(ctx1, changeOwnerTx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get change key owner confirmation")
+	} else {
+		log.Debug().Str("tx", changeOwnerTx).Uint64("block", block).Msg("tx confirmed")
+	}
+	receipt, err = s.blockchain.GetReceipt(ctx1, changeOwnerTx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get change owner receipt")
+	} else {
+		log.Debug().Str("tx", changeOwnerTx).Interface("receipt", receipt).Msg("got receipt")
 	}
 
 	log.Info().Msg("blockchain registration is done")

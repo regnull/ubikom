@@ -145,6 +145,7 @@ var lookupNameCmd = &cobra.Command{
 
 		if len(key) == 0 {
 			fmt.Printf("name is not registered\n")
+			return
 		}
 
 		publicKey, err := easyecc.NewPublicFromSerializedCompressed(key)

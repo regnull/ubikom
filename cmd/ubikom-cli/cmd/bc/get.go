@@ -2,7 +2,9 @@ package bc
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -13,6 +15,7 @@ import (
 func init() {
 	getCmd.AddCommand(getBalanceCmd)
 	getCmd.AddCommand(getBlockCmd)
+	getCmd.AddCommand(getReceiptCmd)
 
 	BCCmd.AddCommand(getCmd)
 }
@@ -79,5 +82,54 @@ var getBlockCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get latest block number")
 		}
 		fmt.Printf("%d\n", num)
+	},
+}
+
+var getReceiptCmd = &cobra.Command{
+	Use:   "receipt",
+	Short: "Get transaction receipt",
+	Long:  "Get transaction receipt",
+	Run: func(cmd *cobra.Command, args []string) {
+		nodeURL, err := cmd.Flags().GetString("node-url")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get node URL")
+		}
+
+		if len(args) < 1 {
+			log.Fatal().Msg("transaction hash required")
+		}
+
+		tx := args[0]
+		if len(tx) < 10 {
+			log.Fatal().Msg("transaction hash required")
+		}
+
+		if strings.HasPrefix("0x", tx) {
+			tx = tx[2:]
+		}
+
+		// Connect to the node.
+		client, err := ethclient.Dial(nodeURL)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to connect to blockchain node")
+		}
+
+		ctx := context.Background()
+
+		hash, err := hex.DecodeString(tx)
+		if err != nil {
+			log.Fatal().Err(err).Msg("invalid transaction")
+		}
+		receipt, err := client.TransactionReceipt(ctx, common.BytesToHash(hash))
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get transaction receipt")
+		}
+
+		fmt.Printf("status: %d\n", receipt.Status)
+		fmt.Printf("block hash: %s\n", receipt.BlockHash.Hex())
+		fmt.Printf("block number: %d\n", receipt.BlockNumber)
+		fmt.Printf("gas used: %d\n", receipt.GasUsed)
+		fmt.Printf("tx index: %d\n", receipt.TransactionIndex)
+		fmt.Printf("tx type: %d\n", receipt.Type)
 	},
 }
