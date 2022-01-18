@@ -392,7 +392,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*120)
 		defer cancel()
-		s.blockchain.MaybeRegisterUser(ctx, name, password)
+		s.blockchain.MaybeRegisterUser(ctx, name, name, password)
 	}()
 
 	var mnemonicQuoted []string

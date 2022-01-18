@@ -278,10 +278,11 @@ func (b *Blockchain) GetReceipt(ctx context.Context, tx string) (*types.Receipt,
 	return receipt, nil
 }
 
-func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password string) error {
+func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, regName, password string) error {
 	log.Info().Str("user", name).Msg("checking user blockchain registration")
 
 	name = strings.ToLower(util.StripDomainName(name))
+	regName = strings.ToLower(util.StripDomainName(regName))
 
 	privateKey := util.GenerateCanonicalKeyFromNamePassword(name, password)
 
@@ -299,13 +300,13 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password strin
 	iAmTheOwner := true
 	ubikomIsTheOwner := false
 	if !keyRegistered {
-		log.Info().Str("name", name).Msg("registering key")
+		log.Info().Str("name", regName).Msg("registering key")
 
 		receipt, err := b.RegisterKey(ctx, privateKey.PublicKey())
 		if err != nil {
 			return fmt.Errorf("error registering key on blockchain: %w", err)
 		}
-		log.Info().Interface("receipt", receipt).Str("name", name).Msg("key registered")
+		log.Info().Interface("receipt", receipt).Str("name", regName).Msg("key registered")
 	} else {
 		owner, err := keyRegCaller.Owner(nil, privateKey.PublicKey().SerializeCompressed())
 		if err != nil {
@@ -313,7 +314,7 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password strin
 		}
 		iAmTheOwner = util.EqualHexStrings(owner.Hex(), b.privateKey.PublicKey().EthereumAddress())
 		ubikomIsTheOwner = util.EqualHexStrings(owner.Hex(), globals.UbikomEthereumAddress)
-		log.Info().Str("name", name).Bool("i-am-the-owner", iAmTheOwner).Str("owner", owner.Hex()).Msg("key is already registered")
+		log.Info().Str("name", regName).Bool("i-am-the-owner", iAmTheOwner).Str("owner", owner.Hex()).Msg("key is already registered")
 	}
 
 	// Check name registration.
@@ -322,22 +323,22 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password strin
 	if err != nil {
 		return err
 	}
-	key, err := nameRegCaller.GetKey(nil, name)
+	key, err := nameRegCaller.GetKey(nil, regName)
 	if err != nil {
 		return err
 	}
 
 	nameRegistered := len(key) == 33
 	if !nameRegistered {
-		log.Info().Str("name", name).Msg("registering name")
+		log.Info().Str("name", regName).Msg("registering name")
 
-		receipt, err := b.RegisterName(ctx, privateKey.PublicKey(), name)
+		receipt, err := b.RegisterName(ctx, privateKey.PublicKey(), regName)
 		if err != nil {
 			return err
 		}
-		log.Info().Interface("receipt", receipt).Str("name", name).Msg("name registered")
+		log.Info().Interface("receipt", receipt).Str("name", regName).Msg("name registered")
 	} else {
-		log.Info().Str("name", name).Msg("name is already registered")
+		log.Info().Str("name", regName).Msg("name is already registered")
 	}
 
 	// Check connector registration.
@@ -354,32 +355,32 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password strin
 
 	connectorRegistered := location != ""
 	if !connectorRegistered {
-		log.Info().Str("name", name).Msg("registering connector")
+		log.Info().Str("name", regName).Msg("registering connector")
 
-		receipt, err := b.RegisterConnector(ctx, name, "PL_DMS", globals.PublicDumpServiceURL)
+		receipt, err := b.RegisterConnector(ctx, regName, "PL_DMS", globals.PublicDumpServiceURL)
 		if err != nil {
 			return err
 		}
 		log.Info().Interface("receipt", receipt).Str("name", name).Msg("connector registered")
 	} else {
-		log.Info().Str("name", name).Msg("connector is already registered")
+		log.Info().Str("name", regName).Msg("connector is already registered")
 	}
 
 	// Change key ownership, if needed.
 
 	if ubikomIsTheOwner {
-		log.Info().Str("name", name).Msg("key ownership is already correct")
+		log.Info().Str("name", regName).Msg("key ownership is already correct")
 	} else {
 		if iAmTheOwner {
-			log.Info().Str("name", name).Msg("changing key ownership")
+			log.Info().Str("name", regName).Msg("changing key ownership")
 
 			receipt, err := b.ChangeKeyOwner(ctx, privateKey.PublicKey(), common.HexToAddress(globals.UbikomEthereumAddress))
 			if err != nil {
 				return err
 			}
-			log.Info().Interface("receipt", receipt).Str("name", name).Msg("key ownership changed")
+			log.Info().Interface("receipt", receipt).Str("name", regName).Msg("key ownership changed")
 		} else {
-			log.Warn().Str("name", name).Msg("key ownership is incorrect, but I can't change it")
+			log.Warn().Str("name", regName).Msg("key ownership is incorrect, but I can't change it")
 		}
 	}
 	return nil
