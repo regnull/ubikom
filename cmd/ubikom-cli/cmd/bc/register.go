@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -73,7 +74,7 @@ var registerKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
 
-		tx, err := interactWithContract(nodeURL, key, contractAddress,
+		err = interactWithContract(nodeURL, key, contractAddress,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := gocontract.NewKeyRegistry(addr, client)
 				if err != nil {
@@ -89,7 +90,6 @@ var registerKeyCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to register key")
 		}
-		fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
 	},
 }
 
@@ -118,7 +118,7 @@ var registerNameCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
-		tx, err := interactWithContract(nodeURL, key, contractAddress,
+		err = interactWithContract(nodeURL, key, contractAddress,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := gocontract.NewNameRegistry(addr, client)
 				if err != nil {
@@ -134,7 +134,6 @@ var registerNameCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to register name")
 		}
-		fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
 	},
 }
 
@@ -173,7 +172,7 @@ var registerConnectorCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
-		tx, err := interactWithContract(nodeURL, key, contractAddress,
+		err = interactWithContract(nodeURL, key, contractAddress,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := gocontract.NewConnectorRegistry(addr, client)
 				if err != nil {
@@ -190,16 +189,15 @@ var registerConnectorCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to register connector")
 		}
-		fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
 	},
 }
 
 func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
-	contractAddress string, f mutateStateFunc) (*types.Transaction, error) {
+	contractAddress string, f mutateStateFunc) error {
 	// Connect to the node.
 	client, err := ethclient.Dial(nodeURL)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	ctx := context.Background()
@@ -207,7 +205,7 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 	// Get nonce.
 	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(key.PublicKey().EthereumAddress()))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
 
@@ -217,19 +215,19 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 	// Get gas price.
 	gasPrice, err := client.SuggestGasPrice(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.Debug().Str("gas-price", gasPrice.String()).Msg("got gas price")
 
 	chainID, err := client.NetworkID(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.Debug().Str("chain-id", chainID.String()).Msg("got chain ID")
 
 	auth, err := bind.NewKeyedTransactorWithChainID(key.ToECDSA(), chainID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0) // in wei
@@ -238,5 +236,14 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 
 	addr := common.HexToAddress(contractAddress)
 
-	return f(client, auth, addr)
+	tx, err := f(client, auth, addr)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
+
+	if err := WaitMinedAndPrintReceipt(client, tx, time.Second*30); err != nil {
+		log.Fatal().Err(err).Msg("failed to get transaction receipt")
+	}
+	return nil
 }
