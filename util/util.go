@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"io/ioutil"
@@ -339,4 +340,12 @@ func FileNameNoExtension(filePath string) string {
 		return b[:pos]
 	}
 	return b
+}
+
+func HexStringToBytes(s string) ([]byte, error) {
+	return hex.DecodeString(strings.TrimPrefix(s, "0x"))
+}
+
+func EqualHexStrings(s1, s2 string) bool {
+	return strings.EqualFold(strings.TrimPrefix(s1, "0x"), strings.TrimPrefix(s2, "0x"))
 }

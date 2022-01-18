@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/dchest/captcha"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/regnull/easyecc"
@@ -390,7 +389,11 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info().Msg("address is registered")
 
-	go s.doBlockchainRegistration(context.Background(), emailKey.PublicKey(), name)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*120)
+		defer cancel()
+		s.blockchain.MaybeRegisterUser(ctx, name, password)
+	}()
 
 	var mnemonicQuoted []string
 	var keyID string
@@ -609,97 +612,6 @@ func (s *Server) HandleNewCaptcha(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Err(err).Msg("failed to send event")
 	}
-}
-
-func (s *Server) doBlockchainRegistration(ctx context.Context, publicKey *easyecc.PublicKey, name string) {
-	name = strings.Trim(strings.ToLower(name), " ")
-
-	log.Info().Msg("starting blockchain registration")
-	if s.blockchain == nil {
-		return
-	}
-	keyTx, err := s.blockchain.RegisterKey(ctx, publicKey)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to register key on blockchain")
-		return
-	}
-	log.Debug().Str("tx", keyTx).Msg("key registered")
-
-	nameTx, err := s.blockchain.RegisterName(ctx, publicKey, name)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to register name on blockchain")
-	}
-	log.Debug().Str("tx", nameTx).Msg("name registered")
-
-	connectorTx, err := s.blockchain.RegisterConnector(ctx, name, "PL_DMS", dumpAddress)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to register connector on blockchain")
-	}
-	log.Debug().Str("tx", connectorTx).Msg("connector registered")
-
-	ownerAddr := common.HexToAddress(defaultKeyOwner)
-	changeOwnerTx, err := s.blockchain.ChangeKeyOwner(ctx, publicKey, ownerAddr)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to change the key owner")
-	}
-	log.Debug().Str("tx", changeOwnerTx).Msg("key owner changed")
-
-	ctx1, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
-
-	block, err := s.blockchain.WaitForConfirmation(ctx1, keyTx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get register key confirmation")
-	} else {
-		log.Debug().Str("tx", keyTx).Uint64("block", block).Msg("tx confirmed")
-	}
-	receipt, err := s.blockchain.GetReceipt(ctx1, keyTx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get register key receipt")
-	} else {
-		log.Debug().Str("tx", keyTx).Interface("receipt", receipt).Msg("got receipt")
-	}
-
-	block, err = s.blockchain.WaitForConfirmation(ctx1, nameTx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get register name confirmation")
-	} else {
-		log.Debug().Str("tx", nameTx).Uint64("block", block).Msg("tx confirmed")
-	}
-	receipt, err = s.blockchain.GetReceipt(ctx1, nameTx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get register name receipt")
-	} else {
-		log.Debug().Str("tx", nameTx).Interface("receipt", receipt).Msg("got receipt")
-	}
-
-	block, err = s.blockchain.WaitForConfirmation(ctx1, connectorTx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get register connector confirmation")
-	} else {
-		log.Debug().Str("tx", connectorTx).Uint64("block", block).Msg("tx confirmed")
-	}
-	receipt, err = s.blockchain.GetReceipt(ctx1, connectorTx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get register connector receipt")
-	} else {
-		log.Debug().Str("tx", connectorTx).Interface("receipt", receipt).Msg("got receipt")
-	}
-
-	block, err = s.blockchain.WaitForConfirmation(ctx1, changeOwnerTx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get change key owner confirmation")
-	} else {
-		log.Debug().Str("tx", changeOwnerTx).Uint64("block", block).Msg("tx confirmed")
-	}
-	receipt, err = s.blockchain.GetReceipt(ctx1, changeOwnerTx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get change owner receipt")
-	} else {
-		log.Debug().Str("tx", changeOwnerTx).Interface("receipt", receipt).Msg("got receipt")
-	}
-
-	log.Info().Msg("blockchain registration is done")
 }
 
 func main() {

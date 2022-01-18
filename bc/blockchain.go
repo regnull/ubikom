@@ -50,11 +50,11 @@ func NewBlockchain(client *ethclient.Client, keyRegistryContractAddress string,
 }
 
 // RegisterKey registers a new key.
-func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (string, error) {
+func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (*types.Receipt, error) {
 	nonce, err := b.client.PendingNonceAt(ctx,
 		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
 
@@ -64,19 +64,19 @@ func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (s
 	// Get gas price.
 	gasPrice, err := b.client.SuggestGasPrice(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Str("gas-price", gasPrice.String()).Msg("got gas price")
 
 	chainID, err := b.client.NetworkID(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Str("chain-id", chainID.String()).Msg("got chain ID")
 
 	auth, err := bind.NewKeyedTransactorWithChainID(b.privateKey.ToECDSA(), chainID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0) // in wei
@@ -85,23 +85,23 @@ func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (s
 
 	instance, err := gocontract.NewKeyRegistry(b.keyRegistryContractAddress, b.client)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	tx, err := instance.Register(auth, key.SerializeCompressed())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return tx.Hash().Hex(), nil
+	return bind.WaitMined(ctx, b.client, tx)
 }
 
 func (b *Blockchain) ChangeKeyOwner(ctx context.Context, key *easyecc.PublicKey,
-	owner common.Address) (string, error) {
+	owner common.Address) (*types.Receipt, error) {
 	nonce, err := b.client.PendingNonceAt(ctx,
 		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
 
@@ -111,19 +111,19 @@ func (b *Blockchain) ChangeKeyOwner(ctx context.Context, key *easyecc.PublicKey,
 	// Get gas price.
 	gasPrice, err := b.client.SuggestGasPrice(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Str("gas-price", gasPrice.String()).Msg("got gas price")
 
 	chainID, err := b.client.NetworkID(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Str("chain-id", chainID.String()).Msg("got chain ID")
 
 	auth, err := bind.NewKeyedTransactorWithChainID(b.privateKey.ToECDSA(), chainID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0) // in wei
@@ -132,22 +132,22 @@ func (b *Blockchain) ChangeKeyOwner(ctx context.Context, key *easyecc.PublicKey,
 
 	instance, err := gocontract.NewKeyRegistry(b.keyRegistryContractAddress, b.client)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	tx, err := instance.ChangeOwner(auth, key.SerializeCompressed(), owner)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return tx.Hash().Hex(), nil
+	return bind.WaitMined(ctx, b.client, tx)
 }
 
-func (b *Blockchain) RegisterName(ctx context.Context, key *easyecc.PublicKey, name string) (string, error) {
+func (b *Blockchain) RegisterName(ctx context.Context, key *easyecc.PublicKey, name string) (*types.Receipt, error) {
 	nonce, err := b.client.PendingNonceAt(ctx,
 		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
 
@@ -157,19 +157,19 @@ func (b *Blockchain) RegisterName(ctx context.Context, key *easyecc.PublicKey, n
 	// Get gas price.
 	gasPrice, err := b.client.SuggestGasPrice(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Str("gas-price", gasPrice.String()).Msg("got gas price")
 
 	chainID, err := b.client.NetworkID(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Str("chain-id", chainID.String()).Msg("got chain ID")
 
 	auth, err := bind.NewKeyedTransactorWithChainID(b.privateKey.ToECDSA(), chainID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0) // in wei
@@ -178,22 +178,22 @@ func (b *Blockchain) RegisterName(ctx context.Context, key *easyecc.PublicKey, n
 
 	instance, err := gocontract.NewNameRegistry(b.nameRegistryContractAddress, b.client)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	tx, err := instance.Register(auth, name, key.SerializeCompressed())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return tx.Hash().Hex(), nil
+	return bind.WaitMined(ctx, b.client, tx)
 }
 
-func (b *Blockchain) RegisterConnector(ctx context.Context, name string, protocol string, location string) (string, error) {
+func (b *Blockchain) RegisterConnector(ctx context.Context, name string, protocol string, location string) (*types.Receipt, error) {
 	nonce, err := b.client.PendingNonceAt(ctx,
 		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
 
@@ -203,19 +203,19 @@ func (b *Blockchain) RegisterConnector(ctx context.Context, name string, protoco
 	// Get gas price.
 	gasPrice, err := b.client.SuggestGasPrice(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Str("gas-price", gasPrice.String()).Msg("got gas price")
 
 	chainID, err := b.client.NetworkID(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	log.Debug().Str("chain-id", chainID.String()).Msg("got chain ID")
 
 	auth, err := bind.NewKeyedTransactorWithChainID(b.privateKey.ToECDSA(), chainID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0) // in wei
@@ -224,18 +224,19 @@ func (b *Blockchain) RegisterConnector(ctx context.Context, name string, protoco
 
 	instance, err := gocontract.NewConnectorRegistry(b.connectorRegistryContractAddress, b.client)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	tx, err := instance.Register(auth, name, protocol, location)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return tx.Hash().Hex(), nil
+	return bind.WaitMined(ctx, b.client, tx)
 }
 
 func (b *Blockchain) WaitForConfirmation(ctx context.Context, tx string) (uint64, error) {
+	// TODO: Remove this? With WaitMined working, this one is not necessary.
 	ticker := time.NewTicker(time.Second * 10)
 	for {
 		block, err := b.findTx(ctx, 10, tx)
@@ -279,56 +280,108 @@ func (b *Blockchain) GetReceipt(ctx context.Context, tx string) (*types.Receipt,
 
 func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, password string) error {
 	log.Info().Str("user", name).Msg("checking user blockchain registration")
-	nameRegCaller, err := gocontract.NewNameRegistry(b.nameRegistryContractAddress, b.client)
-	if err != nil {
-		return fmt.Errorf("error getting name registry on blockchain: %w", err)
-	}
+
 	name = strings.ToLower(util.StripDomainName(name))
-	key, err := nameRegCaller.GetKey(nil, name)
-	if err != nil {
-		return fmt.Errorf("error getting key on blockchain: %w", err)
-	}
-	if len(key) == 33 {
-		log.Debug().Str("user", name).Msg("name is already registered on blockchain")
-		return nil
-	}
-	log.Debug().Str("user", name).Msg("registering user on blockchain")
 
 	privateKey := util.GenerateCanonicalKeyFromNamePassword(name, password)
-	keyTx, err := b.RegisterKey(ctx, privateKey.PublicKey())
-	if err != nil {
-		return fmt.Errorf("error registering key on blockchain: %w", err)
-	}
-	log.Debug().Str("tx", keyTx).Msg("key is registered")
-	nameTx, err := b.RegisterName(ctx, privateKey.PublicKey(), name)
-	if err != nil {
-		return fmt.Errorf("error registering name on blockchain: %w", err)
-	}
-	log.Debug().Str("tx", nameTx).Msg("name is registered")
-	connectorTx, err := b.RegisterConnector(ctx, name, "PL_DMS", globals.PublicDumpServiceURL)
-	if err != nil {
-		return fmt.Errorf("error registering connector on blockchain: %w", err)
-	}
-	log.Debug().Str("tx", connectorTx).Msg("connector is registered")
 
-	ctx1, cancel := context.WithTimeout(ctx, time.Second*60)
-	defer cancel()
+	// Check key registration.
+	keyRegCaller, err := gocontract.NewKeyRegistryCaller(b.keyRegistryContractAddress, b.client)
+	if err != nil {
+		return err
+	}
 
-	block, err := b.WaitForConfirmation(ctx1, keyTx)
+	keyRegistered, err := keyRegCaller.Registered(nil, privateKey.PublicKey().SerializeCompressed())
 	if err != nil {
-		return fmt.Errorf("error waiting for blockchain confirmation: %w", err)
+		return err
 	}
-	log.Debug().Str("tx", keyTx).Uint64("block", block).Msg("key registration tx confirmed")
-	block, err = b.WaitForConfirmation(ctx1, nameTx)
+
+	iAmTheOwner := true
+	ubikomIsTheOwner := false
+	if !keyRegistered {
+		log.Info().Str("name", name).Msg("registering key")
+
+		receipt, err := b.RegisterKey(ctx, privateKey.PublicKey())
+		if err != nil {
+			return fmt.Errorf("error registering key on blockchain: %w", err)
+		}
+		log.Info().Interface("receipt", receipt).Str("name", name).Msg("key registered")
+	} else {
+		owner, err := keyRegCaller.Owner(nil, privateKey.PublicKey().SerializeCompressed())
+		if err != nil {
+			return err
+		}
+		iAmTheOwner = util.EqualHexStrings(owner.Hex(), b.privateKey.PublicKey().EthereumAddress())
+		ubikomIsTheOwner = util.EqualHexStrings(owner.Hex(), globals.UbikomEthereumAddress)
+		log.Info().Str("name", name).Bool("i-am-the-owner", iAmTheOwner).Str("owner", owner.Hex()).Msg("key is already registered")
+	}
+
+	// Check name registration.
+
+	nameRegCaller, err := gocontract.NewNameRegistryCaller(b.nameRegistryContractAddress, b.client)
 	if err != nil {
-		return fmt.Errorf("error waiting for blockchain confirmation: %w", err)
+		return err
 	}
-	log.Debug().Str("tx", nameTx).Uint64("block", block).Msg("name registration tx confirmed")
-	block, err = b.WaitForConfirmation(ctx1, connectorTx)
+	key, err := nameRegCaller.GetKey(nil, name)
 	if err != nil {
-		return fmt.Errorf("error waiting for blockchain confirmation: %w", err)
+		return err
 	}
-	log.Debug().Str("tx", connectorTx).Uint64("block", block).Msg("connector registration tx confirmed")
+
+	nameRegistered := len(key) == 33
+	if !nameRegistered {
+		log.Info().Str("name", name).Msg("registering name")
+
+		receipt, err := b.RegisterName(ctx, privateKey.PublicKey(), name)
+		if err != nil {
+			return err
+		}
+		log.Info().Interface("receipt", receipt).Str("name", name).Msg("name registered")
+	} else {
+		log.Info().Str("name", name).Msg("name is already registered")
+	}
+
+	// Check connector registration.
+
+	connectorRegCaller, err := gocontract.NewConnectorRegistryCaller(b.connectorRegistryContractAddress, b.client)
+	if err != nil {
+		return err
+	}
+
+	location, err := connectorRegCaller.GetLocation(nil, name, "PL_DMS")
+	if err != nil {
+		return err
+	}
+
+	connectorRegistered := location != ""
+	if !connectorRegistered {
+		log.Info().Str("name", name).Msg("registering connector")
+
+		receipt, err := b.RegisterConnector(ctx, name, "PL_DMS", globals.PublicDumpServiceURL)
+		if err != nil {
+			return err
+		}
+		log.Info().Interface("receipt", receipt).Str("name", name).Msg("connector registered")
+	} else {
+		log.Info().Str("name", name).Msg("connector is already registered")
+	}
+
+	// Change key ownership, if needed.
+
+	if ubikomIsTheOwner {
+		log.Info().Str("name", name).Msg("key ownership is already correct")
+	} else {
+		if iAmTheOwner {
+			log.Info().Str("name", name).Msg("changing key ownership")
+
+			receipt, err := b.ChangeKeyOwner(ctx, privateKey.PublicKey(), common.HexToAddress(globals.UbikomEthereumAddress))
+			if err != nil {
+				return err
+			}
+			log.Info().Interface("receipt", receipt).Str("name", name).Msg("key ownership changed")
+		} else {
+			log.Warn().Str("name", name).Msg("key ownership is incorrect, but I can't change it")
+		}
+	}
 	return nil
 }
 
