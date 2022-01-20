@@ -330,13 +330,17 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, regName, passw
 
 	nameRegistered := len(key) == 33
 	if !nameRegistered {
-		log.Info().Str("name", regName).Msg("registering name")
+		if iAmTheOwner {
+			log.Info().Str("name", regName).Msg("registering name")
 
-		receipt, err := b.RegisterName(ctx, privateKey.PublicKey(), regName)
-		if err != nil {
-			return err
+			receipt, err := b.RegisterName(ctx, privateKey.PublicKey(), regName)
+			if err != nil {
+				return err
+			}
+			log.Info().Interface("receipt", receipt).Str("name", regName).Msg("name registered")
+		} else {
+			log.Warn().Str("name", regName).Msg("cannot register name, I'm not the key owner")
 		}
-		log.Info().Interface("receipt", receipt).Str("name", regName).Msg("name registered")
 	} else {
 		log.Info().Str("name", regName).Msg("name is already registered")
 	}
@@ -355,13 +359,17 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, regName, passw
 
 	connectorRegistered := location != ""
 	if !connectorRegistered {
-		log.Info().Str("name", regName).Msg("registering connector")
+		if iAmTheOwner {
+			log.Info().Str("name", regName).Msg("registering connector")
 
-		receipt, err := b.RegisterConnector(ctx, regName, "PL_DMS", globals.PublicDumpServiceURL)
-		if err != nil {
-			return err
+			receipt, err := b.RegisterConnector(ctx, regName, "PL_DMS", globals.PublicDumpServiceURL)
+			if err != nil {
+				return err
+			}
+			log.Info().Interface("receipt", receipt).Str("name", name).Msg("connector registered")
+		} else {
+			log.Warn().Str("name", regName).Msg("cannot register connector, I'm not the key owner")
 		}
-		log.Info().Interface("receipt", receipt).Str("name", name).Msg("connector registered")
 	} else {
 		log.Info().Str("name", regName).Msg("connector is already registered")
 	}
