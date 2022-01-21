@@ -427,7 +427,10 @@ func (b *Blockchain) LookupKey(ctx context.Context, in *pb.LookupKeyRequest, opt
 	if err != nil {
 		return nil, err
 	}
-	registered, err := caller.Registered(nil, in.Key)
+
+	callOpts := &bind.CallOpts{Context: ctx}
+
+	registered, err := caller.Registered(callOpts, in.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -436,7 +439,7 @@ func (b *Blockchain) LookupKey(ctx context.Context, in *pb.LookupKeyRequest, opt
 		return nil, status.Error(codes.NotFound, "key not found")
 	}
 
-	disabled, err := caller.Disabled(nil, in.Key)
+	disabled, err := caller.Disabled(callOpts, in.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +453,10 @@ func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest, o
 	if err != nil {
 		return nil, err
 	}
-	key, err := caller.GetKey(nil, strings.ToLower(in.GetName()))
+
+	callOpts := &bind.CallOpts{Context: ctx}
+
+	key, err := caller.GetKey(callOpts, strings.ToLower(in.GetName()))
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +473,10 @@ func (b *Blockchain) LookupAddress(ctx context.Context, in *pb.LookupAddressRequ
 	if err != nil {
 		return nil, err
 	}
-	location, err := caller.GetLocation(nil, strings.ToLower(in.GetName()), in.GetProtocol().String())
+
+	callOpts := &bind.CallOpts{Context: ctx}
+
+	location, err := caller.GetLocation(callOpts, strings.ToLower(in.GetName()), in.GetProtocol().String())
 	if err != nil {
 		return nil, err
 	}
