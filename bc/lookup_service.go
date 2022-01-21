@@ -39,6 +39,8 @@ func (c *LookupServiceClient) LookupKey(ctx context.Context, in *pb.LookupKeyReq
 		wg.Done()
 	}()
 
+	wg.Wait()
+
 	if legacyErr != nil && bcErr != nil {
 		return nil, legacyErr
 	}
@@ -64,6 +66,8 @@ func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameR
 		legacyRes, legacyErr = c.legacyLookup.LookupName(ctx, in, opts...)
 		wg.Done()
 	}()
+
+	wg.Wait()
 
 	var bcRes *pb.LookupNameResponse
 	var bcErr error
@@ -106,6 +110,8 @@ func (c *LookupServiceClient) LookupAddress(ctx context.Context, in *pb.LookupAd
 		bcRes, bcErr = c.bcLookup.LookupAddress(ctx, in, opts...)
 		wg.Done()
 	}()
+
+	wg.Wait()
 
 	if legacyErr != nil && bcErr != nil {
 		return nil, legacyErr
