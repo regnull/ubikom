@@ -16,8 +16,12 @@ import (
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/globals"
+	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -416,6 +420,60 @@ func (b *Blockchain) GetKeyByName(ctx context.Context, name string) (*easyecc.Pu
 		return nil, nil
 	}
 	return easyecc.NewPublicFromSerializedCompressed(bb)
+}
+
+func (b *Blockchain) LookupKey(ctx context.Context, in *pb.LookupKeyRequest, opts ...grpc.CallOption) (*pb.LookupKeyResponse, error) {
+	caller, err := gocontract.NewKeyRegistryCaller(b.keyRegistryContractAddress, b.client)
+	if err != nil {
+		return nil, err
+	}
+	registered, err := caller.Registered(nil, in.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	if !registered {
+		return nil, status.Error(codes.NotFound, "key not found")
+	}
+
+	disabled, err := caller.Disabled(nil, in.Key)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.LookupKeyResponse{
+		Disabled: disabled,
+	}, nil
+}
+
+func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest, opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
+	caller, err := gocontract.NewNameRegistryCaller(b.nameRegistryContractAddress, b.client)
+	if err != nil {
+		return nil, err
+	}
+	key, err := caller.GetKey(nil, in.GetName())
+	if err != nil {
+		return nil, err
+	}
+	if len(key) != 33 {
+		return nil, status.Error(codes.NotFound, "name not found")
+	}
+	return &pb.LookupNameResponse{
+		Key: key,
+	}, nil
+}
+
+func (b *Blockchain) LookupAddress(ctx context.Context, in *pb.LookupAddressRequest, opts ...grpc.CallOption) (*pb.LookupAddressResponse, error) {
+	caller, err := gocontract.NewConnectorRegistryCaller(b.connectorRegistryContractAddress, b.client)
+	if err != nil {
+		return nil, err
+	}
+	location, err := caller.GetLocation(nil, in.GetName(), in.GetProtocol().String())
+	if err != nil {
+		return nil, err
+	}
+	return &pb.LookupAddressResponse{
+		Address: location,
+	}, nil
 }
 
 func (b *Blockchain) findTx(ctx context.Context, maxBlocks uint, tx string) (uint64, error) {
