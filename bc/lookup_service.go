@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"sync"
+	"time"
 
 	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
@@ -28,15 +29,17 @@ func (c *LookupServiceClient) LookupKey(ctx context.Context, in *pb.LookupKeyReq
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
+		defer wg.Done()
 		legacyRes, legacyErr = c.legacyLookup.LookupKey(ctx, in, opts...)
-		wg.Done()
 	}()
 
 	var bcRes *pb.LookupKeyResponse
 	var bcErr error
 	go func() {
-		bcRes, bcErr = c.bcLookup.LookupKey(ctx, in, opts...)
-		wg.Done()
+		defer wg.Done()
+		ctx1, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		bcRes, bcErr = c.bcLookup.LookupKey(ctx1, in, opts...)
 	}()
 
 	wg.Wait()
@@ -69,8 +72,8 @@ func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameR
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
+		defer wg.Done()
 		legacyRes, legacyErr = c.legacyLookup.LookupName(ctx, in, opts...)
-		wg.Done()
 	}()
 
 	wg.Wait()
@@ -78,8 +81,10 @@ func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameR
 	var bcRes *pb.LookupNameResponse
 	var bcErr error
 	go func() {
-		bcRes, bcErr = c.bcLookup.LookupName(ctx, in, opts...)
-		wg.Done()
+		defer wg.Done()
+		ctx1, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		bcRes, bcErr = c.bcLookup.LookupName(ctx1, in, opts...)
 	}()
 
 	if legacyErr != nil && bcErr != nil {
@@ -112,15 +117,17 @@ func (c *LookupServiceClient) LookupAddress(ctx context.Context, in *pb.LookupAd
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
+		defer wg.Done()
 		legacyRes, legacyErr = c.legacyLookup.LookupAddress(ctx, in, opts...)
-		wg.Done()
 	}()
 
 	var bcRes *pb.LookupAddressResponse
 	var bcErr error
 	go func() {
-		bcRes, bcErr = c.bcLookup.LookupAddress(ctx, in, opts...)
-		wg.Done()
+		defer wg.Done()
+		ctx1, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		bcRes, bcErr = c.bcLookup.LookupAddress(ctx1, in, opts...)
 	}()
 
 	wg.Wait()
