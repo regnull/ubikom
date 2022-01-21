@@ -46,7 +46,13 @@ func (c *LookupServiceClient) LookupKey(ctx context.Context, in *pb.LookupKeyReq
 	}
 
 	if legacyErr != nil || bcErr != nil {
-		log.Error().Msg("lookup error mismatch")
+		log.Error().Msg("lookup key error mismatch")
+		if legacyErr != nil {
+			log.Error().Err(legacyErr).Msg("legacy error")
+		}
+		if bcErr != nil {
+			log.Error().Err(bcErr).Msg("bc error")
+		}
 		if legacyErr != nil {
 			return nil, legacyErr
 		}
@@ -81,7 +87,13 @@ func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameR
 	}
 
 	if legacyErr != nil || bcErr != nil {
-		log.Error().Msg("lookup error mismatch")
+		log.Error().Str("name", in.GetName()).Msg("lookup name error mismatch")
+		if legacyErr != nil {
+			log.Error().Err(legacyErr).Msg("legacy error")
+		}
+		if bcErr != nil {
+			log.Error().Err(bcErr).Msg("bc error")
+		}
 		if legacyErr != nil {
 			return nil, legacyErr
 		}
@@ -118,7 +130,13 @@ func (c *LookupServiceClient) LookupAddress(ctx context.Context, in *pb.LookupAd
 	}
 
 	if legacyErr != nil || bcErr != nil {
-		log.Error().Msg("lookup error mismatch")
+		log.Error().Str("name", in.GetName()).Str("protocol", in.GetProtocol().String()).Msg("lookup address error mismatch")
+		if legacyErr != nil {
+			log.Error().Err(legacyErr).Msg("legacy error")
+		}
+		if bcErr != nil {
+			log.Error().Err(bcErr).Msg("bc error")
+		}
 		if legacyErr != nil {
 			return nil, legacyErr
 		}
