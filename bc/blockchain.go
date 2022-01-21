@@ -450,7 +450,7 @@ func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest, o
 	if err != nil {
 		return nil, err
 	}
-	key, err := caller.GetKey(nil, in.GetName())
+	key, err := caller.GetKey(nil, strings.ToLower(in.GetName()))
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +467,7 @@ func (b *Blockchain) LookupAddress(ctx context.Context, in *pb.LookupAddressRequ
 	if err != nil {
 		return nil, err
 	}
-	location, err := caller.GetLocation(nil, in.GetName(), in.GetProtocol().String())
+	location, err := caller.GetLocation(nil, strings.ToLower(in.GetName()), in.GetProtocol().String())
 	if err != nil {
 		return nil, err
 	}
