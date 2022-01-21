@@ -76,8 +76,6 @@ func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameR
 		legacyRes, legacyErr = c.legacyLookup.LookupName(ctx, in, opts...)
 	}()
 
-	wg.Wait()
-
 	var bcRes *pb.LookupNameResponse
 	var bcErr error
 	go func() {
@@ -86,6 +84,8 @@ func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameR
 		defer cancel()
 		bcRes, bcErr = c.bcLookup.LookupName(ctx1, in, opts...)
 	}()
+
+	wg.Wait()
 
 	if legacyErr != nil && bcErr != nil {
 		return nil, legacyErr
