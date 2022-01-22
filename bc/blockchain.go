@@ -356,7 +356,7 @@ func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, regName, passw
 		return err
 	}
 
-	location, err := connectorRegCaller.GetLocation(nil, name, "PL_DMS")
+	location, err := connectorRegCaller.GetLocation(nil, regName, "PL_DMS")
 	if err != nil {
 		return err
 	}
