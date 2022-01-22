@@ -3,6 +3,7 @@ package bc
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -49,7 +50,7 @@ func (c *LookupServiceClient) LookupKey(ctx context.Context, in *pb.LookupKeyReq
 	}
 
 	if legacyErr != nil || bcErr != nil {
-		log.Error().Msg("lookup key error mismatch")
+		log.Error().Str("key", fmt.Sprintf("%0x", in.GetKey())).Msg("lookup key error mismatch")
 		if legacyErr != nil {
 			log.Error().Err(legacyErr).Msg("legacy error")
 		}
