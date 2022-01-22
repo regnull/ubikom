@@ -15,12 +15,14 @@ import (
 type LookupServiceClient struct {
 	bcLookup     pb.LookupServiceClient
 	legacyLookup pb.LookupServiceClient
+	useLegacy    bool
 }
 
-func NewLookupServiceClient(bcLookup, legacyLookup pb.LookupServiceClient) *LookupServiceClient {
+func NewLookupServiceClient(bcLookup, legacyLookup pb.LookupServiceClient, useLegacy bool) *LookupServiceClient {
 	return &LookupServiceClient{
 		bcLookup:     bcLookup,
 		legacyLookup: legacyLookup,
+		useLegacy:    useLegacy,
 	}
 }
 
@@ -45,11 +47,7 @@ func (c *LookupServiceClient) LookupKey(ctx context.Context, in *pb.LookupKeyReq
 
 	wg.Wait()
 
-	if legacyErr != nil && bcErr != nil {
-		return nil, legacyErr
-	}
-
-	if legacyErr != nil || bcErr != nil {
+	if legacyErr != bcErr {
 		log.Error().Str("key", fmt.Sprintf("%0x", in.GetKey())).Msg("lookup key error mismatch")
 		if legacyErr != nil {
 			log.Error().Err(legacyErr).Msg("legacy error")
@@ -57,14 +55,13 @@ func (c *LookupServiceClient) LookupKey(ctx context.Context, in *pb.LookupKeyReq
 		if bcErr != nil {
 			log.Error().Err(bcErr).Msg("bc error")
 		}
-		if legacyErr != nil {
-			return nil, legacyErr
-		}
 	}
 
-	_ = bcRes
+	if c.useLegacy {
+		return legacyRes, legacyErr
+	}
 
-	return legacyRes, nil
+	return bcRes, bcErr
 }
 
 func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameRequest, opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
@@ -88,11 +85,7 @@ func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameR
 
 	wg.Wait()
 
-	if legacyErr != nil && bcErr != nil {
-		return nil, legacyErr
-	}
-
-	if legacyErr != nil || bcErr != nil {
+	if legacyErr != bcErr {
 		log.Error().Str("name", in.GetName()).Msg("lookup name error mismatch")
 		if legacyErr != nil {
 			log.Error().Err(legacyErr).Msg("legacy error")
@@ -100,16 +93,17 @@ func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameR
 		if bcErr != nil {
 			log.Error().Err(bcErr).Msg("bc error")
 		}
-		if legacyErr != nil {
-			return nil, legacyErr
-		}
 	}
 
 	if !bytes.Equal(legacyRes.GetKey(), bcRes.GetKey()) {
 		log.Error().Msg("lookup key mismatch")
 	}
 
-	return legacyRes, nil
+	if c.useLegacy {
+		return legacyRes, legacyErr
+	}
+
+	return bcRes, bcErr
 }
 
 func (c *LookupServiceClient) LookupAddress(ctx context.Context, in *pb.LookupAddressRequest, opts ...grpc.CallOption) (*pb.LookupAddressResponse, error) {
@@ -133,11 +127,7 @@ func (c *LookupServiceClient) LookupAddress(ctx context.Context, in *pb.LookupAd
 
 	wg.Wait()
 
-	if legacyErr != nil && bcErr != nil {
-		return nil, legacyErr
-	}
-
-	if legacyErr != nil || bcErr != nil {
+	if legacyErr != bcErr {
 		log.Error().Str("name", in.GetName()).Str("protocol", in.GetProtocol().String()).Msg("lookup address error mismatch")
 		if legacyErr != nil {
 			log.Error().Err(legacyErr).Msg("legacy error")
@@ -145,14 +135,15 @@ func (c *LookupServiceClient) LookupAddress(ctx context.Context, in *pb.LookupAd
 		if bcErr != nil {
 			log.Error().Err(bcErr).Msg("bc error")
 		}
-		if legacyErr != nil {
-			return nil, legacyErr
-		}
 	}
 
 	if legacyRes.GetAddress() != bcRes.GetAddress() {
 		log.Error().Msg("lookup address mismatch")
 	}
 
-	return legacyRes, nil
+	if c.useLegacy {
+		return legacyRes, legacyErr
+	}
+
+	return bcRes, bcErr
 }
