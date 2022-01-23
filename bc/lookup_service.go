@@ -57,11 +57,26 @@ func (c *LookupServiceClient) LookupKey(ctx context.Context, in *pb.LookupKeyReq
 		}
 	}
 
+	var primaryRes, secondaryRes *pb.LookupKeyResponse
+	var primaryErr, secondaryErr error
+
 	if c.useLegacy {
-		return legacyRes, legacyErr
+		primaryRes = legacyRes
+		primaryErr = legacyErr
+		secondaryRes = bcRes
+		secondaryErr = bcErr
+	} else {
+		secondaryRes = legacyRes
+		secondaryErr = legacyErr
+		primaryRes = bcRes
+		primaryErr = bcErr
 	}
 
-	return bcRes, bcErr
+	if primaryErr != nil && secondaryErr == nil {
+		return secondaryRes, secondaryErr
+	}
+
+	return primaryRes, primaryErr
 }
 
 func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameRequest, opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
@@ -99,11 +114,26 @@ func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameR
 		log.Error().Msg("lookup key mismatch")
 	}
 
+	var primaryRes, secondaryRes *pb.LookupNameResponse
+	var primaryErr, secondaryErr error
+
 	if c.useLegacy {
-		return legacyRes, legacyErr
+		primaryRes = legacyRes
+		primaryErr = legacyErr
+		secondaryRes = bcRes
+		secondaryErr = bcErr
+	} else {
+		secondaryRes = legacyRes
+		secondaryErr = legacyErr
+		primaryRes = bcRes
+		primaryErr = bcErr
 	}
 
-	return bcRes, bcErr
+	if primaryErr != nil && secondaryErr == nil {
+		return secondaryRes, secondaryErr
+	}
+
+	return primaryRes, primaryErr
 }
 
 func (c *LookupServiceClient) LookupAddress(ctx context.Context, in *pb.LookupAddressRequest, opts ...grpc.CallOption) (*pb.LookupAddressResponse, error) {
@@ -141,9 +171,24 @@ func (c *LookupServiceClient) LookupAddress(ctx context.Context, in *pb.LookupAd
 		log.Error().Msg("lookup address mismatch")
 	}
 
+	var primaryRes, secondaryRes *pb.LookupAddressResponse
+	var primaryErr, secondaryErr error
+
 	if c.useLegacy {
-		return legacyRes, legacyErr
+		primaryRes = legacyRes
+		primaryErr = legacyErr
+		secondaryRes = bcRes
+		secondaryErr = bcErr
+	} else {
+		secondaryRes = legacyRes
+		secondaryErr = legacyErr
+		primaryRes = bcRes
+		primaryErr = bcErr
 	}
 
-	return bcRes, bcErr
+	if primaryErr != nil && secondaryErr == nil {
+		return secondaryRes, secondaryErr
+	}
+
+	return primaryRes, primaryErr
 }
