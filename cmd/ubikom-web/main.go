@@ -140,6 +140,7 @@ type CmdArgs struct {
 	PowStrength                      int
 	RateLimitPerHour                 int
 	BlockchainNodeURL                string
+	UseLegacyLookupService           bool
 	KeyRegistryContractAddress       string
 	NameRegistryContractAddress      string
 	ConnectorRegistryContractAddress string
@@ -630,7 +631,8 @@ func main() {
 	flag.StringVar(&args.NotificationName, "notification-name", "", "where to send notifications")
 	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength")
 	flag.IntVar(&args.RateLimitPerHour, "rate-limit-per-hour", defaultRateLimitPerHour, "rate limit per hour for identity creation")
-	flag.StringVar(&args.BlockchainNodeURL, "bc-node-url", globals.BlockchainNodeURL, "blockchain node URL")
+	flag.StringVar(&args.BlockchainNodeURL, "blockchain-node-url", globals.BlockchainNodeURL, "blockchain node URL")
+	flag.BoolVar(&args.UseLegacyLookupService, "use-legacy-lookup-service", false, "use legacy lookup service")
 	flag.StringVar(&args.KeyRegistryContractAddress, "key-registry-contract-address", globals.KeyRegistryContractAddress, "key registry contract address")
 	flag.StringVar(&args.NameRegistryContractAddress, "name-registry-contract-address", globals.NameRegistryContractAddress, "name registry contract address")
 	flag.StringVar(&args.ConnectorRegistryContractAddress, "connector-registry-contract-address", globals.ConnectorRegistryContractAddress, "connector registry contract address")
@@ -684,7 +686,8 @@ func main() {
 	}
 
 	var blockchain *bc.Blockchain
-	// Connect to the node.
+	// Connect to the blockchain node.
+	log.Info().Str("url", args.BlockchainNodeURL).Msg("connecting to blockchain node")
 	bcClient, err := ethclient.Dial(args.BlockchainNodeURL)
 	if err == nil {
 		log.Debug().Str("node-url", args.BlockchainNodeURL).Msg("connected to blockchain node")
@@ -695,7 +698,15 @@ func main() {
 		log.Error().Err(err).Msg("cannot connect to blockchain")
 	}
 
-	server := NewServer(lookupClient, identityClient, proxyManagementClient, privateKey, args.UbikomName,
+	var combinedLookupClient pb.LookupServiceClient
+	if args.UseLegacyLookupService {
+		log.Info().Msg("using legacy lookup service")
+		combinedLookupClient = lookupClient
+	} else {
+		combinedLookupClient = bc.NewLookupServiceClient(blockchain, lookupClient, false)
+	}
+
+	server := NewServer(combinedLookupClient, identityClient, proxyManagementClient, privateKey, args.UbikomName,
 		args.NotificationName, args.PowStrength, args.RateLimitPerHour, blockchain)
 
 	http.HandleFunc("/lookupName", server.HandleNameLookup)

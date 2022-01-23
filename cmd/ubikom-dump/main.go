@@ -27,10 +27,12 @@ const (
 )
 
 type CmdArgs struct {
-	DataDir            string
-	Port               int
-	LookupServerURL    string
-	MaxMessageAgeHours int
+	DataDir                string
+	Port                   int
+	LookupServerURL        string
+	MaxMessageAgeHours     int
+	BlockchainNodeURL      string
+	UseLegacyLookupService bool
 }
 
 func main() {
@@ -42,6 +44,8 @@ func main() {
 	flag.StringVar(&args.DataDir, "data-dir", "", "base directory")
 	flag.StringVar(&args.LookupServerURL, "lookup-server-url", defaultIdentityServerURL, "URL of the lookup server")
 	flag.IntVar(&args.MaxMessageAgeHours, "max-message-age-hours", defaultMaxMessageAgeHours, "max message age, in hours")
+	flag.StringVar(&args.BlockchainNodeURL, "blockchain-node-url", globals.BlockchainNodeURL, "blockchain node url")
+	flag.BoolVar(&args.UseLegacyLookupService, "use-legacy-lookup-service", false, "use legacy lookup service")
 	flag.Parse()
 
 	if args.DataDir == "" {
@@ -63,15 +67,21 @@ func main() {
 	}
 	defer conn.Close()
 
-	client, err := ethclient.Dial(globals.BlockchainNodeURL)
+	log.Info().Str("url", args.BlockchainNodeURL).Msg("connecting to blockchain node")
+	client, err := ethclient.Dial(args.BlockchainNodeURL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to blockchain node")
 	}
 	blockchain := bc.NewBlockchain(client, globals.KeyRegistryContractAddress,
 		globals.NameRegistryContractAddress, globals.ConnectorRegistryContractAddress, nil)
 
-	combinedLookupClient := bc.NewLookupServiceClient(blockchain, lookupService, false)
-	//combinedLookupClient := lookupService
+	var combinedLookupClient pb.LookupServiceClient
+	if args.UseLegacyLookupService {
+		log.Info().Msg("using legacy lookup service")
+		combinedLookupClient = lookupService
+	} else {
+		combinedLookupClient = bc.NewLookupServiceClient(blockchain, lookupService, false)
+	}
 
 	dumpServer, err := server.NewDumpServer(args.DataDir, combinedLookupClient, args.MaxMessageAgeHours)
 	if err != nil {

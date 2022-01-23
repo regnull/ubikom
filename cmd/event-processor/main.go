@@ -9,10 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/bc"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
@@ -25,10 +27,12 @@ import (
 )
 
 type CmdArgs struct {
-	DumpServiceURL   string
-	LookupServiceURL string
-	Key              string
-	DBPassword       string
+	DumpServiceURL         string
+	LookupServiceURL       string
+	Key                    string
+	DBPassword             string
+	BlockchainNodeURL      string
+	UseLegacyLookupService bool
 }
 
 func main() {
@@ -40,6 +44,8 @@ func main() {
 	flag.StringVar(&args.LookupServiceURL, "lookup-service-url", globals.PublicLookupServiceURL, "lookup service URL")
 	flag.StringVar(&args.Key, "key", "", "key location")
 	flag.StringVar(&args.DBPassword, "db-password", "", "db password")
+	flag.StringVar(&args.BlockchainNodeURL, "blockchain-node-url", globals.BlockchainNodeURL, "blockchain node url")
+	flag.BoolVar(&args.UseLegacyLookupService, "use-legacy-lookup-service", false, "use legacy lookup service")
 	flag.Parse()
 
 	var err error
@@ -104,6 +110,22 @@ func main() {
 	defer lookupConn.Close()
 	lookupService := pb.NewLookupServiceClient(lookupConn)
 
+	log.Info().Str("url", args.BlockchainNodeURL).Msg("connecting to blockchain node")
+	blockchainClient, err := ethclient.Dial(args.BlockchainNodeURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to blockchain node")
+	}
+	blockchain := bc.NewBlockchain(blockchainClient, globals.KeyRegistryContractAddress,
+		globals.NameRegistryContractAddress, globals.ConnectorRegistryContractAddress, nil)
+
+	var combinedLookupClient pb.LookupServiceClient
+	if args.UseLegacyLookupService {
+		log.Info().Msg("using legacy lookup service")
+		combinedLookupClient = lookupService
+	} else {
+		combinedLookupClient = bc.NewLookupServiceClient(blockchain, lookupService, false)
+	}
+
 	ticker := time.NewTicker(time.Minute)
 	for range ticker.C {
 		count := 0
@@ -122,7 +144,7 @@ func main() {
 			}
 			msg := res.GetMessage()
 
-			lookupRes, err := lookupService.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
+			lookupRes, err := combinedLookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to get receiver public key")
 			}
