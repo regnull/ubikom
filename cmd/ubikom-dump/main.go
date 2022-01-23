@@ -8,6 +8,9 @@ import (
 	"path"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/regnull/ubikom/bc"
+	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/server"
 	"github.com/rs/zerolog"
@@ -60,7 +63,17 @@ func main() {
 	}
 	defer conn.Close()
 
-	dumpServer, err := server.NewDumpServer(args.DataDir, lookupService, args.MaxMessageAgeHours)
+	client, err := ethclient.Dial(globals.BlockchainNodeURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to blockchain node")
+	}
+	blockchain := bc.NewBlockchain(client, globals.KeyRegistryContractAddress,
+		globals.NameRegistryContractAddress, globals.ConnectorRegistryContractAddress, nil)
+
+	combinedLookupClient := bc.NewLookupServiceClient(blockchain, lookupService, false)
+	//combinedLookupClient := lookupService
+
+	dumpServer, err := server.NewDumpServer(args.DataDir, combinedLookupClient, args.MaxMessageAgeHours)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create data store")
 	}

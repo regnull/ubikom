@@ -29,7 +29,8 @@ const (
 )
 
 var (
-	ErrTxNotFound = errors.New("transaction not found")
+	ErrTxNotFound       = errors.New("transaction not found")
+	ErrKeyNotConfigured = errors.New("private key is not configured")
 )
 
 // Blockchain represents Ethereum blockchain.
@@ -55,6 +56,9 @@ func NewBlockchain(client *ethclient.Client, keyRegistryContractAddress string,
 
 // RegisterKey registers a new key.
 func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (*types.Receipt, error) {
+	if b.privateKey == nil {
+		return nil, ErrKeyNotConfigured
+	}
 	nonce, err := b.client.PendingNonceAt(ctx,
 		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
 	if err != nil {
@@ -102,6 +106,9 @@ func (b *Blockchain) RegisterKey(ctx context.Context, key *easyecc.PublicKey) (*
 
 func (b *Blockchain) ChangeKeyOwner(ctx context.Context, key *easyecc.PublicKey,
 	owner common.Address) (*types.Receipt, error) {
+	if b.privateKey == nil {
+		return nil, ErrKeyNotConfigured
+	}
 	nonce, err := b.client.PendingNonceAt(ctx,
 		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
 	if err != nil {
@@ -148,6 +155,9 @@ func (b *Blockchain) ChangeKeyOwner(ctx context.Context, key *easyecc.PublicKey,
 }
 
 func (b *Blockchain) RegisterName(ctx context.Context, key *easyecc.PublicKey, name string) (*types.Receipt, error) {
+	if b.privateKey == nil {
+		return nil, ErrKeyNotConfigured
+	}
 	nonce, err := b.client.PendingNonceAt(ctx,
 		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
 	if err != nil {
@@ -194,6 +204,9 @@ func (b *Blockchain) RegisterName(ctx context.Context, key *easyecc.PublicKey, n
 }
 
 func (b *Blockchain) RegisterConnector(ctx context.Context, name string, protocol string, location string) (*types.Receipt, error) {
+	if b.privateKey == nil {
+		return nil, ErrKeyNotConfigured
+	}
 	nonce, err := b.client.PendingNonceAt(ctx,
 		common.HexToAddress(b.privateKey.PublicKey().EthereumAddress()))
 	if err != nil {
@@ -283,6 +296,9 @@ func (b *Blockchain) GetReceipt(ctx context.Context, tx string) (*types.Receipt,
 }
 
 func (b *Blockchain) MaybeRegisterUser(ctx context.Context, name, regName, password string) error {
+	if b.privateKey == nil {
+		return ErrKeyNotConfigured
+	}
 	log.Info().Str("user", name).Msg("checking user blockchain registration")
 
 	name = strings.ToLower(util.StripDomainName(name))
