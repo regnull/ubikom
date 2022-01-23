@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
@@ -47,7 +48,7 @@ func (c *LookupServiceClient) LookupKey(ctx context.Context, in *pb.LookupKeyReq
 
 	wg.Wait()
 
-	if legacyErr != bcErr {
+	if !errorsEqual(legacyErr, bcErr) {
 		log.Error().Str("key", fmt.Sprintf("%0x", in.GetKey())).Msg("lookup key error mismatch")
 		if legacyErr != nil {
 			log.Error().Err(legacyErr).Msg("legacy error")
@@ -100,7 +101,7 @@ func (c *LookupServiceClient) LookupName(ctx context.Context, in *pb.LookupNameR
 
 	wg.Wait()
 
-	if legacyErr != bcErr {
+	if !errorsEqual(legacyErr, bcErr) {
 		log.Error().Str("name", in.GetName()).Msg("lookup name error mismatch")
 		if legacyErr != nil {
 			log.Error().Err(legacyErr).Msg("legacy error")
@@ -157,7 +158,7 @@ func (c *LookupServiceClient) LookupAddress(ctx context.Context, in *pb.LookupAd
 
 	wg.Wait()
 
-	if legacyErr != bcErr {
+	if !errorsEqual(legacyErr, bcErr) {
 		log.Error().Str("name", in.GetName()).Str("protocol", in.GetProtocol().String()).Msg("lookup address error mismatch")
 		if legacyErr != nil {
 			log.Error().Err(legacyErr).Msg("legacy error")
@@ -191,4 +192,23 @@ func (c *LookupServiceClient) LookupAddress(ctx context.Context, in *pb.LookupAd
 	}
 
 	return primaryRes, primaryErr
+}
+
+func errorsEqual(err1, err2 error) bool {
+	// Both are nil.
+	if err1 == nil && err2 == nil {
+		return true
+	}
+	// One is not nil, and one is nil.
+	if err1 == nil || err2 == nil {
+		return false
+	}
+	// Both are not nil.
+	if err1 == err2 {
+		return true
+	}
+	if util.StatusCodeFromError(err1) == util.StatusCodeFromError(err2) {
+		return true
+	}
+	return false
 }

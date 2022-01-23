@@ -477,7 +477,7 @@ func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest, o
 		return nil, err
 	}
 	if len(key) != 33 {
-		return nil, status.Error(codes.NotFound, "name not found")
+		return nil, status.Error(codes.NotFound, "name was not found")
 	}
 	return &pb.LookupNameResponse{
 		Key: key,
@@ -496,6 +496,11 @@ func (b *Blockchain) LookupAddress(ctx context.Context, in *pb.LookupAddressRequ
 	if err != nil {
 		return nil, err
 	}
+
+	if location == "" {
+		return nil, status.Error(codes.NotFound, "address was not found")
+	}
+
 	return &pb.LookupAddressResponse{
 		Address: location,
 	}, nil
