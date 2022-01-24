@@ -264,13 +264,6 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		useMainKey = !req.EmailKeyOnly
 		captchaId = req.CaptchaId
 		captchaSolution = req.CaptchaSolution
-	} else if r.Method == "OPTIONS" {
-		// This is a "pre-flight" request, see https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
-		w.Header().Add("Access-Control-Allow-Origin", "*")
-		w.Header().Add("Access-Control-Allow-Methods", "POST, GET")
-		w.Header().Add("Access-Control-Allow-Headers", "*")
-		w.WriteHeader(http.StatusNoContent)
-		return
 	} else {
 		name = r.URL.Query().Get("name")
 		password = r.URL.Query().Get("password")
