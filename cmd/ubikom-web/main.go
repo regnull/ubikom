@@ -63,6 +63,13 @@ message in Ubikom ecosystem without encryption and authentication.
 We encrypt every message with a unique key so only the intended
 recipient can read this message.
 
+We want to remind you that messages are end-to-end encrypted between Ubikom users only.
+When you send an email to an outside user (i.e. anyone whose address is not @ubikom.cc), 
+our gateway will decrypt and send it as is, because this is what legacy email understands. 
+To enjoy fully secure communication, please invite your correspondents 
+to get a Ubikom email. The more people join Ubikom, the more secure 
+everyone is.
+
 We are open source, which means all our code is public. You can
 find it at https://github.com/regnull/ubikom. We don't spy on our
 users. This is not because we are so nice - it's because our system
@@ -84,12 +91,6 @@ and will, change. We are striving to provide best, uninterrupted
 service, but we make no guarantees.
 
 - Don't spam other users. Spam elimination is one of our goals.
-
-- Messages are end-to-end encrypted between Ubikom users only.
-When you send a message to an outside user (i.e. anyone whose
-address is not @ubikom.cc), our gateway will decrypt the message
-and send it in the clear, because it's the only way we can work
-with legacy email. Act accordingly.
 
 - Every part of the system can be self-hosted by anyone, including
 you. If you run ubikom-proxy, for example, your password will
