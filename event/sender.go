@@ -111,6 +111,30 @@ func (s *Sender) SMTPSend(ctx context.Context, name string, toInternal, toExtern
 	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
 }
 
+func (s *Sender) WebMailLogin(ctx context.Context, name string) error {
+	event := &pb.Event{
+		Id:        uuid.New().String(),
+		Timestamp: uint64(util.NowMs()),
+		EventType: pb.EventType_ET_PROXY_WEBMAIL_LOGIN,
+		User1:     name,
+		Message:   "User logged in via web mail",
+		Component: s.component}
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
+}
+
+func (s *Sender) WebMailSend(ctx context.Context, name string, toInternal, toExternal string) error {
+	event := &pb.Event{
+		Id:        uuid.New().String(),
+		Timestamp: uint64(util.NowMs()),
+		EventType: pb.EventType_ET_PROXY_WEBMAIL_MESSAGE_SENT,
+		User1:     name,
+		Message:   "User sent a message via web mail",
+		Component: s.component,
+		User2:     toInternal,
+		Data1:     toExternal}
+	return marshalAndSend(ctx, s.privateKey, s.sender, s.target, s.lookupClient, event)
+}
+
 func (s *Sender) ExternalEmailSend(ctx context.Context, name string, toExternal string) error {
 	event := &pb.Event{
 		Id:        uuid.New().String(),
