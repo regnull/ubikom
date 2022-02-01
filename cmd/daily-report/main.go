@@ -60,11 +60,13 @@ type ReportArgs struct {
 	DroppedOff               []*CountByOS
 	IMAPClientNum            int
 	POPClientNum             int
+	WebMailClientNum         int
 	ClientNum                int
 	WeeklyClientNum          int
 	NewClientNum             int
 	TotalClientNum           int
 	SMTPMessagesSent         int
+	WebMailMessagesSent      int
 	ExternalMessagesSent     int
 	ExternalMessagesReceived int
 	Fortune                  string
@@ -191,6 +193,11 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to get pop clients num")
 	}
 
+	reportArgs.WebMailClientNum, err = GetWebMailClientNum(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get webmail clients num")
+	}
+
 	reportArgs.ClientNum, err = GetClientNum(db)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get client num")
@@ -214,6 +221,11 @@ func main() {
 	reportArgs.SMTPMessagesSent, err = GetSMTPMessagesSent(db)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get smtp messages sent")
+	}
+
+	reportArgs.WebMailMessagesSent, err = GetWebMailMessagesSent(db)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get web mail messages sent")
 	}
 
 	reportArgs.ExternalMessagesSent, err = GetExternalMessagesSent(db)
@@ -371,6 +383,19 @@ WHERE
 	return getNumberFromQuery(db, query)
 }
 
+func GetWebMailClientNum(db *sql.DB) (int, error) {
+	const query = `
+SELECT 
+	COUNT(DISTINCT user1)
+FROM 
+	events
+WHERE
+	  event_type = 'ET_PROXY_WEBMAIL_LOGIN' AND
+	  timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	return getNumberFromQuery(db, query)
+}
+
 func GetClientNum(db *sql.DB) (int, error) {
 	const query = `
 SELECT 
@@ -379,7 +404,8 @@ FROM
 	events
 WHERE
 	  (event_type = 'ET_PROXY_POP_LOGIN' OR 
-	  	 event_type = 'ET_PROXY_IMAP_LOGIN') AND
+	  	event_type = 'ET_PROXY_IMAP_LOGIN' OR
+		event_type = 'ET_PROXY_WEBMAIL_LOGIN') AND
 	  timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
 	return getNumberFromQuery(db, query)
@@ -392,8 +418,9 @@ SELECT
 FROM 
 	events
 WHERE
-	  (event_type = 'ET_PROXY_POP_LOGIN' OR 
-	  	 event_type = 'ET_PROXY_IMAP_LOGIN') AND
+	 (event_type = 'ET_PROXY_POP_LOGIN' OR 
+	  	event_type = 'ET_PROXY_IMAP_LOGIN' OR
+		event_type = 'ET_PROXY_WEBMAIL_LOGIN') AND
 	  timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -7 DAY) AND NOW()
 `
 	return getNumberFromQuery(db, query)
@@ -412,10 +439,10 @@ WHERE
 	    FROM
 			events
 		WHERE
-			(event_type = 'ET_PROXY_POP_LOGIN' or event_type = 'ET_PROXY_IMAP_LOGIN') AND
+			(event_type = 'ET_PROXY_POP_LOGIN' OR event_type = 'ET_PROXY_IMAP_LOGIN' OR event_type = 'ET_PROXY_WEBMAIL_LOGIN') AND
   			timestamp < DATE_ADD(NOW(), INTERVAL -1 DAY)
 	) AND
-		(event_type = 'ET_PROXY_POP_LOGIN' or event_type = 'ET_PROXY_IMAP_LOGIN') AND
+		(event_type = 'ET_PROXY_POP_LOGIN' or event_type = 'ET_PROXY_IMAP_LOGIN' OR event_type = 'ET_PROXY_WEBMAIL_LOGIN') AND
 		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
 	return getNumberFromQuery(db, query)
@@ -429,7 +456,8 @@ FROM
 	events
 WHERE
 	  (event_type = 'ET_PROXY_POP_LOGIN' OR 
-	  	 event_type = 'ET_PROXY_IMAP_LOGIN')
+	  	 event_type = 'ET_PROXY_IMAP_LOGIN' OR
+		 event_type = 'ET_PROXY_WEBMAIL_LOGIN')
 `
 	return getNumberFromQuery(db, query)
 }
@@ -442,6 +470,19 @@ FROM
 	events
 WHERE
 		event_type = 'ET_PROXY_SMTP_MESSAGE_SENT' AND
+		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
+`
+	return getNumberFromQuery(db, query)
+}
+
+func GetWebMailMessagesSent(db *sql.DB) (int, error) {
+	const query = `
+SELECT
+	COUNT(*)
+FROM
+	events
+WHERE
+		event_type = 'ET_PROXY_WEBMAIL_MESSAGE_SENT' AND
 		timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 `
 	return getNumberFromQuery(db, query)
@@ -585,14 +626,16 @@ WHERE
 				WHERE 
 					(
 						event_type = 'ET_PROXY_POP_LOGIN' OR 
-						event_type = 'ET_PROXY_IMAP_LOGIN'
+						event_type = 'ET_PROXY_IMAP_LOGIN' OR
+						event_type = 'ET_PROXY_WEBMAIL_LOGIN'
 					) AND   
 					timestamp < DATE_ADD(NOW(), INTERVAL -1 DAY) 
 			) 
 			AND 
 			(
 				event_type = 'ET_PROXY_POP_LOGIN' OR 
-				event_type = 'ET_PROXY_IMAP_LOGIN'
+				event_type = 'ET_PROXY_IMAP_LOGIN' OR
+				event_type = 'ET_PROXY_WEBMAIL_LOGIN'
 			) AND 
 			timestamp BETWEEN DATE_ADD(NOW(), INTERVAL -1 DAY) AND NOW()
 	)
@@ -632,8 +675,10 @@ do I have some stats for you!
 {{printf "%-35s" "Actual clients:"}}{{.ClientNum}}
 {{printf "%-35s" "Actual clients, POP:"}}{{.POPClientNum}}
 {{printf "%-35s" "Actual clients, IMAP:"}}{{.IMAPClientNum}}
+{{printf "%-35s" "Actual clients, Web Mail:"}}{{.WebMailClientNum}}
 {{printf "%-35s" "New actual clients:"}}{{.NewClientNum}}
 {{printf "%-35s" "Messages sent via SMTP:"}}{{.SMTPMessagesSent}}
+{{printf "%-35s" "Messages sent via Web Mail:"}}{{.WebMailMessagesSent}}
 {{printf "%-35s" "Messages sent via gateway:"}}{{.ExternalMessagesSent}}
 {{printf "%-35s" "Messages from external users:"}}{{.ExternalMessagesReceived}}
 
