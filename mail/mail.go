@@ -117,42 +117,28 @@ func ExtractReceiverInternalNames(content string) ([]string, error) {
 	return receiver, nil
 }
 
-// RewriteFromHeader rewrites the message to change sender from internal to external format.
-func RewriteFromHeader(message string) (rewrittenMessage string, fromAddr string, toAddr []string, err error) {
+// RewriteInternalAddresses rewrites the message to change sender from internal to external format.
+func RewriteInternalAddresses(message string, header string) (rewrittenMessage string, err error) {
 	contentReader := strings.NewReader(message)
 	mailMsg, err := mail.ReadMessage(contentReader)
 	if err != nil {
 		return
 	}
 
-	from := mailMsg.Header.Get("From")
-	fromAddr, fullAddr, err := InternalToExternalAddress(from)
-	if err != nil {
-		return
-	}
-
-	// Remove internal addresses from the list of recipients.
+	headerVal := mailMsg.Header.Get(header)
 	var externalAddresses []string
-	for _, to := range strings.Split(mailMsg.Header.Get("To"), ",") {
-		a, err := mail.ParseAddress(to)
+	for _, to := range strings.Split(headerVal, ",") {
+		_, fullAddr, err := InternalToExternalAddress(to)
 		if err != nil {
-			// Invalid address.
-			return "", "", nil, err
+			return "", err
 		}
-		if !IsInternal(a.Address) {
-			externalAddresses = append(externalAddresses, to)
-			toAddr = append(toAddr, a.Address)
-		}
+		externalAddresses = append(externalAddresses, fullAddr)
 	}
 
 	var buf bytes.Buffer
-	buf.Write([]byte(fmt.Sprintf("To: %s\n", strings.Join(externalAddresses, ","))))
-	buf.Write([]byte(fmt.Sprintf("From: %s\n", fullAddr)))
+	buf.Write([]byte(fmt.Sprintf("%s: %s\n", header, strings.Join(externalAddresses, ","))))
 	for name, values := range mailMsg.Header {
-		if name == "From" {
-			continue
-		}
-		if name == "To" {
+		if name == header {
 			continue
 		}
 		for _, value := range values {
@@ -161,8 +147,28 @@ func RewriteFromHeader(message string) (rewrittenMessage string, fromAddr string
 	}
 	buf.Write([]byte("\n"))
 	io.Copy(&buf, mailMsg.Body)
-	rewrittenMessage = string(buf.Bytes())
+	rewrittenMessage = buf.String()
 	return
+}
+
+// ExtractAddresses extracts short email addresses from the email.
+func ExtractAddresses(message string, header string) ([]string, error) {
+	contentReader := strings.NewReader(message)
+	mailMsg, err := mail.ReadMessage(contentReader)
+	if err != nil {
+		return nil, err
+	}
+
+	headerVal := mailMsg.Header.Get(header)
+	var addresses []string
+	for _, addr := range strings.Split(headerVal, ",") {
+		mailAddr, err := mail.ParseAddress(addr)
+		if err != nil {
+			return nil, err
+		}
+		addresses = append(addresses, mailAddr.Address)
+	}
+	return addresses, nil
 }
 
 func AddReceivedHeader(message string, header []string) (string, error) {

@@ -28,27 +28,6 @@ Content-Language: en-US
 Hello	
 `
 
-var anotherMessage = `From - Tue Jun 15 13:23:32 2021
-X-Account-Key: account3
-X-UIDL: 2f95ef4512a5ed4d9c2cfe0b9eda3f112e42f6304c849982cbfe3d05650bd8b5
-X-Mozilla-Status: 0001
-X-Mozilla-Status2: 00000000
-X-Mozilla-Keys:                                                                                 
-To: Leonid Gorkin <lgx@x>
-From: Leonid Gorkin <lgx@x>
-Subject: test headers
-Message-ID: <8124dc1a-7e25-d056-6797-9bf935cff444@x>
-Date: Tue, 15 Jun 2021 13:23:28 -0400
-User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:78.0)
- Gecko/20100101 Thunderbird/78.11.0
-MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Content-Language: en-US
-
-Hello
-`
-
 var messageWithMultipleInternalRecipients = `From - Tue Jun 15 13:23:32 2021
 X-Account-Key: account3
 X-UIDL: 2f95ef4512a5ed4d9c2cfe0b9eda3f112e42f6304c849982cbfe3d05650bd8b5
@@ -87,14 +66,14 @@ func Test_ExtractSenderAddress(t *testing.T) {
 	assert.EqualValues("Leonid Gorkin <lgx@x>", addr)
 }
 
-func Test_RewriteFromHeader(t *testing.T) {
+func Test_RewriteInternalAddresses(t *testing.T) {
 	assert := assert.New(t)
 
-	_, from, to, err := RewriteFromHeader(testMessage)
+	rewritten, err := RewriteInternalAddresses(testMessage, "From")
 	assert.NoError(err)
-	assert.EqualValues("lgx@ubikom.cc", from)
-	assert.Contains(to, "regnull@gmail.com")
-	assert.Contains(to, "nullreg@gmail.com")
+	assert.Contains(rewritten, "lgx@ubikom.cc")
+	assert.Contains(rewritten, "regnull@gmail.com")
+	assert.Contains(rewritten, "nullreg@gmail.com")
 }
 
 func Test_StripDomain(t *testing.T) {
@@ -125,8 +104,8 @@ func Test_AddHeaders(t *testing.T) {
 	}
 	newMessage := AddHeaders(testMessage, headers)
 	assert.True(len(newMessage) > len(testMessage))
-	assert.True(strings.Index(newMessage, "X-foo:") != -1)
-	assert.True(strings.Index(newMessage, "X-baz:") != -1)
+	assert.True(strings.Contains(newMessage, "X-foo:"))
+	assert.True(strings.Contains(newMessage, "X-baz:"))
 }
 
 func Test_ExtractReceiverInternalNames(t *testing.T) {
@@ -146,4 +125,13 @@ func Test_AddReceivedHeader(t *testing.T) {
 	assert.NoError(err)
 	assert.True(strings.Contains(modified, "Received: from foo.bar\n"))
 	assert.True(strings.Contains(modified, "by bar.foo;"))
+}
+
+func Test_ExtractAddresses(t *testing.T) {
+	assert := assert.New(t)
+
+	addresses, err := ExtractAddresses(testMessage, "To")
+	assert.NoError(err)
+	assert.Contains(addresses, "regnull@gmail.com")
+	assert.Contains(addresses, "nullreg@gmail.com")
 }
