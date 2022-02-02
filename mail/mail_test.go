@@ -74,6 +74,10 @@ func Test_RewriteInternalAddresses(t *testing.T) {
 	assert.Contains(rewritten, "lgx@ubikom.cc")
 	assert.Contains(rewritten, "regnull@gmail.com")
 	assert.Contains(rewritten, "nullreg@gmail.com")
+
+	rewritten, err = RewriteInternalAddresses(testMessage, "Xyz")
+	assert.NoError(err)
+	assert.Equal(rewritten, testMessage)
 }
 
 func Test_StripDomain(t *testing.T) {

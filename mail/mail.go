@@ -126,6 +126,10 @@ func RewriteInternalAddresses(message string, header string) (rewrittenMessage s
 	}
 
 	headerVal := mailMsg.Header.Get(header)
+	if headerVal == "" {
+		rewrittenMessage = message
+		return
+	}
 	var externalAddresses []string
 	for _, to := range strings.Split(headerVal, ",") {
 		_, fullAddr, err := InternalToExternalAddress(to)
