@@ -163,14 +163,13 @@ func ExtractAddresses(message string, header string) ([]string, error) {
 		return nil, err
 	}
 
-	headerVal := mailMsg.Header.Get(header)
+	aa, err := mailMsg.Header.AddressList(header)
+	if err != nil {
+		return nil, err
+	}
 	var addresses []string
-	for _, addr := range strings.Split(headerVal, ",") {
-		mailAddr, err := mail.ParseAddress(addr)
-		if err != nil {
-			return nil, err
-		}
-		addresses = append(addresses, mailAddr.Address)
+	for _, addr := range aa {
+		addresses = append(addresses, addr.Address)
 	}
 	return addresses, nil
 }
