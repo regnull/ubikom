@@ -102,13 +102,15 @@ them to a local folder in your IMAP client. If you are using POP
 client, messages are already copied locally. You can also run
 your own proxy server and keep your messages for as long as you like.
 
-- The identity registry is decentralized on an experimental blockchain. We will migrate it to
-a permanent blockchain in the future and will distribute tokens to early users. Stay connected!
+- The identity registry is decentralized on an experimental blockchain.
+We will migrate it to a permanent blockchain in the future and will
+distribute tokens to early users. Stay connected!
 
 - Subscribe to @UbikomProject on Twitter for updates.
 
 - We have a request for you. If you could find a few minutes to fill out
-<a href="https://docs.google.com/forms/d/e/1FAIpQLSdM67T8vVMAUHuDSKwUdPpEihGUe3zrbYj8kCXWy03zr9dqaA/viewform?usp=sf_link">an anonymous survey</a>,
+an anonymous survey here:
+https://docs.google.com/forms/d/e/1FAIpQLSdM67T8vVMAUHuDSKwUdPpEihGUe3zrbYj8kCXWy03zr9dqaA/viewform?usp=sf_link
 it will greatly help us to improve the service focusing on the most important areas first.
 
 Please contact lgx@ubikom.cc with any questions.
