@@ -30,6 +30,7 @@ upload:
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-dump ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-dump
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-cli ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-cli
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-web ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-web
+	scp -i $(SSH_KEY) $(ROOT_DIR)welcome/* ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/welcome
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/dbexport ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/dbexport
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/dbimport ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/dbimport
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/snap-print ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/snap-print
@@ -37,6 +38,7 @@ upload:
 
 web-upload:
 	scp -i $(SSH_KEY) $(ROOT_DIR)build/linux-amd64/ubikom-web ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/ubikom-web
+	scp -i $(SSH_KEY) $(ROOT_DIR)welcome/* ubuntu@$(UBIKOM_ONE_ADR):~/ubikom/welcome
 
 server-start:
 	ssh -i $(SSH_KEY) ubuntu@$(UBIKOM_ONE_ADR) sudo supervisorctl start ubikom-server

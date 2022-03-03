@@ -8,6 +8,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -44,88 +47,8 @@ The newly registered name is %s.
 That is all. Have a nice day!
 `
 
-// TODO: Put this in a file somewhere.
-var welcomeMessage = `To: %s@ubikom.cc
-From: Ubikom Web <%s@ubikom.cc>
-Subject: Welcome to Ubikom!
-Date: %s
-Content-Type: text/plain; charset=UTF-8; format=flowed
-Content-Transfer-Encoding: 8bit
-Content-Language: en-US
-MIME-Version: 1.0
-
-You've done it! You have successfully configured your email client,
-so now you are ready to start using Ubikom messaging system!
-
-Our goal is to provide safe, secure, and private communications to
-everyone, and everything. That's why it is impossible to send a
-message in Ubikom ecosystem without encryption and authentication.
-We encrypt every message with a unique key so only the intended
-recipient can read this message.
-
-We want to remind you that messages are end-to-end encrypted between Ubikom users only.
-When you send an email to an outside user (i.e. anyone whose address is not @ubikom.cc), 
-our gateway will decrypt and send it as is, because this is what legacy email understands. 
-To enjoy fully secure communication, please invite your correspondents 
-to get a Ubikom email. The more people join Ubikom, the more secure 
-everyone is.
-
-We are open source, which means all our code is public. You can
-find it at https://github.com/regnull/ubikom. We don't spy on our
-users. This is not because we are so nice - it's because our system
-is designed in a way that makes it impossible. We don't have any
-backdoors.
-
-This also means that you, and only you, are responsible for your
-identity, which means your encryption key. The encryption key is
-derived from your user identifier and password. You must have a
-strong password! You can always change it at
-https://www.ubikom.cc/change_password.html. You are responsible
-for safeguarding your password. No one, not even us, will be
-able to help you if you lose your password, or it gets leaked.
-
-Few other things you would probably like to know:
-
-- Everything here is under active development. Things may,
-and will, change. We are striving to provide best, uninterrupted
-service, but we make no guarantees.
-
-- Don't spam other users. Spam elimination is one of our goals.
-
-- Every part of the system can be self-hosted by anyone, including
-you. If you run ubikom-proxy, for example, your password will
-never leave your possession. Email lgx@ubikom.cc for details.
-
-- Currently, we keep email messages on our proxy server for 90
-days. If you want to keep your messages longer, you should copy
-them to a local folder in your IMAP client. If you are using POP
-client, messages are already copied locally. You can also run
-your own proxy server and keep your messages for as long as you like.
-
-- The identity registry is decentralized on an experimental blockchain.
-We will migrate it to a permanent blockchain in the future and will
-distribute tokens to early users. Stay connected!
-
-- Subscribe to @UbikomProject on Twitter for updates.
-
-- We have a request for you. If you could find a few minutes to fill out
-an anonymous survey here:
-https://docs.google.com/forms/d/e/1FAIpQLSdM67T8vVMAUHuDSKwUdPpEihGUe3zrbYj8kCXWy03zr9dqaA/viewform?usp=sf_link
-it will greatly help us to improve the service focusing on the most important areas first.
-
-Please contact lgx@ubikom.cc with any questions.
-
-Best regards,
-
-    Ubikom Web
-
-
-P.S. I'm a bot. I don't know how to reply to messages.
-`
-
 const (
 	defaultPowStrength      = 23
-	dumpAddress             = "alpha.ubikom.cc:8826"
 	minNameLength           = 3
 	minPasswordLength       = 6
 	defaultRateLimitPerHour = 200
@@ -150,6 +73,7 @@ type CmdArgs struct {
 	KeyRegistryContractAddress       string
 	NameRegistryContractAddress      string
 	ConnectorRegistryContractAddress string
+	WelcomeMessageDir                string
 }
 
 type Server struct {
@@ -164,6 +88,7 @@ type Server struct {
 	rateLimiter           *rate.Limiter
 	eventSender           *event.Sender
 	blockchain            *bc.Blockchain
+	welcomeMessageDir     string
 }
 
 func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentityServiceClient,
@@ -226,6 +151,7 @@ type EasySetupRequest struct {
 	EmailKeyOnly    bool   `json:"email_key_only"`
 	CaptchaId       string `json:"captcha_id"`
 	CaptchaSolution string `json:"captcha_solution"`
+	Language        string `json:"language"`
 }
 
 func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
@@ -248,6 +174,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	password := ""
 	captchaId := ""
 	captchaSolution := ""
+	language := ""
 	useMainKey := true
 	log.Debug().Str("method", r.Method).Msg("got method")
 	if r.Method == "POST" {
@@ -270,6 +197,11 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		useMainKey = !req.EmailKeyOnly
 		captchaId = req.CaptchaId
 		captchaSolution = req.CaptchaSolution
+		if req.Language != "" {
+			language = req.Language
+		} else {
+			language = "en"
+		}
 	} else {
 		name = r.URL.Query().Get("name")
 		password = r.URL.Query().Get("password")
@@ -381,7 +313,7 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 
 	// Register address.
 
-	err = protoutil.RegisterAddress(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, dumpAddress, s.powStrength)
+	err = protoutil.RegisterAddress(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, globals.PublicDumpServiceURL, s.powStrength)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to register address")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -429,16 +361,29 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.privateKey != nil && s.name != "" {
-		body := fmt.Sprintf(welcomeMessage, name, s.name,
-			time.Now().Format("02 Jan 06 15:04:05 -0700"))
-		body, err = mail.AddReceivedHeader(body, []string{"by Ubikom client"})
+		welcomeMessage, err := getWelcomeMessage(s.welcomeMessageDir, language)
 		if err != nil {
-			log.Error().Err(err).Msg("error adding received header")
-			w.WriteHeader(http.StatusInternalServerError)
+			welcomeMessage, err = getWelcomeMessage(s.welcomeMessageDir, "en")
+			if err == nil {
+				log.Info().Str("language", "en").Msg("found welcome message")
+			}
+		} else {
+			log.Info().Str("language", language).Msg("found welcome message")
 		}
-		err = protoutil.SendEmail(r.Context(), s.privateKey, []byte(body), s.name, name, s.lookupClient)
-		if err != nil {
-			log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending welcome message")
+
+		if err == nil {
+			// Succeeded in getting welcome message template.
+			body := fmt.Sprintf(welcomeMessage, name, s.name,
+				time.Now().Format("02 Jan 06 15:04:05 -0700"))
+			body, err = mail.AddReceivedHeader(body, []string{"by Ubikom client"})
+			if err != nil {
+				log.Error().Err(err).Msg("error adding received header")
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+			err = protoutil.SendEmail(r.Context(), s.privateKey, []byte(body), s.name, name, s.lookupClient)
+			if err != nil {
+				log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending welcome message")
+			}
 		}
 	}
 
@@ -614,6 +559,39 @@ func (s *Server) HandleNewCaptcha(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getCurrentExecDir() (dir string, err error) {
+	path, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		fmt.Printf("exec.LookPath(%s), err: %s\n", os.Args[0], err)
+		return "", err
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+
+	dir = filepath.Dir(absPath)
+
+	return dir, nil
+}
+
+func getWelcomeMessage(dir string, lang string) (string, error) {
+	filePath := path.Join(dir, fmt.Sprintf("welcome-%s.txt", lang))
+	if path.IsAbs(filePath) {
+		execDir, err := getCurrentExecDir()
+		if err != nil {
+			return "", err
+		}
+		filePath = path.Join(execDir, filePath)
+	}
+	b, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "01/02 15:04:05"})
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -636,6 +614,7 @@ func main() {
 	flag.StringVar(&args.NameRegistryContractAddress, "name-registry-contract-address", globals.NameRegistryContractAddress, "name registry contract address")
 	flag.StringVar(&args.ConnectorRegistryContractAddress, "connector-registry-contract-address", globals.ConnectorRegistryContractAddress, "connector registry contract address")
 	flag.StringVar(&args.ProxyManagementServiceURL, "proxy-management-service-url", "", "proxy management service url")
+	flag.StringVar(&args.WelcomeMessageDir, "welcome-message-dir", "welcome", "directory for welcome message")
 	flag.Parse()
 
 	opts := []grpc.DialOption{

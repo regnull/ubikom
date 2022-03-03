@@ -1,0 +1,76 @@
+To: %s@ubikom.cc
+From: Ubikom Web <%s@ubikom.cc>
+Subject: Welcome to Ubikom!
+Date: %s
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 8bit
+Content-Language: en-US
+MIME-Version: 1.0
+
+You've done it! You have successfully configured your email client,
+so now you are ready to start using Ubikom messaging system!
+
+Our goal is to provide safe, secure, and private communications to
+everyone, and everything. That's why it is impossible to send a
+message in Ubikom ecosystem without encryption and authentication.
+We encrypt every message with a unique key so only the intended
+recipient can read this message.
+
+We want to remind you that messages are end-to-end encrypted between Ubikom users only.
+When you send an email to an outside user (i.e. anyone whose address is not @ubikom.cc), 
+our gateway will decrypt and send it as is, because this is what legacy email understands. 
+To enjoy fully secure communication, please invite your correspondents 
+to get a Ubikom email. The more people join Ubikom, the more secure 
+everyone is.
+
+We are open source, which means all our code is public. You can
+find it at https://github.com/regnull/ubikom. We don't spy on our
+users. This is not because we are so nice - it's because our system
+is designed in a way that makes it impossible. We don't have any
+backdoors.
+
+This also means that you, and only you, are responsible for your
+identity, which means your encryption key. The encryption key is
+derived from your user identifier and password. You must have a
+strong password! You can always change it at
+https://www.ubikom.cc/change_password.html. You are responsible
+for safeguarding your password. No one, not even us, will be
+able to help you if you lose your password, or it gets leaked.
+
+Few other things you would probably like to know:
+
+- Everything here is under active development. Things may,
+and will, change. We are striving to provide best, uninterrupted
+service, but we make no guarantees.
+
+- Don't spam other users. Spam elimination is one of our goals.
+
+- Every part of the system can be self-hosted by anyone, including
+you. If you run ubikom-proxy, for example, your password will
+never leave your possession. Email lgx@ubikom.cc for details.
+
+- Currently, we keep email messages on our proxy server for 90
+days. If you want to keep your messages longer, you should copy
+them to a local folder in your IMAP client. If you are using POP
+client, messages are already copied locally. You can also run
+your own proxy server and keep your messages for as long as you like.
+
+- The identity registry is decentralized on an experimental blockchain.
+We will migrate it to a permanent blockchain in the future and will
+distribute tokens to early users. Stay connected!
+
+- Subscribe to @UbikomProject on Twitter for updates.
+
+- We have a request for you. If you could find a few minutes to fill out
+an anonymous survey here:
+https://docs.google.com/forms/d/e/1FAIpQLSdM67T8vVMAUHuDSKwUdPpEihGUe3zrbYj8kCXWy03zr9dqaA/viewform?usp=sf_link
+it will greatly help us to improve the service focusing on the most important areas first.
+
+Please contact lgx@ubikom.cc with any questions.
+
+Best regards,
+
+    Ubikom Web
+
+
+P.S. I'm a bot. I don't know how to reply to messages.
