@@ -94,7 +94,7 @@ type Server struct {
 func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentityServiceClient,
 	proxyManagementClient pb.ProxyServiceClient,
 	privateKey *easyecc.PrivateKey, name string, notificationName string, powStrength int,
-	rateLimitPerHour int, blockhain *bc.Blockchain) *Server {
+	rateLimitPerHour int, blockhain *bc.Blockchain, welcomeMessageDir string) *Server {
 	return &Server{
 		lookupClient:          lookupClient,
 		identityClient:        identityClient,
@@ -107,6 +107,7 @@ func NewServer(lookupClient pb.LookupServiceClient, identityClient pb.IdentitySe
 		rateLimiter:           rate.NewLimiter(rate.Every(time.Hour), rateLimitPerHour),
 		eventSender:           event.NewSender("ubikom-event-processor", "ubikom-web", "web", privateKey, lookupClient),
 		blockchain:            blockhain,
+		welcomeMessageDir:     welcomeMessageDir,
 	}
 }
 
@@ -384,7 +385,11 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending welcome message")
 			}
+		} else {
+			log.Error().Err(err).Msg("failed to get welcome message")
 		}
+	} else {
+		log.Warn().Msg("cannot send welcome message")
 	}
 
 	w.Header().Add("Content-Type", "application/json")
@@ -577,8 +582,8 @@ func getCurrentExecDir() (dir string, err error) {
 }
 
 func getWelcomeMessage(dir string, lang string) (string, error) {
-	filePath := path.Join(dir, fmt.Sprintf("welcome-%s.txt", lang))
-	if path.IsAbs(filePath) {
+	filePath := path.Join(dir, fmt.Sprintf("welcome_%s.txt", lang))
+	if !path.IsAbs(filePath) {
 		execDir, err := getCurrentExecDir()
 		if err != nil {
 			return "", err
@@ -685,7 +690,7 @@ func main() {
 	}
 
 	server := NewServer(combinedLookupClient, identityClient, proxyManagementClient, privateKey, args.UbikomName,
-		args.NotificationName, args.PowStrength, args.RateLimitPerHour, blockchain)
+		args.NotificationName, args.PowStrength, args.RateLimitPerHour, blockchain, args.WelcomeMessageDir)
 
 	http.HandleFunc("/lookupName", server.HandleNameLookup)
 	http.HandleFunc("/easySetup", server.HandleEasySetup)
