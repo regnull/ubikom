@@ -1,76 +1,76 @@
 To: %s@ubikom.cc
 From: Ubikom Web <%s@ubikom.cc>
-Subject: Welcome to Ubikom!
+Subject: Добро пожаловать в Убиком!
 Date: %s
 Content-Type: text/plain; charset=UTF-8; format=flowed
 Content-Transfer-Encoding: 8bit
-Content-Language: en-US
+Content-Language: ru
 MIME-Version: 1.0
 
-You've done it! You have successfully configured your email client,
-so now you are ready to start using Ubikom messaging system!
+Вы сделали это! Вы успешно настроили почтовый клиент,
+Итак, теперь вы готовы начать использовать систему обмена сообщениями Ubikom!
 
-Our goal is to provide safe, secure, and private communications to
-everyone, and everything. That's why it is impossible to send a
-message in Ubikom ecosystem without encryption and authentication.
-We encrypt every message with a unique key so only the intended
-recipient can read this message.
+Наша цель — обеспечить безопасную, защищенную и конфиденциальную связь для
+все и все. Поэтому невозможно отправить
+сообщения в экосистеме Ubikom без шифрования и аутентификации.
+Мы шифруем каждое сообщение уникальным ключом, поэтому только предполагаемое
+получатель может прочитать это сообщение.
 
-We want to remind you that messages are end-to-end encrypted between Ubikom users only.
-When you send an email to an outside user (i.e. anyone whose address is not @ubikom.cc), 
-our gateway will decrypt and send it as is, because this is what legacy email understands. 
-To enjoy fully secure communication, please invite your correspondents 
-to get a Ubikom email. The more people join Ubikom, the more secure 
-everyone is.
+Напоминаем, что сообщения проходят сквозное шифрование только между пользователями Ubikom.
+Когда вы отправляете электронное письмо внешнему пользователю (то есть любому, чей адрес не @ubikom.cc),
+наш шлюз расшифрует и отправит его как есть, потому что это то, что понимает устаревшая электронная почта.
+Чтобы пользоваться полностью безопасным общением, пригласите своих корреспондентов
+чтобы получить электронную почту Ubikom. Чем больше людей присоединится к Ubikom, тем безопаснее
+каждый.
 
-We are open source, which means all our code is public. You can
-find it at https://github.com/regnull/ubikom. We don't spy on our
-users. This is not because we are so nice - it's because our system
-is designed in a way that makes it impossible. We don't have any
-backdoors.
+Мы с открытым исходным кодом, что означает, что весь наш код общедоступен. Ты сможешь
+найти его на https://github.com/regnull/ubikom. Мы не шпионим за нашими
+пользователи. Это не потому, что мы такие милые, а потому, что наша система
+разработан таким образом, что это невозможно. у нас нет
+бэкдоры.
 
-This also means that you, and only you, are responsible for your
-identity, which means your encryption key. The encryption key is
-derived from your user identifier and password. You must have a
-strong password! You can always change it at
-https://www.ubikom.cc/change_password.html. You are responsible
-for safeguarding your password. No one, not even us, will be
-able to help you if you lose your password, or it gets leaked.
+Это также означает, что вы и только вы несете ответственность за
+удостоверение личности, что означает ваш ключ шифрования. Ключ шифрования
+полученный из вашего идентификатора пользователя и пароля. Вы должны иметь
+Надежный пароль! Вы всегда можете изменить его в
+https://www.ubikom.cc/change_password.html. Вы несете ответственность
+для защиты вашего пароля. Никто, даже мы, не будет
+может помочь вам, если вы потеряете свой пароль или он просочится.
 
-Few other things you would probably like to know:
+Несколько других вещей, которые вы, вероятно, хотели бы знать:
 
-- Everything here is under active development. Things may,
-and will, change. We are striving to provide best, uninterrupted
-service, but we make no guarantees.
+- Здесь все находится в активной разработке. Вещи могут,
+и будет, изменится. Мы стремимся обеспечить лучшее, бесперебойное
+обслуживание, но мы не даем никаких гарантий.
 
-- Don't spam other users. Spam elimination is one of our goals.
+- Не спамить других пользователей. Борьба со спамом — одна из наших целей.
 
-- Every part of the system can be self-hosted by anyone, including
-you. If you run ubikom-proxy, for example, your password will
-never leave your possession. Email lgx@ubikom.cc for details.
+- Каждая часть системы может быть размещена кем угодно, в том числе
+ты. Если вы запустите, например, ubikom-proxy, ваш пароль будет
+никогда не оставляй свое владение. Чтобы узнать подробности, напишите по адресу lgx@ubikom.cc.
 
-- Currently, we keep email messages on our proxy server for 90
-days. If you want to keep your messages longer, you should copy
-them to a local folder in your IMAP client. If you are using POP
-client, messages are already copied locally. You can also run
-your own proxy server and keep your messages for as long as you like.
+- В настоящее время мы храним сообщения электронной почты на нашем прокси-сервере в течение 90
+дней. Если вы хотите, чтобы ваши сообщения хранились дольше, вам следует скопировать
+их в локальную папку в вашем IMAP-клиенте. Если вы используете POP
+клиент, сообщения уже копируются локально. Вы также можете запустить
+свой собственный прокси-сервер и храните свои сообщения столько, сколько захотите.
 
-- The identity registry is decentralized on an experimental blockchain.
-We will migrate it to a permanent blockchain in the future and will
-distribute tokens to early users. Stay connected!
+- Реестр удостоверений децентрализован на экспериментальной цепочке блоков.
+В будущем мы перенесем его на постоянную цепочку блоков и
+раздавать токены ранним пользователям. Оставаться на связи!
 
-- Subscribe to @UbikomProject on Twitter for updates.
+- Подпишитесь на @UbikomProject в Твиттере, чтобы быть в курсе обновлений.
 
-- We have a request for you. If you could find a few minutes to fill out
-an anonymous survey here:
+- У нас есть к вам просьба. Если бы вы могли найти несколько минут, чтобы заполнить
+анонимный опрос здесь:
 https://docs.google.com/forms/d/e/1FAIpQLSdM67T8vVMAUHuDSKwUdPpEihGUe3zrbYj8kCXWy03zr9dqaA/viewform?usp=sf_link
-it will greatly help us to improve the service focusing on the most important areas first.
+это очень поможет нам улучшить обслуживание, сосредоточив внимание в первую очередь на наиболее важных областях.
 
-Please contact lgx@ubikom.cc with any questions.
+По любым вопросам обращайтесь по адресу lgx@ubikom.cc.
 
-Best regards,
+С наилучшими пожеланиями,
 
-    Ubikom Web
+    Убиком Веб
 
 
-P.S. I'm a bot. I don't know how to reply to messages. [ru]
+P.S. Я бот. Я не знаю, как отвечать на сообщения.
