@@ -26,6 +26,10 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+const (
+	timeout = 20 * time.Second
+)
+
 type CmdArgs struct {
 	DumpServiceURL   string
 	LookupServiceURL string
@@ -125,7 +129,7 @@ func main() {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
-		grpc.WithTimeout(time.Second * 5),
+		grpc.WithTimeout(timeout),
 	}
 	lookupConn, err := grpc.Dial(args.LookupServiceURL, opts...)
 	if err != nil {
@@ -751,7 +755,7 @@ func execute(cmd *exec.Cmd) (string, error) {
 }
 
 func getNumberFromQuery(db *sql.DB, query string) (int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
