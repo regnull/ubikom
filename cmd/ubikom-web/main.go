@@ -171,6 +171,12 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
 		return
 	}
+
+	// !!!!! Registration disabled.
+	log.Warn().Msg("registration disabled")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	return
+
 	name := ""
 	password := ""
 	captchaId := ""
