@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubchain/gocontract"
+	gocontv2 "github.com/regnull/ubchain/gocontract/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -21,6 +22,8 @@ func init() {
 	deployNameRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 	deployNameRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
 
+	deployNameRegistryV2Cmd.Flags().String("key", "", "key to authorize the transaction")
+
 	deployConnectorRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 	deployConnectorRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
 	deployConnectorRegistryCmd.Flags().String("name-registry-address", "", "name registry contract address")
@@ -30,6 +33,7 @@ func init() {
 	deployCmd.AddCommand(deployKeyRegistryCmd)
 	deployCmd.AddCommand(deployNameRegistryCmd)
 	deployCmd.AddCommand(deployConnectorRegistryCmd)
+	deployCmd.AddCommand(deployNameRegistryV2Cmd)
 
 	BCCmd.AddCommand(deployCmd)
 }
@@ -166,6 +170,40 @@ var deployConnectorRegistryCmd = &cobra.Command{
 		txAddr, tx, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
 			client *ethclient.Client) (common.Address, *types.Transaction, error) {
 			txAddr, tx, _, err := gocontract.DeployConnectorRegistry(auth, client, keyRegistryAddr, nameRegistryAddr)
+			return txAddr, tx, err
+		})
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to deploy")
+		}
+
+		fmt.Printf("contract address: %s\n", txAddr.Hex())
+		fmt.Printf("tx: %s\n", tx.Hash().Hex())
+	},
+}
+
+var deployNameRegistryV2Cmd = &cobra.Command{
+	Use:   "name-registry-v2",
+	Short: "Deploy name registry v2",
+	Long:  "Deploy name registry v2",
+	Run: func(cmd *cobra.Command, args []string) {
+		key, err := LoadKeyFromFlag(cmd, "key")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load key")
+		}
+
+		nodeURL, err := cmd.Flags().GetString("node-url")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get node URL")
+		}
+
+		gasLimit, err := cmd.Flags().GetUint64("gas-limit")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get gas limit")
+		}
+
+		txAddr, tx, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
+			client *ethclient.Client) (common.Address, *types.Transaction, error) {
+			txAddr, tx, _, err := gocontv2.DeployNameRegistry(auth, client)
 			return txAddr, tx, err
 		})
 		if err != nil {
