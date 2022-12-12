@@ -23,7 +23,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/regnull/easyecc v0.2.1
-	github.com/regnull/ubchain v0.0.0-20221209142022-49b432ae0184
+	github.com/regnull/ubchain v0.0.0-20221212144338-76207c0933bb
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rs/zerolog v1.21.0
