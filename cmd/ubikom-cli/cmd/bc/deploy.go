@@ -28,7 +28,7 @@ func init() {
 	deployConnectorRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
 	deployConnectorRegistryCmd.Flags().String("name-registry-address", "", "name registry contract address")
 
-	deployCmd.PersistentFlags().Uint64("gas-limit", 1000000, "gas limit")
+	deployCmd.PersistentFlags().Uint64("gas-limit", 2000000, "gas limit")
 
 	deployCmd.AddCommand(deployKeyRegistryCmd)
 	deployCmd.AddCommand(deployNameRegistryCmd)
