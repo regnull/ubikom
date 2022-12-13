@@ -182,9 +182,9 @@ var deployConnectorRegistryCmd = &cobra.Command{
 }
 
 var deployNameRegistryV2Cmd = &cobra.Command{
-	Use:   "name-registry-v2",
-	Short: "Deploy name registry v2",
-	Long:  "Deploy name registry v2",
+	Use:   "registry",
+	Short: "Deploy registry v2",
+	Long:  "Deploy registry v2",
 	Run: func(cmd *cobra.Command, args []string) {
 		key, err := LoadKeyFromFlag(cmd, "key")
 		if err != nil {
@@ -255,5 +255,15 @@ func deploy(nodeURL string, key *easyecc.PrivateKey, gasLimit uint64,
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 
-	return deployFunc(auth, client)
+	txAddr, tx, err := deployFunc(auth, client)
+	if err != nil {
+		return txAddr, tx, err
+	}
+	receipt, err := bind.WaitMined(ctx, client, tx)
+	if receipt.Status == 0 {
+		return txAddr, tx, fmt.Errorf("miner returned error %w", err)
+	}
+	fmt.Printf("confirmed in block %s\n", receipt.BlockNumber.String())
+
+	return txAddr, tx, err
 }
