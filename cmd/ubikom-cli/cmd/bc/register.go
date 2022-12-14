@@ -21,7 +21,6 @@ import (
 func init() {
 	registerNameCmd.Flags().String("key", "", "key to authorize the transaction")
 	registerNameCmd.Flags().String("enc-key", "", "key to register")
-	registerNameCmd.Flags().String("name", "", "name to register")
 	registerNameCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
 
 	registerCmd.AddCommand(registerNameCmd)
@@ -54,10 +53,11 @@ var registerNameCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load reg key")
 		}
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get name")
+		if len(args) < 1 {
+			log.Fatal().Msg("name must be specified")
 		}
+
+		name := args[0]
 		nodeURL, err := cmd.Flags().GetString("node-url")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")

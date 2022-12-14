@@ -27,7 +27,7 @@ CONTRACT_ADDRESS=$(echo $REG_RES| jq -r ".Address")
 $TEMP_DIR/ubikom-cli create key --out=$TEMP_DIR/enc_key --skip-passphrase
 
 # Register a name.
-$TEMP_DIR/ubikom-cli bc register name --name=foo --key=$TEMP_DIR/key --enc-key=$TEMP_DIR/enc_key --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL
+$TEMP_DIR/ubikom-cli bc register name foo --key=$TEMP_DIR/key --enc-key=$TEMP_DIR/enc_key --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL
 
 # Lookup the name.
 $TEMP_DIR/ubikom-cli bc lookup name foo --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL
