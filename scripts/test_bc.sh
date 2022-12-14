@@ -14,15 +14,14 @@ NODE_URL=http://127.0.0.1:7545
 # Create the key file.
 echo $1 | xxd -r -p - $TEMP_DIR/key
 
-ls -ls $TEMP_DIR
-
 # Build ubkom-cli.
 cd $SCRIPT_DIR/../cmd/ubikom-cli
 go build -o $TEMP_DIR/ubikom-cli
 
 # Deploy the contract.
-CONTRACT_ADDRESS=$($TEMP_DIR/ubikom-cli bc deploy registry --key=$TEMP_DIR/key --node-url=$NODE_URL | grep "contract address: " | cut -f 3 -d ' ')
-echo contract address: $CONTRACT_ADDRESS
+REG_RES=$($TEMP_DIR/ubikom-cli bc deploy registry --key=$TEMP_DIR/key --node-url=$NODE_URL)
+echo $REG_RES
+CONTRACT_ADDRESS=$(echo $REG_RES| jq -r ".Address")
 
 # Create an encryption key.
 $TEMP_DIR/ubikom-cli create key --out=$TEMP_DIR/enc_key --skip-passphrase

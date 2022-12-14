@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"encoding/json"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -22,7 +24,7 @@ func init() {
 	deployNameRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 	deployNameRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
 
-	deployNameRegistryV2Cmd.Flags().String("key", "", "key to authorize the transaction")
+	deployRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 
 	deployConnectorRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
 	deployConnectorRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
@@ -33,7 +35,7 @@ func init() {
 	deployCmd.AddCommand(deployKeyRegistryCmd)
 	deployCmd.AddCommand(deployNameRegistryCmd)
 	deployCmd.AddCommand(deployConnectorRegistryCmd)
-	deployCmd.AddCommand(deployNameRegistryV2Cmd)
+	deployCmd.AddCommand(deployRegistryCmd)
 
 	BCCmd.AddCommand(deployCmd)
 }
@@ -67,7 +69,7 @@ var deployKeyRegistryCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get gas limit")
 		}
 
-		txAddr, tx, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
+		txAddr, tx, _, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
 			client *ethclient.Client) (common.Address, *types.Transaction, error) {
 			txAddr, tx, _, err := gocontract.DeployKeyRegistry(auth, client)
 			return txAddr, tx, err
@@ -112,7 +114,7 @@ var deployNameRegistryCmd = &cobra.Command{
 
 		keyRegistryAddr := common.HexToAddress(keyRegistryAddress)
 
-		txAddr, tx, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
+		txAddr, tx, _, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
 			client *ethclient.Client) (common.Address, *types.Transaction, error) {
 			txAddr, tx, _, err := gocontract.DeployNameRegistry(auth, client, keyRegistryAddr)
 			return txAddr, tx, err
@@ -167,7 +169,7 @@ var deployConnectorRegistryCmd = &cobra.Command{
 		keyRegistryAddr := common.HexToAddress(keyRegistryAddress)
 		nameRegistryAddr := common.HexToAddress(nameRegistryAddress)
 
-		txAddr, tx, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
+		txAddr, tx, _, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
 			client *ethclient.Client) (common.Address, *types.Transaction, error) {
 			txAddr, tx, _, err := gocontract.DeployConnectorRegistry(auth, client, keyRegistryAddr, nameRegistryAddr)
 			return txAddr, tx, err
@@ -181,7 +183,13 @@ var deployConnectorRegistryCmd = &cobra.Command{
 	},
 }
 
-var deployNameRegistryV2Cmd = &cobra.Command{
+type registryDeployResult struct {
+	Address string
+	Tx      string
+	Block   string
+}
+
+var deployRegistryCmd = &cobra.Command{
 	Use:   "registry",
 	Short: "Deploy registry v2",
 	Long:  "Deploy registry v2",
@@ -201,7 +209,7 @@ var deployNameRegistryV2Cmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get gas limit")
 		}
 
-		txAddr, tx, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
+		txAddr, tx, block, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
 			client *ethclient.Client) (common.Address, *types.Transaction, error) {
 			txAddr, tx, _, err := gocontv2.DeployNameRegistry(auth, client)
 			return txAddr, tx, err
@@ -210,18 +218,28 @@ var deployNameRegistryV2Cmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to deploy")
 		}
 
-		fmt.Printf("contract address: %s\n", txAddr.Hex())
-		fmt.Printf("tx: %s\n", tx.Hash().Hex())
+		res := &registryDeployResult{
+			Address: txAddr.Hex(),
+			Tx:      tx.Hash().Hex(),
+			Block:   block.String(),
+		}
+
+		s, err := json.MarshalIndent(res, "", "  ")
+
+		fmt.Printf("%s\n", s)
 	},
 }
 
 func deploy(nodeURL string, key *easyecc.PrivateKey, gasLimit uint64,
 	deployFunc func(*bind.TransactOpts,
-		*ethclient.Client) (common.Address, *types.Transaction, error)) (common.Address, *types.Transaction, error) {
+		*ethclient.Client) (common.Address, *types.Transaction, error)) (common.Address,
+	*types.Transaction,
+	*big.Int,
+	error) {
 	// Connect to the node.
 	client, err := ethclient.Dial(nodeURL)
 	if err != nil {
-		return common.Address{}, nil, err
+		return common.Address{}, nil, nil, err
 	}
 
 	ctx := context.Background()
@@ -229,26 +247,26 @@ func deploy(nodeURL string, key *easyecc.PrivateKey, gasLimit uint64,
 	// Get nonce.
 	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(key.PublicKey().EthereumAddress()))
 	if err != nil {
-		return common.Address{}, nil, err
+		return common.Address{}, nil, nil, err
 	}
 	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
 
 	// Get gas price.
 	gasPrice, err := client.SuggestGasPrice(ctx)
 	if err != nil {
-		return common.Address{}, nil, err
+		return common.Address{}, nil, nil, err
 	}
 	log.Debug().Str("gas-price", gasPrice.String()).Msg("got gas price")
 
 	chainID, err := client.NetworkID(ctx)
 	if err != nil {
-		return common.Address{}, nil, err
+		return common.Address{}, nil, nil, err
 	}
 	log.Debug().Str("chain-id", chainID.String()).Msg("got chain ID")
 
 	auth, err := bind.NewKeyedTransactorWithChainID(key.ToECDSA(), chainID)
 	if err != nil {
-		return common.Address{}, nil, err
+		return common.Address{}, nil, nil, err
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0) // in wei
@@ -257,13 +275,12 @@ func deploy(nodeURL string, key *easyecc.PrivateKey, gasLimit uint64,
 
 	txAddr, tx, err := deployFunc(auth, client)
 	if err != nil {
-		return txAddr, tx, err
+		return txAddr, tx, nil, err
 	}
 	receipt, err := bind.WaitMined(ctx, client, tx)
 	if receipt.Status == 0 {
-		return txAddr, tx, fmt.Errorf("miner returned error %w", err)
+		return txAddr, tx, nil, fmt.Errorf("miner returned error %w", err)
 	}
-	fmt.Printf("confirmed in block %s\n", receipt.BlockNumber.String())
 
-	return txAddr, tx, err
+	return txAddr, tx, receipt.BlockNumber, nil
 }

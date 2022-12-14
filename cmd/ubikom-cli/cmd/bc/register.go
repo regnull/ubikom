@@ -2,6 +2,7 @@ package bc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"time"
@@ -134,8 +135,20 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 	}
 	fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
 
-	if err := WaitMinedAndPrintReceipt(client, tx, time.Second*30); err != nil {
+	res, err := WaitMined(client, tx, time.Second*30)
+	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get transaction receipt")
+	}
+	jsonBytes, err := json.MarshalIndent(res, "", "  ")
+	fmt.Printf("%s\n", jsonBytes)
+
+	// It's not entirely clear how to see when a write transaction failed, because the contract is
+	// not there, etc. The only way I've found, is to look at logs, which are empty if the
+	// contract address is wrong. Status is 1 regardless, but we look at the status as well,
+	// just in case.
+	if len(res.Logs) == 0 || res.Status == 0 {
+		log.Error().Msg("transaction failed")
+		return fmt.Errorf("transaction failed")
 	}
 	return nil
 }

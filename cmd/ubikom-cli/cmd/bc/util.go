@@ -2,8 +2,6 @@ package bc
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -47,17 +45,12 @@ func LoadKeyFromFlag(cmd *cobra.Command, keyFlagName string) (*easyecc.PrivateKe
 	return privateKey, nil
 }
 
-func WaitMinedAndPrintReceipt(client *ethclient.Client, tx *types.Transaction, waitDuration time.Duration) error {
+func WaitMined(client *ethclient.Client, tx *types.Transaction, waitDuration time.Duration) (*types.Receipt, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), waitDuration)
 	defer cancel()
 	receipt, err := bind.WaitMined(ctx, client, tx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	jsonBytes, err := json.MarshalIndent(receipt, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Printf("%s\n", string(jsonBytes))
-	return nil
+	return receipt, nil
 }
