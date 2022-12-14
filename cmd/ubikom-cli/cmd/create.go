@@ -26,6 +26,7 @@ func init() {
 	createKeyCmd.Flags().Bool("base58-salt", false, "use base58 salt")
 	createKeyCmd.Flags().Bool("from-mnemonic", false, "create private key from mnemonic")
 	createKeyCmd.Flags().String("salt", "", "Salt used for private key creation")
+	createKeyCmd.Flags().Bool("skip-passphrase", false, "skip passphrase")
 	createCmd.AddCommand(createKeyCmd)
 	rootCmd.AddCommand(createCmd)
 }
@@ -68,6 +69,11 @@ var createKeyCmd = &cobra.Command{
 		fromMnemonic, err := cmd.Flags().GetBool("from-mnemonic")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get --from-mnemonic flag")
+		}
+
+		skipPassphrase, err := cmd.Flags().GetBool("skip-passphrase")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get --skip-passphrase flag")
 		}
 
 		var privateKey *easyecc.PrivateKey
@@ -121,9 +127,12 @@ var createKeyCmd = &cobra.Command{
 			}
 		}
 
-		passphrase, err := util.EnterPassphrase()
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get passphase")
+		passphrase := ""
+		if !skipPassphrase {
+			passphrase, err = util.EnterPassphrase()
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to get passphase")
+			}
 		}
 
 		if passphrase == "" {
