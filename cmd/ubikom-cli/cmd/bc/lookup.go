@@ -73,7 +73,7 @@ var lookupNameCmd = &cobra.Command{
 		}
 
 		zeroAddress := common.BigToAddress(big.NewInt(0))
-		if bytes.Compare(res.Owner.Bytes(), zeroAddress.Bytes()) == 0 {
+		if bytes.Equal(res.Owner.Bytes(), zeroAddress.Bytes()) {
 			fmt.Printf("name is not registered\n")
 			return
 		}
@@ -83,7 +83,7 @@ var lookupNameCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("invalid key returned")
 		}
 
-		fmt.Printf("hex: %x\n", publicKey.SerializeCompressed())
+		fmt.Printf("public key: %x\n", publicKey.SerializeCompressed())
 		fmt.Printf("owner: %x\n", res.Owner)
 		fmt.Printf("price: %s\n", res.Price.String())
 	},
