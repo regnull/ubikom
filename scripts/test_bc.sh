@@ -55,5 +55,6 @@ $TEMP_DIR/ubikom-cli bc update owner foo --key=$TEMP_DIR/key1 --new-owner-addres
 
 # Update price.
 $TEMP_DIR/ubikom-cli bc update price foo --key=$TEMP_DIR/key2 --price=123456789 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
+$TEMP_DIR/ubikom-cli bc lookup name foo --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
 
 rm -rf $TEMP_DIR

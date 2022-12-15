@@ -2,6 +2,7 @@ package bc
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -33,6 +34,12 @@ var lookupCmd = &cobra.Command{
 	Long:  "Lookup stuff on the blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
 	},
+}
+
+type lookupNameRes struct {
+	PublicKey string
+	Owner     string
+	Price     int64
 }
 
 var lookupNameCmd = &cobra.Command{
@@ -83,9 +90,18 @@ var lookupNameCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("invalid key returned")
 		}
 
-		fmt.Printf("public key: %x\n", publicKey.SerializeCompressed())
-		fmt.Printf("owner: %x\n", res.Owner)
-		fmt.Printf("price: %s\n", res.Price.String())
+		cmdRes := &lookupNameRes{
+			PublicKey: fmt.Sprintf("0x%x", publicKey.SerializeCompressed()),
+			Owner:     fmt.Sprintf("0x%x", res.Owner),
+			Price:     res.Price.Int64(),
+		}
+
+		s, err := json.MarshalIndent(cmdRes, "", "  ")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to marshal json")
+		}
+
+		fmt.Printf("%s\n", s)
 	},
 }
 
