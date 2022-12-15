@@ -12,28 +12,28 @@ import (
 )
 
 func init() {
-	registerNameCmd.Flags().String("key", "", "key to authorize the transaction")
-	registerNameCmd.Flags().String("pub-key", "", "public key for communication")
-	registerNameCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
+	updatePublicKeyCmd.Flags().String("key", "", "key to authorize the transaction")
+	updatePublicKeyCmd.Flags().String("pub-key", "", "public key to update")
+	updatePublicKeyCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
 
-	registerCmd.AddCommand(registerNameCmd)
+	updateCmd.AddCommand(updatePublicKeyCmd)
 
-	BCCmd.AddCommand(registerCmd)
+	BCCmd.AddCommand(updateCmd)
 }
 
-var registerCmd = &cobra.Command{
-	Use:   "register",
-	Short: "Register various things on the blockchain",
-	Long:  "Register various things on the blockchain",
+var updateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update various things on the blockchain",
+	Long:  "Update various things on the blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Fatal().Msg("sub-command required (do 'ubikom-cli bc register --help' to see available commands)")
+		log.Fatal().Msg("sub-command required (do 'ubikom-cli bc update --help' to see available commands)")
 	},
 }
 
-var registerNameCmd = &cobra.Command{
-	Use:   "name",
-	Short: "Register name on the blockchain",
-	Long:  "Register name on the blockchain",
+var updatePublicKeyCmd = &cobra.Command{
+	Use:   "public-key",
+	Short: "Update public key on the blockchain",
+	Long:  "Update public key on the blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
 		key, err := LoadKeyFromFlag(cmd, "key")
 		if err != nil {
@@ -63,7 +63,7 @@ var registerNameCmd = &cobra.Command{
 					log.Fatal().Err(err).Msg("failed to get contract instance")
 				}
 
-				tx, err := instance.RegisterName(auth, encKey.PublicKey().SerializeCompressed(), name)
+				tx, err := instance.UpdatePublicKey(auth, encKey.PublicKey().SerializeCompressed(), name)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to register name")
 				}
