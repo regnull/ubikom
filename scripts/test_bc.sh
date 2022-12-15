@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+#set -e
 
 if [ $# -lt 1 ]
 then
@@ -25,6 +25,13 @@ CONTRACT_ADDRESS=$(echo $REG_RES| jq -r ".Address")
 
 # Create an encryption key.
 $TEMP_DIR/ubikom-cli create key --out=$TEMP_DIR/pub_key --skip-passphrase
+
+# Try to register an invalid name.
+$TEMP_DIR/ubikom-cli bc register name "$$$" --key=$TEMP_DIR/key --pub-key=$TEMP_DIR/pub_key --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL
+if [ "$?" -eq 0 ];
+then
+    echo "The command was supposed to fail."
+fi 
 
 # Register a name.
 $TEMP_DIR/ubikom-cli bc register name foo --key=$TEMP_DIR/key --pub-key=$TEMP_DIR/pub_key --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL
