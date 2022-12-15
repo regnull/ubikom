@@ -16,7 +16,12 @@ func init() {
 	updatePublicKeyCmd.Flags().String("pub-key", "", "public key to update")
 	updatePublicKeyCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
 
+	updateOwnerCmd.Flags().String("key", "", "key to authorize the transaction")
+	updateOwnerCmd.Flags().String("new-owner-address", "", "new owner address")
+	updateOwnerCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
+
 	updateCmd.AddCommand(updatePublicKeyCmd)
+	updateCmd.AddCommand(updateOwnerCmd)
 
 	BCCmd.AddCommand(updateCmd)
 }
@@ -64,6 +69,52 @@ var updatePublicKeyCmd = &cobra.Command{
 				}
 
 				tx, err := instance.UpdatePublicKey(auth, encKey.PublicKey().SerializeCompressed(), name)
+				if err != nil {
+					log.Fatal().Err(err).Msg("failed to register name")
+				}
+				return tx, err
+			})
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to register name")
+		}
+	},
+}
+
+var updateOwnerCmd = &cobra.Command{
+	Use:   "owner",
+	Short: "Update name owner on the blockchain",
+	Long:  "Update name owner on the blockchain",
+	Run: func(cmd *cobra.Command, args []string) {
+		key, err := LoadKeyFromFlag(cmd, "key")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load key")
+		}
+		if len(args) < 1 {
+			log.Fatal().Msg("name must be specified")
+		}
+		name := args[0]
+
+		nodeURL, err := cmd.Flags().GetString("node-url")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get node URL")
+		}
+		newOwnerAddressHex, err := cmd.Flags().GetString("new-owner-address")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get new owner address")
+		}
+		newOwnerAddress := common.HexToAddress(newOwnerAddressHex)
+		contractAddress, err := cmd.Flags().GetString("contract-address")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load contract address")
+		}
+		err = interactWithContract(nodeURL, key, contractAddress,
+			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
+				instance, err := cntv2.NewNameRegistry(addr, client)
+				if err != nil {
+					log.Fatal().Err(err).Msg("failed to get contract instance")
+				}
+
+				tx, err := instance.UpdateOwnership(auth, name, newOwnerAddress)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to register name")
 				}
