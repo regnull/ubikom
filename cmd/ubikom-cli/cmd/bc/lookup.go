@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
-	"github.com/regnull/ubchain/gocontract"
 	cntv2 "github.com/regnull/ubchain/gocontract/v2"
 	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
@@ -19,11 +18,11 @@ import (
 func init() {
 	lookupNameCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
 
-	lookupConnectorCmd.Flags().String("protocol", "PL_DMS", "protocol to look up")
-	lookupConnectorCmd.Flags().String("contract-address", globals.ConnectorRegistryContractAddress, "contract address")
+	lookupConfigCmd.Flags().String("config-name", "", "protocol to look up")
+	lookupConfigCmd.Flags().String("contract-address", globals.ConnectorRegistryContractAddress, "contract address")
 
 	lookupCmd.AddCommand(lookupNameCmd)
-	lookupCmd.AddCommand(lookupConnectorCmd)
+	lookupCmd.AddCommand(lookupConfigCmd)
 
 	BCCmd.AddCommand(lookupCmd)
 }
@@ -105,10 +104,15 @@ var lookupNameCmd = &cobra.Command{
 	},
 }
 
-var lookupConnectorCmd = &cobra.Command{
-	Use:   "connector",
-	Short: "Get connector",
-	Long:  "Get connector",
+type lookupConfigRes struct {
+	ConfigName  string
+	ConfigValue string
+}
+
+var lookupConfigCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Get config",
+	Long:  "Get config",
 	Run: func(cmd *cobra.Command, args []string) {
 		nodeURL, err := cmd.Flags().GetString("node-url")
 		if err != nil {
@@ -121,12 +125,9 @@ var lookupConnectorCmd = &cobra.Command{
 
 		name := args[0]
 
-		protocol, err := cmd.Flags().GetString("protocol")
+		configName, err := cmd.Flags().GetString("config-name")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load protocol")
-		}
-		if protocol != "PL_DMS" {
-			log.Fatal().Msg("invalid protocol")
 		}
 
 		contractAddress, err := cmd.Flags().GetString("contract-address")
@@ -140,17 +141,23 @@ var lookupConnectorCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to connect to blockchain node")
 		}
 
-		instance, err := gocontract.NewConnectorRegistryCaller(common.HexToAddress(contractAddress), client)
+		instance, err := cntv2.NewNameRegistryCaller(common.HexToAddress(contractAddress), client)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get contract instance")
 		}
 
-		log.Debug().Str("name", name).Str("protocol", protocol).Msg("about to look up")
-		location, err := instance.GetLocation(nil, name, protocol)
+		log.Debug().Str("name", name).Str("config-name", configName).Msg("about to look up config")
+		configValue, err := instance.LookupConfig(nil, name, configName)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to query the key")
+			log.Fatal().Err(err).Msg("failed to query the config")
 		}
 
-		fmt.Printf("location: %s\n", location)
+		res := &lookupConfigRes{
+			ConfigName:  configName,
+			ConfigValue: configValue,
+		}
+
+		s, err := json.MarshalIndent(res, "", "  ")
+		fmt.Printf("%s\n", s)
 	},
 }

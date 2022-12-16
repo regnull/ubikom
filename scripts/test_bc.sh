@@ -33,15 +33,15 @@ echo $REG_RES
 CONTRACT_ADDRESS=$(echo $REG_RES| jq -r ".Address")
 
 # Create an encryption key.
-$TEMP_DIR/ubikom-cli create key --out=$TEMP_DIR/pub_key --skip-passphrase || exit 1
+#$TEMP_DIR/ubikom-cli create key --out=$TEMP_DIR/pub_key --skip-passphrase || exit 1
 
 # Try to register an invalid name.
-$TEMP_DIR/ubikom-cli bc register name "$$$" --key=$TEMP_DIR/key1 --pub-key=$TEMP_DIR/pub_key --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL && exit 1
-$TEMP_DIR/ubikom-cli bc register name "_" --key=$TEMP_DIR/key1 --pub-key=$TEMP_DIR/pub_key --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL && exit 1
-$TEMP_DIR/ubikom-cli bc register name "-foo" --key=$TEMP_DIR/key1 --pub-key=$TEMP_DIR/pub_key --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL && exit 1
+$TEMP_DIR/ubikom-cli bc register name "$$$" --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL && exit 1
+$TEMP_DIR/ubikom-cli bc register name "_" --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL && exit 1
+$TEMP_DIR/ubikom-cli bc register name "-foo" --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL && exit 1
 
 # Register a name.
-$TEMP_DIR/ubikom-cli bc register name foo --key=$TEMP_DIR/key1 --pub-key=$TEMP_DIR/pub_key --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
+$TEMP_DIR/ubikom-cli bc register name foo --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
 
 # Lookup the name.
 $TEMP_DIR/ubikom-cli bc lookup name foo --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
@@ -54,7 +54,16 @@ $TEMP_DIR/ubikom-cli bc update public-key foo --key=$TEMP_DIR/key1 --pub-key=$TE
 $TEMP_DIR/ubikom-cli bc update owner foo --key=$TEMP_DIR/key1 --new-owner-address=$ADDRESS2 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
 
 # Update price.
-$TEMP_DIR/ubikom-cli bc update price foo --key=$TEMP_DIR/key2 --price=123456789 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
+$TEMP_DIR/ubikom-cli bc update price foo --key=$TEMP_DIR/key2 --price=1230000000000000000 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
 $TEMP_DIR/ubikom-cli bc lookup name foo --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
+
+# Buy.
+$TEMP_DIR/ubikom-cli bc buy name foo --key=$TEMP_DIR/key1 --value=1230000000000000000 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
+
+# Update config.
+$TEMP_DIR/ubikom-cli bc update config foo --key=$TEMP_DIR/key1 --config-name=myconfigname --config-value=myconfigvalue --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
+$TEMP_DIR/ubikom-cli bc lookup config foo --contract-address=$CONTRACT_ADDRESS --config-name=myconfigname --node-url=$NODE_URL || exit 1
+
+# Lookup connector.
 
 rm -rf $TEMP_DIR

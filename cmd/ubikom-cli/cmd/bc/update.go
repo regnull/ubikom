@@ -26,9 +26,15 @@ func init() {
 	updatePriceCmd.Flags().Int64("price", 0, "new price")
 	updatePriceCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
 
+	updateConfigCmd.Flags().String("key", "", "key to authorize the transaction")
+	updateConfigCmd.Flags().String("config-name", "", "new price")
+	updateConfigCmd.Flags().String("config-value", "", "new price")
+	updateConfigCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
+
 	updateCmd.AddCommand(updatePublicKeyCmd)
 	updateCmd.AddCommand(updateOwnerCmd)
 	updateCmd.AddCommand(updatePriceCmd)
+	updateCmd.AddCommand(updateConfigCmd)
 
 	BCCmd.AddCommand(updateCmd)
 }
@@ -77,12 +83,12 @@ var updatePublicKeyCmd = &cobra.Command{
 
 				tx, err := instance.UpdatePublicKey(auth, encKey.PublicKey().SerializeCompressed(), name)
 				if err != nil {
-					log.Fatal().Err(err).Msg("failed to register name")
+					log.Fatal().Err(err).Msg("failed to update public key")
 				}
 				return tx, err
 			})
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to register name")
+			log.Fatal().Err(err).Msg("failed to update public key")
 		}
 	},
 }
@@ -123,12 +129,12 @@ var updateOwnerCmd = &cobra.Command{
 
 				tx, err := instance.UpdateOwnership(auth, name, newOwnerAddress)
 				if err != nil {
-					log.Fatal().Err(err).Msg("failed to register name")
+					log.Fatal().Err(err).Msg("failed to update owner")
 				}
 				return tx, err
 			})
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to register name")
+			log.Fatal().Err(err).Msg("failed to update owner")
 		}
 	},
 }
@@ -168,12 +174,64 @@ var updatePriceCmd = &cobra.Command{
 
 				tx, err := instance.UpdatePrice(auth, name, big.NewInt(price))
 				if err != nil {
-					log.Fatal().Err(err).Msg("failed to register name")
+					log.Fatal().Err(err).Msg("failed to update price")
 				}
 				return tx, err
 			})
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to register name")
+			log.Fatal().Err(err).Msg("failed to update price")
+		}
+	},
+}
+
+var updateConfigCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Update name config on the blockchain",
+	Long:  "Update name config on the blockchain",
+	Run: func(cmd *cobra.Command, args []string) {
+		key, err := LoadKeyFromFlag(cmd, "key")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load key")
+		}
+		if len(args) < 1 {
+			log.Fatal().Msg("name must be specified")
+		}
+		name := args[0]
+
+		nodeURL, err := cmd.Flags().GetString("node-url")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get node URL")
+		}
+		configName, err := cmd.Flags().GetString("config-name")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get config name")
+		}
+		configValue, err := cmd.Flags().GetString("config-value")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get config value")
+		}
+		if configName == "" {
+			log.Fatal().Msg("--config-name cannot be empty")
+		}
+		contractAddress, err := cmd.Flags().GetString("contract-address")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load contract address")
+		}
+		err = interactWithContract(nodeURL, key, contractAddress,
+			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
+				instance, err := cntv2.NewNameRegistry(addr, client)
+				if err != nil {
+					log.Fatal().Err(err).Msg("failed to get contract instance")
+				}
+
+				tx, err := instance.UpdateConfig(auth, name, configName, configValue)
+				if err != nil {
+					log.Fatal().Err(err).Msg("failed to update price")
+				}
+				return tx, err
+			})
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to update price")
 		}
 	},
 }
