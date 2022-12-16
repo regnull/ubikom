@@ -38,10 +38,14 @@ CONTRACT_ADDRESS=$(echo $REG_RES| jq -r ".Address")
 # Try to register an invalid name.
 $TEMP_DIR/ubikom-cli bc register name "$$$" --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL && exit 1
 $TEMP_DIR/ubikom-cli bc register name "_" --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL && exit 1
-$TEMP_DIR/ubikom-cli bc register name "-foo" --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL && exit 1
+$TEMP_DIR/ubikom-cli bc register name '\-foo' --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL && exit 1
 
 # Register a name.
 $TEMP_DIR/ubikom-cli bc register name foo --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
+
+# Register a long name.
+$TEMP_DIR/ubikom-cli bc register name "abcdefghijklmnopqrstuvwxyz1234567890-_" --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
+$TEMP_DIR/ubikom-cli bc register name "foo_bar" --key=$TEMP_DIR/key1 --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1
 
 # Lookup the name.
 $TEMP_DIR/ubikom-cli bc lookup name foo --contract-address=$CONTRACT_ADDRESS --node-url=$NODE_URL || exit 1

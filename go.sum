@@ -529,6 +529,8 @@ github.com/regnull/ubchain v0.0.0-20221216030731-df2d8e21201a h1:PoSmT1BscFjRlez
 github.com/regnull/ubchain v0.0.0-20221216030731-df2d8e21201a/go.mod h1:VXcXOhIuEfKL3Cl++mqobPmpsp6cs5C7fbc/5SdQYto=
 github.com/regnull/ubchain v0.0.0-20221216142635-cab67bc04f00 h1:4oOVnURCUtr6TuJIKyaL56XGEvrBPQItTtUZEeXgAr0=
 github.com/regnull/ubchain v0.0.0-20221216142635-cab67bc04f00/go.mod h1:VXcXOhIuEfKL3Cl++mqobPmpsp6cs5C7fbc/5SdQYto=
+github.com/regnull/ubchain v0.0.0-20221216162132-ab3cf6198874 h1:R0SH+ROXYWeoW63nnbrlj2Rj/9ZFemF01BeXQ2M43Fw=
+github.com/regnull/ubchain v0.0.0-20221216162132-ab3cf6198874/go.mod h1:VXcXOhIuEfKL3Cl++mqobPmpsp6cs5C7fbc/5SdQYto=
 github.com/retailnext/hllpp v1.0.1-0.20180308014038-101a6d2f8b52/go.mod h1:RDpi1RftBQPUCDRw6SmxeaREsAaRKnOclghuzp/WRzc=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rivo/uniseg v0.4.3 h1:utMvzDsuh3suAEnhH0RdHmoPbU648o6CvXxTx4SBMOw=
