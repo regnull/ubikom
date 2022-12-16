@@ -1,8 +1,6 @@
 package bc
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -76,9 +74,8 @@ var buyNameCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
-		err = interactWithContract(nodeURL, key, contractAddress,
+		err = interactWithContract(nodeURL, key, contractAddress, value,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
-				auth.Value = big.NewInt(value)
 				instance, err := cntv2.NewNameRegistry(addr, client)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to get contract instance")

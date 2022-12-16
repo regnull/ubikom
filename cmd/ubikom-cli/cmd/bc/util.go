@@ -64,7 +64,7 @@ type mutateStateFunc func(client *ethclient.Client, auth *bind.TransactOpts,
 	addr common.Address) (*types.Transaction, error)
 
 func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
-	contractAddress string, f mutateStateFunc) error {
+	contractAddress string, value int64, f mutateStateFunc) error {
 	// Connect to the node.
 	client, err := ethclient.Dial(nodeURL)
 	if err != nil {
@@ -101,7 +101,7 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 		return err
 	}
 	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0) // in wei
+	auth.Value = big.NewInt(value) // in wei
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 
