@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	BCCmd.PersistentFlags().String("node-url", globals.BlockchainNodeURL, "blockchain node location")
+	BCCmd.PersistentFlags().String("node-url", globals.InfuraNodeURL, "blockchain node location")
 }
 
 var BCCmd = &cobra.Command{

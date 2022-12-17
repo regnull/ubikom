@@ -16,20 +16,20 @@ import (
 func init() {
 	updatePublicKeyCmd.Flags().String("key", "", "key to authorize the transaction")
 	updatePublicKeyCmd.Flags().String("pub-key", "", "public key to update")
-	updatePublicKeyCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
+	updatePublicKeyCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	updateOwnerCmd.Flags().String("key", "", "key to authorize the transaction")
 	updateOwnerCmd.Flags().String("new-owner-address", "", "new owner address")
-	updateOwnerCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
+	updateOwnerCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	updatePriceCmd.Flags().String("key", "", "key to authorize the transaction")
 	updatePriceCmd.Flags().Int64("price", 0, "new price")
-	updatePriceCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
+	updatePriceCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	updateConfigCmd.Flags().String("key", "", "key to authorize the transaction")
 	updateConfigCmd.Flags().String("config-name", "", "new price")
 	updateConfigCmd.Flags().String("config-value", "", "new price")
-	updateConfigCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
+	updateConfigCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	updateCmd.AddCommand(updatePublicKeyCmd)
 	updateCmd.AddCommand(updateOwnerCmd)

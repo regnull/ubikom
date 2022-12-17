@@ -15,7 +15,7 @@ import (
 func init() {
 	registerNameCmd.Flags().String("key", "", "key to authorize the transaction")
 	registerNameCmd.Flags().String("enc-key", "", "encryption key")
-	registerNameCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
+	registerNameCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	registerCmd.AddCommand(registerNameCmd)
 

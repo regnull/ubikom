@@ -16,10 +16,10 @@ import (
 )
 
 func init() {
-	lookupNameCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
+	lookupNameCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	lookupConfigCmd.Flags().String("config-name", "", "protocol to look up")
-	lookupConfigCmd.Flags().String("contract-address", globals.ConnectorRegistryContractAddress, "contract address")
+	lookupConfigCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	lookupCmd.AddCommand(lookupNameCmd)
 	lookupCmd.AddCommand(lookupConfigCmd)
