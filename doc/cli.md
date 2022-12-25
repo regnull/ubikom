@@ -155,6 +155,47 @@ $ ubikom-cli get mnemonic --key=secret.key
 5:  ....
 ```
 
+## Getting Balance, Funding
+
+Now that we have our key registered, we can query our balance:
+
+```
+$ ADDRESS=$(ubikom-cli get ethereum-address --key secret.key)
+$ ubikom-cli bc get balance $ADDRESS --mode=test
+15:11:26 WRN using Sepolia testnet
+Balance: 0
+```
+
+In the first line, we got our Ethereum address and assigned it to the ADDRESS variable. In the second line,
+we queried the balance of this address, which, unsurprisingly, is zero. Notice that we are using Sepolia testnet
+(--mode=test argument). Without it, we would go to the Ethereum mainnet. The warning message was printed
+out to alert us to the fact that we are working on the testnet.
+
+Let's get some funds into our test account. To do that, find a Sepolia faucet and request funds using our 
+Ethereum address, which, again, you can obtain using this command:
+
+```
+$ ubikom-cli get ethereum-address --key secret.key
+```
+
+At the moment when this was written, Sepolia faucets were somewhat unreliable, but if you try a few of them
+you can find one that works. Google for 'free Sepolia faucet'. As always, be carefull by not giving your
+private information to anyone.
+
+I had some luck using this one: https://sepolia-faucet.com/, which mines Ether in your browser for a few minutes
+and then sends the reward to you. Use at your own risk.
+
+After you get some funds, your balance will change:
+
+```
+$ ubikom-cli bc get balance $ADDRESS --mode=test
+15:29:33 WRN using Sepolia testnet
+Balance: 32375000000000000
+```
+
+Notice that your balance is in wei, the smallest unit in Ethereum ecosystem. To convert it into Ether, you 
+may use a tool like this one: https://eth-converter.com/
+
 ## Registering keys, names, and addresses
 
 ### Registering name
