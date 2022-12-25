@@ -10,5 +10,7 @@ const (
 	ConnectorRegistryContractAddress = "0x2E0832755a6963C35FfD39CedB7e63614799Eb1b"
 	UbikomEthereumAddress            = "0x24fa5B1d7FBe98A9316101E311F0c409791EaA76"
 	InfuraNodeURL                    = "https://mainnet.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23"
+	InfuraSepoliaNodeURL             = "https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23"
 	MainnetNameRegistryAddress       = "0xed7a3009dc614469ac5222f5a6efc9f16d6190da"
+	SepoliaNameRegistryAddress       = "0xcc8650c9cd8d99b62375c22f270a803e7abf0de9"
 )
