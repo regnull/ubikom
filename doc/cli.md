@@ -1,5 +1,10 @@
 # Using Ubikom CLI
 
+:toc:
+:toc-title:
+:toclevels: 2
+:icons:
+
 ## Prerequisites
 
 You must have Go installed. If you don't, follow the instructions [here](https://golang.org/doc/install).
