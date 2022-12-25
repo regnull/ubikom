@@ -1,7 +1,8 @@
 # Using Ubikom CLI
 
-* [Prerequisites](#prerequisites)
+  * [Prerequisites](#prerequisites)
   * [Install CLI](#install-cli)
+  * [Output Format](#output-format)
   * [Create a Private Key](#create-a-private-key)
     + [Create Key Using Password](#create-key-using-password)
     + [Create Key from Mnemonic](#create-key-from-mnemonic)
@@ -13,6 +14,8 @@
   * [Registering Names, Updating Configuration](#registering-names--updating-configuration)
     + [Registering Name](#registering-name)
     + [Registering Messaging Endpoint](#registering-messaging-endpoint)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 ## Prerequisites
 
@@ -60,6 +63,13 @@ Flags:
 
 Use "ubikom-cli [command] --help" for more information about a command.
 ```
+
+## Output Format
+
+When you request data using ubikom-cli, the output format will be either a string or JSON:
+
+* If the data includes a single value (for example, your account balance), it's printed out as a string;
+* If the data includes multiple values (for example, the result of blockchain interaction), it's printed out as JSON.
 
 ## Create a Private Key
 
@@ -373,3 +383,14 @@ tx sent: 0x2e5089d7cab9070362e8ee8f2acdff1188301fd569332eebffc91ac71bd41652
 
 Here, we used gas-price flag to specify the gas price. Sometimes, the suggested gas price in Sepolia is too high (probably an issue with the 
 new test network), and you might need to specify gas-price explicitly. If you don't, the suggested gas price value will be used.
+
+To verify that the config value was updated, run:
+
+```
+ubikom-cli bc lookup config test666 --config-name=dms-endpoint --mode=test
+18:55:41 WRN using Sepolia testnet
+18:55:41 DBG using node node-url=https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23
+18:55:41 WRN using Sepolia testnet
+18:55:41 DBG about to look up config config-name=dms-endpoint name=test666
+alpha.ubikom.cc:8826
+```
