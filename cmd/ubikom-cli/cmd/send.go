@@ -21,6 +21,7 @@ import (
 )
 
 func init() {
+	sendCmd.PersistentFlags().String("registry-type", "bc", "registry type")
 	sendCmd.PersistentFlags().String("lookup-service-url", globals.PublicLookupServiceURL, "lookup service URL")
 
 	sendMessageCmd.Flags().String("receiver", "", "receiver's address")
@@ -54,6 +55,12 @@ var sendMessageCmd = &cobra.Command{
 	Short: "Send message",
 	Long:  "Send message",
 	Run: func(cmd *cobra.Command, args []string) {
+		registryType, err := cmd.Flags().GetString("registry-type")
+		switch registryType {
+		case "bc":
+		case "bc-test":
+		}
+
 		lookupServiceURL, err := cmd.Flags().GetString("lookup-service-url")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get lookup server URL")

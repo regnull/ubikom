@@ -1,13 +1,16 @@
 package bc
 
 import (
-	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	BCCmd.PersistentFlags().String("node-url", globals.InfuraNodeURL, "blockchain node location")
+	BCCmd.PersistentFlags().String("mode", "live", "mode, either live or prod")
+	BCCmd.PersistentFlags().String("node-url", "", "blockchain node location")
+	BCCmd.PersistentFlags().String("contract-address", "", "registry contract address")
+	BCCmd.PersistentFlags().Uint64("gas-price", 0, "gas price")
+	BCCmd.PersistentFlags().Uint64("gas-limit", 0, "gas limit")
 }
 
 var BCCmd = &cobra.Command{

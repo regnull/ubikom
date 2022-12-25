@@ -34,7 +34,7 @@ var getBalanceCmd = &cobra.Command{
 	Short: "Get balance",
 	Long:  "Get balance",
 	Run: func(cmd *cobra.Command, args []string) {
-		nodeURL, err := cmd.Flags().GetString("node-url")
+		nodeURL, err := getNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}

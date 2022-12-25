@@ -74,7 +74,7 @@ var buyNameCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
-		err = interactWithContract(nodeURL, key, contractAddress, value,
+		err = interactWithContract(nodeURL, key, contractAddress, value, 0, 0,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := cntv2.NewNameRegistry(addr, client)
 				if err != nil {

@@ -16,8 +16,6 @@ import (
 )
 
 func init() {
-	lookupNameCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
-
 	lookupConfigCmd.Flags().String("config-name", "", "protocol to look up")
 	lookupConfigCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
@@ -46,21 +44,22 @@ var lookupNameCmd = &cobra.Command{
 	Short: "Get name",
 	Long:  "Get name",
 	Run: func(cmd *cobra.Command, args []string) {
-		nodeURL, err := cmd.Flags().GetString("node-url")
+		nodeURL, err := getNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
+		log.Debug().Str("node-url", nodeURL).Msg("using node")
+		contractAddress, err := getContractAddress(cmd.Flags())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load contract address")
+		}
+		log.Debug().Str("contract-address", contractAddress).Msg("using contract")
 
 		if len(args) < 1 {
 			log.Fatal().Msg("name must be specified")
 		}
 
 		name := args[0]
-
-		contractAddress, err := cmd.Flags().GetString("contract-address")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load contract address")
-		}
 
 		// Connect to the node.
 		client, err := ethclient.Dial(nodeURL)

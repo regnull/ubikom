@@ -74,7 +74,7 @@ var updatePublicKeyCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
-		err = interactWithContract(nodeURL, key, contractAddress, 0,
+		err = interactWithContract(nodeURL, key, contractAddress, 0, 0, 0,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := cntv2.NewNameRegistry(addr, client)
 				if err != nil {
@@ -120,7 +120,7 @@ var updateOwnerCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
-		err = interactWithContract(nodeURL, key, contractAddress, 0,
+		err = interactWithContract(nodeURL, key, contractAddress, 0, 0, 0,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := cntv2.NewNameRegistry(addr, client)
 				if err != nil {
@@ -165,7 +165,7 @@ var updatePriceCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
-		err = interactWithContract(nodeURL, key, contractAddress, 0,
+		err = interactWithContract(nodeURL, key, contractAddress, 0, 0, 0,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := cntv2.NewNameRegistry(addr, client)
 				if err != nil {
@@ -217,7 +217,7 @@ var updateConfigCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
-		err = interactWithContract(nodeURL, key, contractAddress, 0,
+		err = interactWithContract(nodeURL, key, contractAddress, 0, 0, 0,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := cntv2.NewNameRegistry(addr, client)
 				if err != nil {

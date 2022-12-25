@@ -12,10 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
+
+const suggestedGasLimit = 3000000
 
 func LoadKeyFromFlag(cmd *cobra.Command, keyFlagName string) (*easyecc.PrivateKey, error) {
 	keyFile, err := cmd.Flags().GetString(keyFlagName)
@@ -64,7 +68,7 @@ type mutateStateFunc func(client *ethclient.Client, auth *bind.TransactOpts,
 	addr common.Address) (*types.Transaction, error)
 
 func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
-	contractAddress string, value int64, f mutateStateFunc) error {
+	contractAddress string, value int64, gasPrice uint64, gasLimit uint64, f mutateStateFunc) error {
 	// Connect to the node.
 	client, err := ethclient.Dial(nodeURL)
 	if err != nil {
@@ -81,14 +85,19 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 	log.Debug().Uint64("nonce", nonce).Msg("got nonce")
 
 	// Recommended gas limit.
-	gasLimit := uint64(300000)
+	if gasLimit == 0 {
+		gasLimit = uint64(suggestedGasLimit)
+	}
 
 	// Get gas price.
-	gasPrice, err := client.SuggestGasPrice(ctx)
-	if err != nil {
-		return err
+	if gasPrice == 0 {
+		gasPriceBI, err := client.SuggestGasPrice(ctx)
+		if err != nil {
+			return err
+		}
+		gasPrice = gasPriceBI.Uint64()
 	}
-	log.Debug().Str("gas-price", gasPrice.String()).Msg("got gas price")
+	log.Debug().Uint64("gas-price", gasPrice).Msg("got gas price")
 
 	chainID, err := client.NetworkID(ctx)
 	if err != nil {
@@ -103,7 +112,7 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(value) // in wei
 	auth.GasLimit = gasLimit
-	auth.GasPrice = gasPrice
+	auth.GasPrice = big.NewInt(int64(gasPrice))
 
 	addr := common.HexToAddress(contractAddress)
 
@@ -129,4 +138,46 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 		return fmt.Errorf("transaction failed")
 	}
 	return nil
+}
+
+func getNodeURL(flags *pflag.FlagSet) (string, error) {
+	nodeURL, err := flags.GetString("node-url")
+	if err != nil {
+		return "", fmt.Errorf("failed to get node URL")
+	}
+	if nodeURL != "" {
+		return nodeURL, nil
+	}
+	mode, err := flags.GetString("mode")
+	if err != nil {
+		return "", fmt.Errorf("failed to get mode")
+	}
+	if mode == "live" {
+		return globals.InfuraNodeURL, nil
+	} else if mode == "test" {
+		log.Warn().Msg("using Sepolia testnet")
+		return globals.InfuraSepoliaNodeURL, nil
+	}
+	return "", fmt.Errorf("invalid mode, must be live or test")
+}
+
+func getContractAddress(flags *pflag.FlagSet) (string, error) {
+	contractAddress, err := flags.GetString("contract-address")
+	if err != nil {
+		return "", fmt.Errorf("failed to get node contract address")
+	}
+	if contractAddress != "" {
+		return contractAddress, nil
+	}
+	mode, err := flags.GetString("mode")
+	if err != nil {
+		return "", fmt.Errorf("failed to get mode")
+	}
+	if mode == "live" {
+		return globals.MainnetNameRegistryAddress, nil
+	} else if mode == "test" {
+		log.Warn().Msg("using Sepolia testnet")
+		return globals.SepoliaNameRegistryAddress, nil
+	}
+	return "", fmt.Errorf("invalid mode, must be live or test")
 }

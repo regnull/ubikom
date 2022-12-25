@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
 	cntv2 "github.com/regnull/ubchain/gocontract/v2"
-	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +14,6 @@ import (
 func init() {
 	registerNameCmd.Flags().String("key", "", "key to authorize the transaction")
 	registerNameCmd.Flags().String("enc-key", "", "encryption key")
-	registerNameCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	registerCmd.AddCommand(registerNameCmd)
 
@@ -57,20 +55,30 @@ var registerNameCmd = &cobra.Command{
 				log.Fatal().Err(err).Msg("failed to load encryption key")
 			}
 		}
+		gasPrice, err := cmd.Flags().GetUint64("gas-price")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get gas-price flag")
+		}
+		gasLimit, err := cmd.Flags().GetUint64("gas-limit")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get gas-limit flag")
+		}
 		if len(args) < 1 {
 			log.Fatal().Msg("name must be specified")
 		}
 
 		name := args[0]
-		nodeURL, err := cmd.Flags().GetString("node-url")
+		nodeURL, err := getNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
-		contractAddress, err := cmd.Flags().GetString("contract-address")
+		log.Debug().Str("node-url", nodeURL).Msg("using node")
+		contractAddress, err := getContractAddress(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
-		err = interactWithContract(nodeURL, key, contractAddress, 0,
+		log.Debug().Str("contract-address", contractAddress).Msg("using contract")
+		err = interactWithContract(nodeURL, key, contractAddress, 0, gasPrice, gasLimit,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := cntv2.NewNameRegistry(addr, client)
 				if err != nil {

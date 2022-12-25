@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"encoding/base64"
 	"fmt"
 	"strings"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
@@ -145,9 +143,7 @@ var getPublicKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
 
-		fmt.Printf("hex: %0x\n", privateKey.PublicKey().SerializeCompressed())
-		fmt.Printf("base64: %s\n", base64.StdEncoding.EncodeToString(privateKey.PublicKey().SerializeCompressed()))
-		fmt.Printf("base58: %s\n", base58.Encode(privateKey.PublicKey().SerializeCompressed()))
+		fmt.Printf("0x%0x\n", privateKey.PublicKey().SerializeCompressed())
 	},
 }
 
