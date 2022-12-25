@@ -200,27 +200,111 @@ may use a tool like this one: https://eth-converter.com/
 
 ### Registering name
 
-Having a key is all nice and well, people normally prefer short pronounceable names to 
-public keys and addresses. You can link your key to a name by using register name command.
+Once we have some funds in our account, we can register a name. After you register a name, you own it - you 
+can transfer the ownership to anyone else (if you so choose), or sell it in the future. Here, we will
+register a name on Sepolia testnet - the Ethereum mainnet works the same way, but it might not be a great
+idea to use ubikom-cli on the mainnet - our keys are for testing only, we don't have industrial strength 
+protection that is offered by widely used software and hardware wallets.
 
-The name must be unique, you will receive an error if you try to use a name that is already
-registered.
+Before we register a name, we should create an encryption key. This is optional - if you don't specify
+an encryption key, you won't be able to send and receive secure messages. You can always change the
+encryption key later (but you will have to pay the gas fees).
 
-```
-$ ubikom-cli register name bob --key=secret.key
-19:13:15 DBG generating POW...
-19:13:29 DBG POW found pow=44f5d4a7d57f1514
-19:13:29 INF name registered successfully
-```
-
-If the name is already registered, you will an error:
+The encryption key is just another key. Let's create it:
 
 ```
-19:13:05 FTL failed to register key error="rpc error: code = PermissionDenied desc = key is not authorized"
+$ ubikom-cli create key --out=encrypt.key
 ```
 
-This error means that your key is not authorized to operate on this name, since it's already
-associated with a different key.
+Now we can register a new name:
+
+```
+$ ubikom-cli bc register name test666 --key=secret.key --enc-key=encrypt.key --mode=test
+17:03:20 WRN using Sepolia testnet
+17:03:20 DBG using node node-url=https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23
+17:03:20 WRN using Sepolia testnet
+17:03:20 DBG using contract contract-address=0xcc8650c9cd8d99b62375c22f270a803e7abf0de9
+17:03:20 DBG got nonce nonce=1
+17:03:20 DBG got gas price gas-price=500000000007
+17:03:20 DBG got chain ID chain-id=11155111
+tx sent: 0x8375b513f86a5dbcf8342233048af31e4611b93ca01d3926e17ddf7ff0bdfd24
+{
+  "root": "0x",
+  "status": "0x1",
+  "cumulativeGasUsed": "0x227a8",
+  "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000200000000000000000000000000000010000000000000000000000000000000000000020000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "logs": [
+    {
+      "address": "0xcc8650c9cd8d99b62375c22f270a803e7abf0de9",
+      "topics": [
+        "0x1c6eac0e720ec22bb0653aec9c19985633a4fb07971cf973096c2f8e3c37c17f"
+      ],
+      "data": "0x000000000000000000000000000000000000000000000000000000000000004000000000000000000000000027a5f262be45d99068c157c5a10430dda252b1f600000000000000000000000000000000000000000000000000000000000000077465737436363600000000000000000000000000000000000000000000000000",
+      "blockNumber": "0x26f669",
+      "transactionHash": "0x8375b513f86a5dbcf8342233048af31e4611b93ca01d3926e17ddf7ff0bdfd24",
+      "transactionIndex": "0x1",
+      "blockHash": "0xabc049143e555d2021f7e97e785f8b71312bb255389ab656043a99fa0351bca3",
+      "logIndex": "0x0",
+      "removed": false
+    }
+  ],
+  "transactionHash": "0x8375b513f86a5dbcf8342233048af31e4611b93ca01d3926e17ddf7ff0bdfd24",
+  "contractAddress": "0x0000000000000000000000000000000000000000",
+  "gasUsed": "0x1d5a0",
+  "blockHash": "0xabc049143e555d2021f7e97e785f8b71312bb255389ab656043a99fa0351bca3",
+  "blockNumber": "0x26f669",
+  "transactionIndex": "0x1"
+}
+```
+
+If you try to register the same name again, you will get an error:
+
+```
+$ ubikom-cli bc register name test666 --key=secret.key --enc-key=encrypt.key --mode=test
+17:05:08 WRN using Sepolia testnet
+17:05:08 DBG using node node-url=https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23
+17:05:08 WRN using Sepolia testnet
+17:05:08 DBG using contract contract-address=0xcc8650c9cd8d99b62375c22f270a803e7abf0de9
+17:05:09 DBG got nonce nonce=2
+17:05:09 DBG got gas price gas-price=500000000007
+17:05:09 DBG got chain ID chain-id=11155111
+tx sent: 0x203a0890e7c588df52fa954d0e0d0a76486b96ba7aefdb2a0887f4fb2c74f4f2
+{
+  "root": "0x",
+  "status": "0x0",
+  "cumulativeGasUsed": "0x3cb27",
+  "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "logs": [],
+  "transactionHash": "0x203a0890e7c588df52fa954d0e0d0a76486b96ba7aefdb2a0887f4fb2c74f4f2",
+  "contractAddress": "0x0000000000000000000000000000000000000000",
+  "gasUsed": "0x65e2",
+  "blockHash": "0x9accdee8cc26b87061988a8896e7f623fef51ee588df7cd62b18d58e5d09ae9e",
+  "blockNumber": "0x26f671",
+  "transactionIndex": "0x4"
+}
+17:05:25 ERR transaction failed
+17:05:25 FTL failed to register name error="transaction failed"
+```
+
+Let's verify that the name was successfully registered:
+
+```
+$ ubikom-cli bc lookup name test666 --mode=test
+17:10:21 WRN using Sepolia testnet
+17:10:21 DBG using node node-url=https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23
+17:10:21 WRN using Sepolia testnet
+17:10:21 DBG using contract contract-address=0xcc8650c9cd8d99b62375c22f270a803e7abf0de9
+{
+  "PublicKey": "0x0367714ab1510079fb9c79128f0d3358742dfeaf994bb15190a72715193c8710c3",
+  "Owner": "0x27a5f262be45d99068c157c5a10430dda252b1f6",
+  "Price": 0
+}
+```
+
+Here's what we see:
+* The public key is our encryption public key (you can get it by running "ubikom-cli get public-key --key=encrypt.key");
+* THe owner is us (this is our Ethereum address);
+* The price of the name is zero, which means it's not for sale.
 
 ### Registering messaging address
 
