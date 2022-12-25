@@ -124,6 +124,13 @@ $ ubikom-cli get address --key=secret.key
 
 If your key was saved with a passphrase, you will be prompted for one.
 
+Most of the time we will be using key's Ethereum-style address, which you get get like so:
+
+```
+$ ubikom-cli get ethereum-address --key secret.key
+0x27A5f262Be45D99068C157c5A10430ddA252B1f6
+```
+
 ### Get Public Key
 
 To get the public key associated with this private key, use "get public-key" command:
