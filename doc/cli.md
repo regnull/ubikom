@@ -12,18 +12,26 @@ The easiest way to install Ubikom CLI is by using go get command:
 go get github.com/regnull/ubikom/cmd/ubikom-cli
 ```
 
+Or, if you've already cloned ubikom repo, do:
+
+```
+cd ubikom-directory/cmd/ubikom-cli
+go install
+```
+
 The binary will appear under your $GOROOT/bin directory, by default it will be $HOME/go/bin.
 Either go to that directory or add it to path. Run ubikom-cli to see the list of available commands:
 
 ```
-$ ubikom-cli
-ubikom-cli allows you to run local and remote Ubikom commands
+bikom-cli allows you to run local and remote Ubikom commands
 
 Usage:
   ubikom-cli [flags]
   ubikom-cli [command]
 
 Available Commands:
+  bc          Blockchain-related commands
+  completion  Generate the autocompletion script for the specified shell
   create      Create various things
   disable     Disable something
   get         Get various things
