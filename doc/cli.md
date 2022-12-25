@@ -59,6 +59,8 @@ Confirm passphrase (enter for none):
 15:43:48 INF private key saved location=secret.key
 ```
 
+The key will be saved as secret.key file in the current directory.
+
 It is recommended that you use a passphrase when you create a key. If you don't, anyone who can access this file
 will be able to impersonate you.
 
@@ -68,18 +70,31 @@ It is possible to construct a private key given two pieces of data: password and
 for example, to transmit a private key over as a "user name" and "password", where salt plays the role of
 "user name". Email clients use it to send the email key over to Ubikom proxy using POP3 or SMTP protocol.
 
-If you don't specify salt flag it will be randomly generated for you, like so:
-
 ```
-$ ubikom-cli create key --from-password=supersecretpassword123 --out=secret.key
-salt: bqzPsQDh9YK
+$ ubikom-cli create key --from-password=supersecretpassword123 --salt=123456 --out=secret1.key
 Passphrase (enter for none):
 Confirm passphrase (enter for none):
 14:37:01 WRN saving private key without passphrase
-14:37:01 INF private key saved location=secret111.key
+14:37:01 INF private key saved location=secret1.key
 ```
 
 If you later use this command with --salt flag and specify the same salt, you will end up with the same key.
+
+Let's make sure this is the case. Generate another key using the same password and salt:
+
+```
+$ ubikom-cli create key --from-password=supersecretpassword123 --salt=123456 --out=secret2.key
+```
+
+Now we can compute SHA256 hash of both files and compare the hashes:
+
+```
+$ sha256sum secret1.key
+97a9a2a789a9905d43d8e6922fe2cfc14a05e2aa370b5408291b996e86fa3fa5  secret1.key
+
+$ sha256sum secret2.key
+97a9a2a789a9905d43d8e6922fe2cfc14a05e2aa370b5408291b996e86fa3fa5  secret2.key
+```
 
 ### Create Key from Mnemonic
 
@@ -133,40 +148,7 @@ $ ubikom-cli get mnemonic --key=secret.key
 5:  ....
 ```
 
-## Disable Key
-
-WARNING: Disabling a key will render it forever unusable. Anything related to this key (name, address, 
-etc.) will also become permanently disabled. This is a last resort option, in case your key becomes 
-compromised. Once you do it, there is no way back.
-
-```
-$ ubikom-cli disable key --key=secret.key
-```
-
-You will see a warning when running this command, and you will need to confirm your intentions. To do
-so, re-issue the command with --confirm flag.
-
 ## Registering keys, names, and addresses
-
-### Registering your public key
-
-Before using your private key, you must register it. When a key is registered, its information
-is stored in a public registry where it can be accessed by other users. For example, some
-other user might want to access your public key to encrypt mail addressed to you. Having public
-registry solves other problems as well. If your key is compromised, you can permanently 
-disable it in the public registry, rendering it useless.
-
-To register the key, execute the following command:
-
-```
-$ ubikom-cli register key --key=secret.key
-8:50:38 DBG generating POW...
-18:50:38 DBG POW found pow=5f5bf752ad129813
-18:50:38 INF key registered successfully
-```
-
-When you register a key, you must generate some minimal proof-of-work (POW). This is done to 
-reduce name squatting and spamming. Normally, generating POW will only take a few seconds.
 
 ### Registering name
 
