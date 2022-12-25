@@ -1,6 +1,18 @@
 # Using Ubikom CLI
 
-[Headers](#headers)  
+* [Prerequisites](#prerequisites)
+  * [Install CLI](#install-cli)
+  * [Create a Private Key](#create-a-private-key)
+    + [Create Key Using Password](#create-key-using-password)
+    + [Create Key from Mnemonic](#create-key-from-mnemonic)
+  * [Getting Key Information](#getting-key-information)
+    + [Get Key Address](#get-key-address)
+    + [Get Public Key](#get-public-key)
+    + [Get Key Mnemonic](#get-key-mnemonic)
+  * [Getting Balance, Funding](#getting-balance--funding)
+  * [Registering Names, Updating Configuration](#registering-names--updating-configuration)
+    + [Registering Name](#registering-name)
+    + [Registering Messaging Endpoint](#registering-messaging-endpoint)
 
 ## Prerequisites
 
@@ -198,9 +210,9 @@ Balance: 32375000000000000
 Notice that your balance is in wei, the smallest unit in Ethereum ecosystem. To convert it into Ether, you 
 may use a tool like this one: https://eth-converter.com/
 
-## Registering keys, names, and addresses
+## Registering Names, Updating Configuration
 
-### Registering name
+### Registering Name
 
 Once we have some funds in our account, we can register a name. After you register a name, you own it - you 
 can transfer the ownership to anyone else (if you so choose), or sell it in the future. Here, we will
@@ -308,17 +320,56 @@ Here's what we see:
 * THe owner is us (this is our Ethereum address);
 * The price of the name is zero, which means it's not for sale.
 
-### Registering messaging address
+### Registering Messaging Endpoint
 
-Registering a messaging address allows other users to send mail to you. By registering an address,
-you are saying "if you want to contact me using this protocol, you need to connect to an
-endpoint here". As of this writing, only one protocol exists - PL_DMS.
+Before you can start receiving messages, you must register a messaging endpoint. This is the endpoint 
+other users will use to send messages to you. Each name may have a number of configuration entries
+associated with it, each entry is a key/value pair (both are strings). For messaging, the name of the
+configuration entry must be "dms-endpoint". Ubikom provides a public server located at alpha.ubikom.cc:8826,
+which can be used as a messaging endpoint. It's fine to use another address (as long as it's running a 
+server implementing the messaging protocol). You can run your own server, if you want.
 
-With this in mind, the command to register an address will look like this:
+To register a messaging endpoint, run the following command:
 
 ```
-$ ubikom-cli register address bob alpha.ubikom.cc:8826 --key=secret.key
-19:23:04 DBG generating POW...
-19:23:14 DBG POW found pow=0716958a2af0f4d5
-19:23:14 INF address registered successfully
+ubikom-cli bc update config test666 --config-name=dms-endpoint --config-value=alpha.ubikom.cc:8826 --mode=test --key=secret.key --gas-
+price=3000000
+18:49:14 WRN using Sepolia testnet
+18:49:14 DBG using node node-url=https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23
+18:49:14 WRN using Sepolia testnet
+18:49:14 DBG using contract contract-address=0xcc8650c9cd8d99b62375c22f270a803e7abf0de9
+18:49:14 DBG got nonce nonce=3
+18:49:14 DBG got gas price gas-price=3000000
+18:49:14 DBG got chain ID chain-id=11155111
+tx sent: 0x2e5089d7cab9070362e8ee8f2acdff1188301fd569332eebffc91ac71bd41652
+{
+  "root": "0x",
+  "status": "0x1",
+  "cumulativeGasUsed": "0x2e260",
+  "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000080000000000000000000000000000000000",
+  "logs": [
+    {
+      "address": "0xcc8650c9cd8d99b62375c22f270a803e7abf0de9",
+      "topics": [
+        "0xcde50e1bbc8495f4d015791042ac8d9b4e45d1cd60159e1fbad5863ee388d828"
+      ],
+      "data": "0x000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000077465737436363600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c646d732d656e64706f696e7400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000014616c7068612e7562696b6f6d2e63633a38383236000000000000000000000000",
+      "blockNumber": "0x26f859",
+      "transactionHash": "0x2e5089d7cab9070362e8ee8f2acdff1188301fd569332eebffc91ac71bd41652",
+      "transactionIndex": "0x1",
+      "blockHash": "0x00f4ed3b32a400eb5d66eb10f874c01318900fd02c4747ce9190a4f1beefb9af",
+      "logIndex": "0x0",
+      "removed": false
+    }
+  ],
+  "transactionHash": "0x2e5089d7cab9070362e8ee8f2acdff1188301fd569332eebffc91ac71bd41652",
+  "contractAddress": "0x0000000000000000000000000000000000000000",
+  "gasUsed": "0xd115",
+  "blockHash": "0x00f4ed3b32a400eb5d66eb10f874c01318900fd02c4747ce9190a4f1beefb9af",
+  "blockNumber": "0x26f859",
+  "transactionIndex": "0x1"
+}
 ```
+
+Here, we used gas-price flag to specify the gas price. Sometimes, the suggested gas price in Sepolia is too high (probably an issue with the 
+new test network), and you might need to specify gas-price explicitly. If you don't, the suggested gas price value will be used.
