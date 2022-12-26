@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -82,7 +83,7 @@ var transferCmd = &cobra.Command{
 			accountAddress = accountFrom.Address
 
 		} else {
-			key, err = LoadKeyFromFlag(cmd, "key")
+			key, err = cmdutil.LoadKeyFromFlag(cmd, "key")
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to load key")
 			}

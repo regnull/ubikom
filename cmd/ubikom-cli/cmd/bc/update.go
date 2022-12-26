@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	cntv2 "github.com/regnull/ubchain/gocontract/v2"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -48,11 +49,11 @@ var updatePublicKeyCmd = &cobra.Command{
 	Short: "Update public key on the blockchain",
 	Long:  "Update public key on the blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := LoadKeyFromFlag(cmd, "key")
+		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
-		encKey, err := LoadKeyFromFlag(cmd, "pub-key")
+		encKey, err := cmdutil.LoadKeyFromFlag(cmd, "pub-key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load reg key")
 		}
@@ -93,7 +94,7 @@ var updateOwnerCmd = &cobra.Command{
 	Short: "Update name owner on the blockchain",
 	Long:  "Update name owner on the blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := LoadKeyFromFlag(cmd, "key")
+		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
@@ -139,7 +140,7 @@ var updatePriceCmd = &cobra.Command{
 	Short: "Update name price on the blockchain",
 	Long:  "Update name price on the blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := LoadKeyFromFlag(cmd, "key")
+		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
@@ -184,7 +185,7 @@ var updateConfigCmd = &cobra.Command{
 	Short: "Update name config on the blockchain",
 	Long:  "Update name config on the blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := LoadKeyFromFlag(cmd, "key")
+		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
@@ -193,12 +194,12 @@ var updateConfigCmd = &cobra.Command{
 		}
 		name := args[0]
 
-		nodeURL, err := getNodeURL(cmd.Flags())
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 		log.Debug().Str("node-url", nodeURL).Msg("using node")
-		contractAddress, err := getContractAddress(cmd.Flags())
+		contractAddress, err := cmdutil.GetContractAddress(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}

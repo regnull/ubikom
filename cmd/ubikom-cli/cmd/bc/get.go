@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +35,7 @@ var getBalanceCmd = &cobra.Command{
 	Short: "Get balance",
 	Long:  "Get balance",
 	Run: func(cmd *cobra.Command, args []string) {
-		nodeURL, err := getNodeURL(cmd.Flags())
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
@@ -65,7 +66,7 @@ var getBlockCmd = &cobra.Command{
 	Short: "Get latest block number",
 	Long:  "Get latest block number",
 	Run: func(cmd *cobra.Command, args []string) {
-		nodeURL, err := getNodeURL(cmd.Flags())
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
@@ -90,7 +91,7 @@ var getReceiptCmd = &cobra.Command{
 	Short: "Get transaction receipt",
 	Long:  "Get transaction receipt",
 	Run: func(cmd *cobra.Command, args []string) {
-		nodeURL, err := getNodeURL(cmd.Flags())
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}

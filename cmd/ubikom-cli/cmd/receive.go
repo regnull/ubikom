@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/regnull/easyecc"
-	"github.com/regnull/ubikom/globals"
+	"github.com/regnull/ubikom/bc"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
@@ -18,8 +19,10 @@ import (
 )
 
 func init() {
-	receiveCmd.PersistentFlags().String("dump-service-url", globals.PublicDumpServiceURL, "dump service URL")
-	receiveCmd.PersistentFlags().String("lookup-service-url", globals.PublicLookupServiceURL, "lookup service URL")
+	receiveCmd.PersistentFlags().String("network", "main", "mode, either live or prod")
+	receiveCmd.PersistentFlags().String("node-url", "", "blockchain node location")
+	receiveCmd.PersistentFlags().String("contract-address", "", "registry contract address")
+	receiveCmd.PersistentFlags().String("dump-service-url", "", "dump service url")
 
 	receiveMessageCmd.Flags().String("key", "", "Location of the private key file")
 	receiveCmd.AddCommand(receiveMessageCmd)
@@ -47,42 +50,25 @@ var receiveMessageCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get dump server URL")
 		}
+		if dumpURL == "" {
+			log.Fatal().Msg("--dump-service-url must be specified")
+		}
 
-		lookupServiceURL, err := cmd.Flags().GetString("lookup-service-url")
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get lookup server URL")
+			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
-
-		keyFile, err := cmd.Flags().GetString("key")
+		log.Debug().Str("node-url", nodeURL).Msg("using node")
+		contractAddress, err := cmdutil.GetContractAddress(cmd.Flags())
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get key location")
+			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
+		log.Debug().Str("contract-address", contractAddress).Msg("using contract addresss")
 
-		if keyFile == "" {
-			keyFile, err = util.GetDefaultKeyLocation()
-			if err != nil {
-				log.Fatal().Err(err).Msg("failed to get private key")
-			}
-		}
-
-		encrypted, err := util.IsKeyEncrypted(keyFile)
+		privateKey, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
-			log.Fatal().Err(err).Msg("cannot find key file")
+			log.Fatal().Err(err).Msg("failed to load encryption key")
 		}
-
-		passphrase := ""
-		if encrypted {
-			passphrase, err = util.ReadPassphase()
-			if err != nil {
-				log.Fatal().Err(err).Msg("cannot read passphrase")
-			}
-		}
-
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
-		if err != nil {
-			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
-		}
-
 		opts := []grpc.DialOption{
 			grpc.WithInsecure(),
 			grpc.WithBlock(),
@@ -118,12 +104,10 @@ var receiveMessageCmd = &cobra.Command{
 		}
 		msg := res.GetMessage()
 
-		lookupConn, err := grpc.Dial(lookupServiceURL, opts...)
+		lookupService, err := bc.NewBlockchainV2(nodeURL, contractAddress)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to connect to the lookup server")
+			log.Fatal().Err(err).Msg("failed to create lookup service")
 		}
-		defer lookupConn.Close()
-		lookupService := pb.NewLookupServiceClient(lookupConn)
 		lookupRes, err := lookupService.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get receiver public key")

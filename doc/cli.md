@@ -14,6 +14,11 @@
   * [Registering Names, Updating Configuration](#registering-names--updating-configuration)
     + [Registering Name](#registering-name)
     + [Registering Messaging Endpoint](#registering-messaging-endpoint)
+  * [Sending and Receiving Encrypted Messages](#sending-and-receiving-encrypted-messages)
+    + [Starting Dump Server](#starting-dump-server)
+    + [Creating Keys and Registering Names](#creating-keys-and-registering-names)
+    + [Sending Messages](#sending-messages)
+    + [Receiving Messages](#receiving-messages)
 
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
@@ -401,10 +406,135 @@ alpha.ubikom.cc:8826
 
 ## Sending and Receiving Encrypted Messages
 
+There are two components involved in sending and receiving encrypted messages:
+
+* The identity registry (deployed on the blockchain) keeps track of the names, 
+public keys, and messaging endpoints;
+* The dump server stores and returns encrypted messages.
+
+Here, we will use a local instance of the dump server.
+
+### Starting Dump Server
+
+Let's start a local instance of the dump server. If you cloned the Ubikom repo,
+the dump server resides under cmd/ubikom-dump:
+
+```
+# From the repo directory.
+$ cd cmd/ubikom-dump
+# The server binary will be placed under $GOROOT/bin.
+$ go install
+$ ubikom-dump --data-dir=some_data_directory --lookup-server-url="" \
+  --network=sepolia --log-level=debug
+```
+
+--data-dir specifies the directory where dump server will write the data.
+
+--lookup-server-url="" disables the legacy identity registry (this option will go away after
+migration to Ethereum-based identity registry is complete).
+
+--network=sepolia instructs dump server to use sepolia test network.
+
+The server will start on the default port, 8826. Now we can proceed in a different
+terminal window.
+
+### Creating Keys and Registering Names
+
+Let's register a new set of keys and names. We will use the previously created (and funded)
+secret key (file secret.key, see above). Use your own names instead of 
+"alice111" and "bob111".
+
+```
+# Create a key and associate it with name "alice111".
+$ ubikom-cli create key --out=alice.key
+...
+
+$ ubikom-cli bc register name alice111 --key=secret.key \
+  --enc-key=alice.key --network=sepolia
+...
+
+# Register the messaging endpoint for alice111.
+$ ubikom-cli bc update config alice111 \
+  --config-name=dms-endpoint --config-value=localhost:8826 \
+  --network=sepolia --key=secret.key
+...
+
+# Create a key and associate it with name "bob111".
+$ ubikom-cli create key --out=bob.key
+...
+
+$ ubikom-cli bc register name bob111 --key=secret.key \
+  --enc-key=bob.key --network=sepolia
+...
+
+# Register the messaging endpoint for bob111.
+$ ubikom-cli bc update config bob111 \
+  --config-name=dms-endpoint --config-value=localhost:8826 \
+  --network=sepolia --key=secret.key
+...
+```
+
+Here's what happened:
+
+* We have created a new key and registered it as an encryption key for name "alice111".
+* We have created a new key and registered it as an encryption key for name 
+"bob111".
+* For both names, we've updated the configuration so that the messages are delivered
+to localhost:8826
+* Notice that the names are owned by the address that was used to register them,
+which is the address associated with secret.key file. It has the ultimate authority
+to change the registration data later on.
+
 ### Sending Messages
 
-[TODO]
+Finally, we are ready to send an encrypted message:
+
+```
+$ ubikom-cli send message --sender=alice111 --receiver=bob111 \
+  --key=alice.key --network=sepolia
+14:03:03 WRN using Sepolia testnet
+14:03:03 WRN using Sepolia testnet
+Enter your message, dot on an empty line to finish:
+Attack at dawn
+.
+14:03:13 DBG got receiver's public key
+14:03:13 DBG got receiver's address address=localhost:8826
+14:03:14 DBG sent message successfully
+```
+
+Let's go over the steps:
+
+* We are sending a message (as alice111) to bob111, using our
+encryption key located in alice.key file.
+* First, ubikom-cli must figure out where to send the message. It
+queries the identity registry (on Sepolia test network), and finds
+localhost:8826 as the destination.
+* The message is sent to localhost:8826, where our dump server is running.
+* Dump server verifies that the message originates from someone who has
+control over the private key associated with "alice111" name. The 
+verification succeeds, and it accepts the message, and writes it to the
+local storage. The message is encrypted, only the original sender or the
+recipient can read it.
+* The message sits in the local storage until bob111 shows up to receive it.
 
 ### Receiving Messages
 
-[TODO]
+Now, we can receive the message (as bob111):
+
+```
+ ubikom-cli receive message --key=bob.key --network=sepolia \
+   --dump-service-url=localhost:8826
+14:13:00 WRN using Sepolia testnet
+Attack at dawn
+```
+
+Receiving the message included those steps:
+
+* We generated a proof that we have control over the key associated with
+the name "bob111" and sent it to dump server.
+* Dump server, satisfied with the proof, sent us the encrypted message.
+* We verified that the message came from the stated sender "alice111", by
+retrieving their public key from the identity registry and verifying the
+signature.
+* The message was decrypted by using the key derived from alice111 public key
+and bob111 private key.

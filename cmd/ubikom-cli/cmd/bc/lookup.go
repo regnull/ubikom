@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
 	cntv2 "github.com/regnull/ubchain/gocontract/v2"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -42,12 +43,12 @@ var lookupNameCmd = &cobra.Command{
 	Short: "Get name",
 	Long:  "Get name",
 	Run: func(cmd *cobra.Command, args []string) {
-		nodeURL, err := getNodeURL(cmd.Flags())
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 		log.Debug().Str("node-url", nodeURL).Msg("using node")
-		contractAddress, err := getContractAddress(cmd.Flags())
+		contractAddress, err := cmdutil.GetContractAddress(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
@@ -106,12 +107,12 @@ var lookupConfigCmd = &cobra.Command{
 	Short: "Get config",
 	Long:  "Get config",
 	Run: func(cmd *cobra.Command, args []string) {
-		nodeURL, err := getNodeURL(cmd.Flags())
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 		log.Debug().Str("node-url", nodeURL).Msg("using node")
-		contractAddress, err := getContractAddress(cmd.Flags())
+		contractAddress, err := cmdutil.GetContractAddress(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}

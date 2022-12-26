@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
 	cntv2 "github.com/regnull/ubchain/gocontract/v2"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -37,7 +38,7 @@ var buyNameCmd = &cobra.Command{
 	Short: "Buy name",
 	Long:  "Buy name",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := LoadKeyFromFlag(cmd, "key")
+		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
@@ -57,7 +58,7 @@ var buyNameCmd = &cobra.Command{
 			}
 			log.Info().Str("key", string(encKey.PublicKey().EthereumAddress())).Msg("generated new encryption key")
 		} else {
-			encKey, err = LoadKeyFromFlag(cmd, "enc-key")
+			encKey, err = cmdutil.LoadKeyFromFlag(cmd, "enc-key")
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to load encryption key")
 			}

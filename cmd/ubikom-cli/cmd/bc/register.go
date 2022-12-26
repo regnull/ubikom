@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
 	cntv2 "github.com/regnull/ubchain/gocontract/v2"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +35,7 @@ var registerNameCmd = &cobra.Command{
 	Short: "Register name on the blockchain",
 	Long:  "Register name on the blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := LoadKeyFromFlag(cmd, "key")
+		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
@@ -50,7 +51,7 @@ var registerNameCmd = &cobra.Command{
 			}
 			log.Info().Str("key", string(encKey.PublicKey().EthereumAddress())).Msg("generated new encryption key")
 		} else {
-			encKey, err = LoadKeyFromFlag(cmd, "enc-key")
+			encKey, err = cmdutil.LoadKeyFromFlag(cmd, "enc-key")
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to load encryption key")
 			}
@@ -68,12 +69,12 @@ var registerNameCmd = &cobra.Command{
 		}
 
 		name := args[0]
-		nodeURL, err := getNodeURL(cmd.Flags())
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
 		log.Debug().Str("node-url", nodeURL).Msg("using node")
-		contractAddress, err := getContractAddress(cmd.Flags())
+		contractAddress, err := cmdutil.GetContractAddress(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}

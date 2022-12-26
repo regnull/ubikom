@@ -14,6 +14,7 @@ import (
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubchain/gocontract"
 	gocontv2 "github.com/regnull/ubchain/gocontract/v2"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -54,7 +55,7 @@ var deployKeyRegistryCmd = &cobra.Command{
 	Short: "Deploy key registry",
 	Long:  "Deploy key registry",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := LoadKeyFromFlag(cmd, "key")
+		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
@@ -88,7 +89,7 @@ var deployNameRegistryCmd = &cobra.Command{
 	Short: "Deploy name registry",
 	Long:  "Deploy name registry",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := LoadKeyFromFlag(cmd, "key")
+		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
@@ -133,7 +134,7 @@ var deployConnectorRegistryCmd = &cobra.Command{
 	Short: "Deploy connector registry",
 	Long:  "Deploy connector registry",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := LoadKeyFromFlag(cmd, "key")
+		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
@@ -194,7 +195,7 @@ var deployRegistryCmd = &cobra.Command{
 	Short: "Deploy registry v2",
 	Long:  "Deploy registry v2",
 	Run: func(cmd *cobra.Command, args []string) {
-		key, err := LoadKeyFromFlag(cmd, "key")
+		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
