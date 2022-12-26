@@ -127,6 +127,9 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 		log.Fatal().Err(err).Msg("failed to get transaction receipt")
 	}
 	jsonBytes, err := json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		return err
+	}
 	fmt.Printf("%s\n", jsonBytes)
 
 	// It's not entirely clear how to see when a write transaction failed, because the contract is

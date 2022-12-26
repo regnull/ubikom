@@ -24,6 +24,8 @@ const (
 	defaultHomeSubDir         = ".ubikom"
 	defaultDataSubDir         = "dump"
 	defaultMaxMessageAgeHours = 14 * 24
+	defaultNetwork            = "sepolia"
+	defaultLogLevel           = "info"
 )
 
 type CmdArgs struct {
@@ -33,6 +35,10 @@ type CmdArgs struct {
 	MaxMessageAgeHours     int
 	BlockchainNodeURL      string
 	UseLegacyLookupService bool
+	Network                string
+	ContractAddress        string
+	LogLevel               string
+	LogNoColor             bool
 }
 
 func main() {
@@ -42,11 +48,25 @@ func main() {
 	var args CmdArgs
 	flag.IntVar(&args.Port, "port", defaultPort, "port to listen to")
 	flag.StringVar(&args.DataDir, "data-dir", "", "base directory")
-	flag.StringVar(&args.LookupServerURL, "lookup-server-url", defaultIdentityServerURL, "URL of the lookup server")
+	flag.StringVar(&args.LookupServerURL, "lookup-server-url", defaultIdentityServerURL, "DEPRECATED: URL of the lookup server")
 	flag.IntVar(&args.MaxMessageAgeHours, "max-message-age-hours", defaultMaxMessageAgeHours, "max message age, in hours")
-	flag.StringVar(&args.BlockchainNodeURL, "blockchain-node-url", globals.BlockchainNodeURL, "blockchain node url")
-	flag.BoolVar(&args.UseLegacyLookupService, "use-legacy-lookup-service", false, "use legacy lookup service")
+	flag.StringVar(&args.BlockchainNodeURL, "blockchain-node-url", globals.BlockchainNodeURL, "DEPRECATES: blockchain node url (use network flag instead)")
+	flag.BoolVar(&args.UseLegacyLookupService, "use-legacy-lookup-service", false, "DEPRECATED: use legacy lookup service")
+	flag.StringVar(&args.Network, "network", defaultNetwork, "ethereum network to use")
+	flag.StringVar(&args.ContractAddress, "contract-address", "", "name registry contract address")
+	flag.StringVar(&args.LogLevel, "log-level", defaultLogLevel, "log level")
+	flag.BoolVar(&args.LogNoColor, "log-no-color", false, "disable colors for logging")
 	flag.Parse()
+
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "01/02 15:04:05", NoColor: args.LogNoColor})
+
+	// Set the log level.
+	logLevel, err := zerolog.ParseLevel(args.LogLevel)
+	if err != nil {
+		log.Fatal().Str("level", args.LogLevel).Msg("invalid log level")
+	}
+
+	zerolog.SetGlobalLevel(logLevel)
 
 	if args.DataDir == "" {
 		homeDir, err := os.UserHomeDir()
@@ -61,29 +81,13 @@ func main() {
 	}
 	log.Info().Str("data-dir", args.DataDir).Msg("got data directory")
 
-	lookupService, conn, err := connectToLookupService(args.LookupServerURL)
+	lookupClient, cleanup, err := getLookupService(&args)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to connect to lookup server")
+		log.Fatal().Err(err).Msg("failed to initialize lookup client")
 	}
-	defer conn.Close()
+	defer cleanup()
 
-	log.Info().Str("url", args.BlockchainNodeURL).Msg("connecting to blockchain node")
-	client, err := ethclient.Dial(args.BlockchainNodeURL)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to connect to blockchain node")
-	}
-	blockchain := bc.NewBlockchain(client, globals.KeyRegistryContractAddress,
-		globals.NameRegistryContractAddress, globals.ConnectorRegistryContractAddress, nil)
-
-	var combinedLookupClient pb.LookupServiceClient
-	if args.UseLegacyLookupService {
-		log.Info().Msg("using legacy lookup service")
-		combinedLookupClient = lookupService
-	} else {
-		combinedLookupClient = bc.NewLookupServiceClient(blockchain, lookupService, false)
-	}
-
-	dumpServer, err := server.NewDumpServer(args.DataDir, combinedLookupClient, args.MaxMessageAgeHours)
+	dumpServer, err := server.NewDumpServer(args.DataDir, lookupClient, args.MaxMessageAgeHours)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create data store")
 	}
@@ -112,4 +116,61 @@ func connectToLookupService(url string) (pb.LookupServiceClient, *grpc.ClientCon
 	}
 
 	return pb.NewLookupServiceClient(conn), conn, nil
+}
+
+func getLookupService(args *CmdArgs) (pb.LookupServiceClient, func(), error) {
+	// We always use the new blockchain lookup service as the first priority.
+	// If arguments for the legacy lookup service are specified, we will use
+	// them as fallback.
+
+	nodeURL, err := bc.GetNodeURL(args.Network)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get network URL: %w", err)
+	}
+	log.Debug().Str("node-url", nodeURL).Msg("using blockchain node")
+
+	contractAddress, err := bc.GetContractAddress(args.Network, args.ContractAddress)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get contract address: %w", err)
+	}
+	log.Debug().Str("contract-address", contractAddress).Msg("using contract")
+
+	// This is our main blockchain-based lookup service. Eventually, it will be the only one.
+	// For now, we will fallback on the existing old-style blockchain lookup service, or
+	// standalone lookup service. Those will go away.
+	blockchainV2Lookup, err := bc.NewBlockchainV2(nodeURL, contractAddress)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to blockchain node: %w", err)
+	}
+
+	if args.LookupServerURL == "" || args.BlockchainNodeURL == "" {
+		return blockchainV2Lookup, nil, nil
+	}
+
+	// Standalone lookup service - to be deprecated.
+	lookupService, conn, err := connectToLookupService(args.LookupServerURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to lookup server")
+	}
+
+	// Old-style blockchain lookup service - to be deprecated.
+	log.Info().Str("url", args.BlockchainNodeURL).Msg("connecting to blockchain node")
+	client, err := ethclient.Dial(args.BlockchainNodeURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to blockchain node")
+	}
+	blockchain := bc.NewBlockchain(client, globals.KeyRegistryContractAddress,
+		globals.NameRegistryContractAddress, globals.ConnectorRegistryContractAddress, nil)
+
+	var combinedLookupClient pb.LookupServiceClient
+	if args.UseLegacyLookupService {
+		log.Info().Msg("using legacy lookup service")
+		combinedLookupClient = lookupService
+	} else {
+		combinedLookupClient = bc.NewLookupServiceClient(blockchain, lookupService, false)
+	}
+
+	// For now, we use old lookup service as a fallback.
+	combinedLookupClient = bc.NewLookupServiceV2(blockchainV2Lookup, combinedLookupClient)
+	return combinedLookupClient, func() { conn.Close() }, nil
 }
