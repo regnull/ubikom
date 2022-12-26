@@ -10,14 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
 	cntv2 "github.com/regnull/ubchain/gocontract/v2"
-	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 func init() {
 	lookupConfigCmd.Flags().String("config-name", "", "protocol to look up")
-	lookupConfigCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	lookupCmd.AddCommand(lookupNameCmd)
 	lookupCmd.AddCommand(lookupConfigCmd)
@@ -103,19 +101,19 @@ var lookupNameCmd = &cobra.Command{
 	},
 }
 
-type lookupConfigRes struct {
-	ConfigName  string
-	ConfigValue string
-}
-
 var lookupConfigCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Get config",
 	Long:  "Get config",
 	Run: func(cmd *cobra.Command, args []string) {
-		nodeURL, err := cmd.Flags().GetString("node-url")
+		nodeURL, err := getNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
+		}
+		log.Debug().Str("node-url", nodeURL).Msg("using node")
+		contractAddress, err := getContractAddress(cmd.Flags())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
 
 		if len(args) < 1 {
@@ -127,11 +125,6 @@ var lookupConfigCmd = &cobra.Command{
 		configName, err := cmd.Flags().GetString("config-name")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load protocol")
-		}
-
-		contractAddress, err := cmd.Flags().GetString("contract-address")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
 
 		// Connect to the node.
@@ -151,12 +144,6 @@ var lookupConfigCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to query the config")
 		}
 
-		res := &lookupConfigRes{
-			ConfigName:  configName,
-			ConfigValue: configValue,
-		}
-
-		s, err := json.MarshalIndent(res, "", "  ")
-		fmt.Printf("%s\n", s)
+		fmt.Printf("%s\n", configValue)
 	},
 }

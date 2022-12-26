@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	cntv2 "github.com/regnull/ubchain/gocontract/v2"
-	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -16,20 +15,16 @@ import (
 func init() {
 	updatePublicKeyCmd.Flags().String("key", "", "key to authorize the transaction")
 	updatePublicKeyCmd.Flags().String("pub-key", "", "public key to update")
-	updatePublicKeyCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	updateOwnerCmd.Flags().String("key", "", "key to authorize the transaction")
 	updateOwnerCmd.Flags().String("new-owner-address", "", "new owner address")
-	updateOwnerCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	updatePriceCmd.Flags().String("key", "", "key to authorize the transaction")
 	updatePriceCmd.Flags().Int64("price", 0, "new price")
-	updatePriceCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	updateConfigCmd.Flags().String("key", "", "key to authorize the transaction")
 	updateConfigCmd.Flags().String("config-name", "", "new price")
 	updateConfigCmd.Flags().String("config-value", "", "new price")
-	updateConfigCmd.Flags().String("contract-address", globals.MainnetNameRegistryAddress, "contract address")
 
 	updateCmd.AddCommand(updatePublicKeyCmd)
 	updateCmd.AddCommand(updateOwnerCmd)
@@ -198,10 +193,25 @@ var updateConfigCmd = &cobra.Command{
 		}
 		name := args[0]
 
-		nodeURL, err := cmd.Flags().GetString("node-url")
+		nodeURL, err := getNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
+		log.Debug().Str("node-url", nodeURL).Msg("using node")
+		contractAddress, err := getContractAddress(cmd.Flags())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load contract address")
+		}
+		log.Debug().Str("contract-address", contractAddress).Msg("using contract")
+		gasPrice, err := cmd.Flags().GetUint64("gas-price")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get gas-price flag")
+		}
+		gasLimit, err := cmd.Flags().GetUint64("gas-limit")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get gas-limit flag")
+		}
+
 		configName, err := cmd.Flags().GetString("config-name")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get config name")
@@ -213,11 +223,7 @@ var updateConfigCmd = &cobra.Command{
 		if configName == "" {
 			log.Fatal().Msg("--config-name cannot be empty")
 		}
-		contractAddress, err := cmd.Flags().GetString("contract-address")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load contract address")
-		}
-		err = interactWithContract(nodeURL, key, contractAddress, 0, 0, 0,
+		err = interactWithContract(nodeURL, key, contractAddress, 0, gasPrice, gasLimit,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := cntv2.NewNameRegistry(addr, client)
 				if err != nil {
