@@ -12,13 +12,21 @@ import (
 
 func init() {
 	getAddressCmd.Flags().String("key", "", "Location for the private key file")
+
 	getEthereumAddressCmd.Flags().String("key", "", "Location for the private key file")
+
+	getBitcoinAddressCmd.Flags().String("key", "", "Location for the private key file")
+
 	getPublicKeyCmd.Flags().String("key", "", "Location for the private key file")
+
 	getMnemonicCmd.Flags().String("key", "", "Location for the private key file")
+
 	getCmd.AddCommand(getAddressCmd)
 	getCmd.AddCommand(getEthereumAddressCmd)
+	getCmd.AddCommand(getBitcoinAddressCmd)
 	getCmd.AddCommand(getPublicKeyCmd)
 	getCmd.AddCommand(getMnemonicCmd)
+
 	rootCmd.AddCommand(getCmd)
 }
 
@@ -30,49 +38,10 @@ var getCmd = &cobra.Command{
 	},
 }
 
-var getAddressCmd = &cobra.Command{
-	Use:   "address",
-	Short: "Get address",
-	Long:  "Get address",
-	Run: func(cmd *cobra.Command, args []string) {
-		keyFile, err := cmd.Flags().GetString("key")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get key location")
-		}
-
-		if keyFile == "" {
-			keyFile, err = util.GetDefaultKeyLocation()
-			if err != nil {
-				log.Fatal().Err(err).Msg("failed to get private key")
-			}
-		}
-
-		encrypted, err := util.IsKeyEncrypted(keyFile)
-		if err != nil {
-			log.Fatal().Err(err).Msg("cannot find key file")
-		}
-
-		passphrase := ""
-		if encrypted {
-			passphrase, err = util.ReadPassphase()
-			if err != nil {
-				log.Fatal().Err(err).Msg("cannot read passphrase")
-			}
-		}
-
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
-		if err != nil {
-			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
-		}
-
-		fmt.Printf("%s\n", privateKey.PublicKey().Address())
-	},
-}
-
 var getEthereumAddressCmd = &cobra.Command{
 	Use:   "ethereum-address",
 	Short: "Get Ethereum address",
-	Long:  "Get Ethereum address",
+	Long:  "Get Ethereum address for the specified key",
 	Run: func(cmd *cobra.Command, args []string) {
 		keyFile, err := cmd.Flags().GetString("key")
 		if err != nil {
@@ -105,6 +74,54 @@ var getEthereumAddressCmd = &cobra.Command{
 		}
 
 		fmt.Printf("%s\n", privateKey.PublicKey().EthereumAddress())
+	},
+}
+
+var getAddressCmd = &cobra.Command{
+	Use:   "address",
+	Short: "Get Ethereum address",
+	Long:  "Get Ethereum address for the specified key",
+	Run: func(cmd *cobra.Command, args []string) {
+		getEthereumAddressCmd.Run(cmd, args)
+	},
+}
+
+var getBitcoinAddressCmd = &cobra.Command{
+	Use:   "bitcoin-address",
+	Short: "Get Bitcoin address",
+	Long:  "Get Bitcoin address for the specified key",
+	Run: func(cmd *cobra.Command, args []string) {
+		keyFile, err := cmd.Flags().GetString("key")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get key location")
+		}
+
+		if keyFile == "" {
+			keyFile, err = util.GetDefaultKeyLocation()
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to get private key")
+			}
+		}
+
+		encrypted, err := util.IsKeyEncrypted(keyFile)
+		if err != nil {
+			log.Fatal().Err(err).Msg("cannot find key file")
+		}
+
+		passphrase := ""
+		if encrypted {
+			passphrase, err = util.ReadPassphase()
+			if err != nil {
+				log.Fatal().Err(err).Msg("cannot read passphrase")
+			}
+		}
+
+		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
+		if err != nil {
+			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
+		}
+
+		fmt.Printf("%s\n", privateKey.PublicKey().Address())
 	},
 }
 

@@ -85,8 +85,11 @@ Confirm passphrase (enter for none):
 
 The key will be saved as secret.key file in the current directory.
 
-It is recommended that you use a passphrase when you create a key. If you don't, anyone who can access this file
-will be able to impersonate you.
+It is recommended that you use a passphrase when you create a key. If you don't, 
+anyone with an access to this file will be able to use it right away. Which
+is not to say that using a passphrase would give you perfect protection -
+ubikom-cli is a practical tool, not an industrial-strength wallet. Never
+use it to protect your valuable crypto accounts.
 
 ### Create Key Using Password
 
@@ -95,8 +98,8 @@ for example, to transmit a private key over as a "user name" and "password", whe
 "user name". Email clients use it to send the email key over to Ubikom proxy using POP3 or SMTP protocol.
 
 ```
-$ ubikom-cli create key --from-password=supersecretpassword123 --salt=123456 \
-  --out=secret1.key
+$ ubikom-cli create key --from-password=supersecretpassword123 \
+  --salt=123456 --out=secret1.key
 Passphrase (enter for none):
 Confirm passphrase (enter for none):
 14:37:01 WRN saving private key without passphrase
@@ -108,18 +111,18 @@ If you later use this command with --salt flag and specify the same salt, you wi
 Let's make sure this is the case. Generate another key using the same password and salt:
 
 ```
-$ ubikom-cli create key --from-password=supersecretpassword123 --salt=123456 \
-  --out=secret2.key
+$ ubikom-cli create key --from-password=supersecretpassword123 \
+  --salt=123456 --out=secret2.key
 ```
 
 Now we can compute SHA256 hash of both files and compare the hashes:
 
 ```
 $ sha256sum secret1.key
-97a9a2a789a9905d43d8e6922fe2cfc14a05e2aa370b5408291b996e86fa3fa5  secret1.key
+97a9a2...fa3fa5  secret1.key
 
 $ sha256sum secret2.key
-97a9a2a789a9905d43d8e6922fe2cfc14a05e2aa370b5408291b996e86fa3fa5  secret2.key
+97a9a2...fa3fa5  secret2.key
 ```
 
 ### Create Key from Mnemonic
@@ -141,20 +144,23 @@ Now that you have your key, you can get various details about it.
 
 ### Get Key Address
 
-To get the Bitcoin-style key address, use "get address" command:
+To get the Ethereum-style key address, use "get address" command:
 
 ```
 $ ubikom-cli get address --key=secret.key
-1GCFeppSWHPFwvFdAzU7N7CLA6A9jFVX3J
+0x27A5f262Be45D99068C157c5A10430ddA252B1f6
+
+# Same thing - returns Ethereum address.
+$ ubikom-cli get ethereum-address --key=secret.key
+0x27A5f262Be45D99068C157c5A10430ddA252B1f6
 ```
 
 If your key was saved with a passphrase, you will be prompted for one.
 
-Most of the time we will be using key's Ethereum-style address, which you get get like so:
-
+To get Bitcoin-style address, use "get bitcoin-address" command:
 ```
-$ ubikom-cli get ethereum-address --key secret.key
-0x27A5f262Be45D99068C157c5A10430ddA252B1f6
+$ ubikom-cli get bitcoin-address --key secret.key
+166UnLK76wCm4qwTAkU9SF4WLBJ8kmgEN7
 ```
 
 ### Get Public Key
@@ -163,8 +169,10 @@ To get the public key associated with this private key, use "get public-key" com
 
 ```
 $ ubikom-cli get public-key --key=secret.key
-y55y9N5aRJ3wbvV2oULsJhECrWE26be5LHHV4iWcrToE
+0x036e7...23b994
 ```
+
+Public key here is 33 byte-long compressed public key.
 
 ### Get Key Mnemonic
 
