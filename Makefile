@@ -4,6 +4,7 @@
 .PHONY: server-stop
 .PHONY: server-start
 .PHONY: test
+.PHONY: pdf
 
 UBIKOM_ONE_ADR = alpha.ubikom.cc
 MAIL_SERVER_ADR = mail.ubikom.cc
@@ -59,3 +60,6 @@ cover:
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out
 
+pdf:
+	mkdir -p $(ROOT_DIR)doc/pdf
+	cd $(ROOT_DIR)doc; for f in *.md ; do pandoc "$$f" -o "./pdf/$${f%.md}.pdf"; done
