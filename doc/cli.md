@@ -1,6 +1,6 @@
 # Using Ubikom CLI
 
-    * [Prerequisites](#prerequisites)
+  * [Prerequisites](#prerequisites)
   * [Install CLI](#install-cli)
   * [Output Format](#output-format)
   * [Create a Private Key](#create-a-private-key)
