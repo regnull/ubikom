@@ -120,7 +120,7 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 	if err != nil {
 		return err
 	}
-	fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
+	log.Info().Str("tx", tx.Hash().Hex()).Msg("tx sent")
 
 	res, err := WaitMined(client, tx, time.Second*30)
 	if err != nil {
@@ -148,17 +148,17 @@ func getNodeURL(flags *pflag.FlagSet) (string, error) {
 	if nodeURL != "" {
 		return nodeURL, nil
 	}
-	mode, err := flags.GetString("mode")
+	mode, err := flags.GetString("network")
 	if err != nil {
-		return "", fmt.Errorf("failed to get mode")
+		return "", fmt.Errorf("failed to get network")
 	}
-	if mode == "live" {
+	if mode == "main" {
 		return globals.InfuraNodeURL, nil
-	} else if mode == "test" {
+	} else if mode == "sepolia" {
 		log.Warn().Msg("using Sepolia testnet")
 		return globals.InfuraSepoliaNodeURL, nil
 	}
-	return "", fmt.Errorf("invalid mode, must be live or test")
+	return "", fmt.Errorf("invalid network, must be main or sepolia")
 }
 
 func getContractAddress(flags *pflag.FlagSet) (string, error) {
@@ -169,15 +169,15 @@ func getContractAddress(flags *pflag.FlagSet) (string, error) {
 	if contractAddress != "" {
 		return contractAddress, nil
 	}
-	mode, err := flags.GetString("mode")
+	mode, err := flags.GetString("network")
 	if err != nil {
-		return "", fmt.Errorf("failed to get mode")
+		return "", fmt.Errorf("failed to get network")
 	}
-	if mode == "live" {
+	if mode == "main" {
 		return globals.MainnetNameRegistryAddress, nil
-	} else if mode == "test" {
+	} else if mode == "sepolia" {
 		log.Warn().Msg("using Sepolia testnet")
 		return globals.SepoliaNameRegistryAddress, nil
 	}
-	return "", fmt.Errorf("invalid mode, must be live or test")
+	return "", fmt.Errorf("invalid network, must be main or sepolia")
 }

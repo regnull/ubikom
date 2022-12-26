@@ -56,7 +56,7 @@ var getBalanceCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get balance")
 		}
-		fmt.Printf("Balance: %d\n", balance)
+		fmt.Printf("%d\n", balance)
 	},
 }
 
@@ -65,7 +65,7 @@ var getBlockCmd = &cobra.Command{
 	Short: "Get latest block number",
 	Long:  "Get latest block number",
 	Run: func(cmd *cobra.Command, args []string) {
-		nodeURL, err := cmd.Flags().GetString("node-url")
+		nodeURL, err := getNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
@@ -90,7 +90,7 @@ var getReceiptCmd = &cobra.Command{
 	Short: "Get transaction receipt",
 	Long:  "Get transaction receipt",
 	Run: func(cmd *cobra.Command, args []string) {
-		nodeURL, err := cmd.Flags().GetString("node-url")
+		nodeURL, err := getNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}

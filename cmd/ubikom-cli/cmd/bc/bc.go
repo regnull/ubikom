@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	BCCmd.PersistentFlags().String("mode", "live", "mode, either live or prod")
+	BCCmd.PersistentFlags().String("network", "main", "mode, either live or prod")
 	BCCmd.PersistentFlags().String("node-url", "", "blockchain node location")
 	BCCmd.PersistentFlags().String("contract-address", "", "registry contract address")
 	BCCmd.PersistentFlags().Uint64("gas-price", 0, "gas price")

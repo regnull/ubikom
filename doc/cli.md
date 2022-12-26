@@ -1,6 +1,6 @@
 # Using Ubikom CLI
 
-  * [Prerequisites](#prerequisites)
+    * [Prerequisites](#prerequisites)
   * [Install CLI](#install-cli)
   * [Output Format](#output-format)
   * [Create a Private Key](#create-a-private-key)
@@ -10,7 +10,7 @@
     + [Get Key Address](#get-key-address)
     + [Get Public Key](#get-public-key)
     + [Get Key Mnemonic](#get-key-mnemonic)
-  * [Getting Balance, Funding](#getting-balance--funding)
+  * [Getting Account Balance, Funding](#getting-account-balance--funding)
   * [Registering Names, Updating Configuration](#registering-names--updating-configuration)
     + [Registering Name](#registering-name)
     + [Registering Messaging Endpoint](#registering-messaging-endpoint)
@@ -189,15 +189,15 @@ $ ubikom-cli get mnemonic --key=secret.key
 5:  ....
 ```
 
-## Getting Balance, Funding
+## Getting Account Balance, Funding
 
 Now that we have our key registered, we can query our balance:
 
 ```
 $ ADDRESS=$(ubikom-cli get ethereum-address --key secret.key)
-$ ubikom-cli bc get balance $ADDRESS --mode=test
+$ ubikom-cli bc get balance $ADDRESS --network=sepolia
 15:11:26 WRN using Sepolia testnet
-Balance: 0
+0
 ```
 
 In the first line, we got our Ethereum address and assigned it to the ADDRESS variable. In the second line,
@@ -222,9 +222,9 @@ and then sends the reward to you. Use at your own risk.
 After you get some funds, your balance will change:
 
 ```
-$ ubikom-cli bc get balance $ADDRESS --mode=test
+$ ubikom-cli bc get balance $ADDRESS --network=sepolia
 15:29:33 WRN using Sepolia testnet
-Balance: 32375000000000000
+32375000000000000
 ```
 
 Notice that your balance is in wei, the smallest unit in Ethereum ecosystem. To convert it into Ether, you 
@@ -253,39 +253,38 @@ $ ubikom-cli create key --out=encrypt.key
 Now we can register a new name:
 
 ```
-$ ubikom-cli bc register name test666 --key=secret.key --enc-key=encrypt.key --mode=test
+$ ubikom-cli bc register name test666 --key=secret.key \
+  --enc-key=encrypt.key --network=sepolia
+... some logs omitted...
 17:03:20 WRN using Sepolia testnet
-17:03:20 DBG using node node-url=https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23
-17:03:20 WRN using Sepolia testnet
-17:03:20 DBG using contract contract-address=0xcc8650c9cd8d99b62375c22f270a803e7abf0de9
 17:03:20 DBG got nonce nonce=1
 17:03:20 DBG got gas price gas-price=500000000007
 17:03:20 DBG got chain ID chain-id=11155111
-tx sent: 0x8375b513f86a5dbcf8342233048af31e4611b93ca01d3926e17ddf7ff0bdfd24
+17:03:20 INF tx sent tx=0x387ca...488f920
 {
   "root": "0x",
   "status": "0x1",
   "cumulativeGasUsed": "0x227a8",
-  "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000200000000000000000000000000000010000000000000000000000000000000000000020000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "logsBloom": "0x000000...00000",
   "logs": [
     {
       "address": "0xcc8650c9cd8d99b62375c22f270a803e7abf0de9",
       "topics": [
-        "0x1c6eac0e720ec22bb0653aec9c19985633a4fb07971cf973096c2f8e3c37c17f"
+        "0x1c6eac...37c17f"
       ],
-      "data": "0x000000000000000000000000000000000000000000000000000000000000004000000000000000000000000027a5f262be45d99068c157c5a10430dda252b1f600000000000000000000000000000000000000000000000000000000000000077465737436363600000000000000000000000000000000000000000000000000",
+      "data": "0x00000...000000",
       "blockNumber": "0x26f669",
-      "transactionHash": "0x8375b513f86a5dbcf8342233048af31e4611b93ca01d3926e17ddf7ff0bdfd24",
+      "transactionHash": "0x8375b51...f0bdfd24",
       "transactionIndex": "0x1",
-      "blockHash": "0xabc049143e555d2021f7e97e785f8b71312bb255389ab656043a99fa0351bca3",
+      "blockHash": "0xabc049...51bca3",
       "logIndex": "0x0",
       "removed": false
     }
   ],
-  "transactionHash": "0x8375b513f86a5dbcf8342233048af31e4611b93ca01d3926e17ddf7ff0bdfd24",
+  "transactionHash": "0x8375b5...dfd24",
   "contractAddress": "0x0000000000000000000000000000000000000000",
   "gasUsed": "0x1d5a0",
-  "blockHash": "0xabc049143e555d2021f7e97e785f8b71312bb255389ab656043a99fa0351bca3",
+  "blockHash": "0xabc04...1bca3",
   "blockNumber": "0x26f669",
   "transactionIndex": "0x1"
 }
@@ -294,25 +293,24 @@ tx sent: 0x8375b513f86a5dbcf8342233048af31e4611b93ca01d3926e17ddf7ff0bdfd24
 If you try to register the same name again, you will get an error:
 
 ```
-$ ubikom-cli bc register name test666 --key=secret.key --enc-key=encrypt.key --mode=test
+$ ubikom-cli bc register name test666 --key=secret.key \
+  --enc-key=encrypt.key --network=sepolia
+... some logs omitted...
 17:05:08 WRN using Sepolia testnet
-17:05:08 DBG using node node-url=https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23
-17:05:08 WRN using Sepolia testnet
-17:05:08 DBG using contract contract-address=0xcc8650c9cd8d99b62375c22f270a803e7abf0de9
 17:05:09 DBG got nonce nonce=2
 17:05:09 DBG got gas price gas-price=500000000007
 17:05:09 DBG got chain ID chain-id=11155111
-tx sent: 0x203a0890e7c588df52fa954d0e0d0a76486b96ba7aefdb2a0887f4fb2c74f4f2
+17:05:09 INF tx sent tx=0x203a08...74f4f2
 {
   "root": "0x",
   "status": "0x0",
   "cumulativeGasUsed": "0x3cb27",
-  "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "logsBloom": "0x00000000...000000000",
   "logs": [],
-  "transactionHash": "0x203a0890e7c588df52fa954d0e0d0a76486b96ba7aefdb2a0887f4fb2c74f4f2",
+  "transactionHash": "0x203a0890...74f4f2",
   "contractAddress": "0x0000000000000000000000000000000000000000",
   "gasUsed": "0x65e2",
-  "blockHash": "0x9accdee8cc26b87061988a8896e7f623fef51ee588df7cd62b18d58e5d09ae9e",
+  "blockHash": "0x9accd...09ae9e",
   "blockNumber": "0x26f671",
   "transactionIndex": "0x4"
 }
@@ -323,13 +321,11 @@ tx sent: 0x203a0890e7c588df52fa954d0e0d0a76486b96ba7aefdb2a0887f4fb2c74f4f2
 Let's verify that the name was successfully registered:
 
 ```
-$ ubikom-cli bc lookup name test666 --mode=test
+$ ubikom-cli bc lookup name test666 --network=sepolia
+... some logs omitted...
 17:10:21 WRN using Sepolia testnet
-17:10:21 DBG using node node-url=https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23
-17:10:21 WRN using Sepolia testnet
-17:10:21 DBG using contract contract-address=0xcc8650c9cd8d99b62375c22f270a803e7abf0de9
 {
-  "PublicKey": "0x0367714ab1510079fb9c79128f0d3358742dfeaf994bb15190a72715193c8710c3",
+  "PublicKey": "0x0367714...710c3",
   "Owner": "0x27a5f262be45d99068c157c5a10430dda252b1f6",
   "Price": 0
 }
@@ -337,7 +333,7 @@ $ ubikom-cli bc lookup name test666 --mode=test
 
 Here's what we see:
 * The public key is our encryption public key (you can get it by running "ubikom-cli get public-key --key=encrypt.key");
-* THe owner is us (this is our Ethereum address);
+* The owner is us (this is our Ethereum address);
 * The price of the name is zero, which means it's not for sale.
 
 ### Registering Messaging Endpoint
@@ -352,40 +348,39 @@ server implementing the messaging protocol). You can run your own server, if you
 To register a messaging endpoint, run the following command:
 
 ```
-ubikom-cli bc update config test666 --config-name=dms-endpoint --config-value=alpha.ubikom.cc:8826 --mode=test --key=secret.key --gas-
-price=3000000
+$ ubikom-cli bc update config test666 --config-name=dms-endpoint \
+   --config-value=alpha.ubikom.cc:8826 \
+   --network=sepolia --key=secret.key --gas-price=3000000
+... some logs omitted...
 18:49:14 WRN using Sepolia testnet
-18:49:14 DBG using node node-url=https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23
-18:49:14 WRN using Sepolia testnet
-18:49:14 DBG using contract contract-address=0xcc8650c9cd8d99b62375c22f270a803e7abf0de9
 18:49:14 DBG got nonce nonce=3
 18:49:14 DBG got gas price gas-price=3000000
 18:49:14 DBG got chain ID chain-id=11155111
-tx sent: 0x2e5089d7cab9070362e8ee8f2acdff1188301fd569332eebffc91ac71bd41652
+18:49:14 INF tx sent tx=0x2e508...bd41652
 {
   "root": "0x",
   "status": "0x1",
   "cumulativeGasUsed": "0x2e260",
-  "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000080000000000000000000000000000000000",
+  "logsBloom": "0x0000...0000000",
   "logs": [
     {
       "address": "0xcc8650c9cd8d99b62375c22f270a803e7abf0de9",
       "topics": [
-        "0xcde50e1bbc8495f4d015791042ac8d9b4e45d1cd60159e1fbad5863ee388d828"
+        "0xcde50e...828"
       ],
-      "data": "0x000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000077465737436363600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c646d732d656e64706f696e7400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000014616c7068612e7562696b6f6d2e63633a38383236000000000000000000000000",
+      "data": "0x000000...00000",
       "blockNumber": "0x26f859",
-      "transactionHash": "0x2e5089d7cab9070362e8ee8f2acdff1188301fd569332eebffc91ac71bd41652",
+      "transactionHash": "0x2e5089d...1652",
       "transactionIndex": "0x1",
-      "blockHash": "0x00f4ed3b32a400eb5d66eb10f874c01318900fd02c4747ce9190a4f1beefb9af",
+      "blockHash": "0x00f4ed...b9af",
       "logIndex": "0x0",
       "removed": false
     }
   ],
-  "transactionHash": "0x2e5089d7cab9070362e8ee8f2acdff1188301fd569332eebffc91ac71bd41652",
+  "transactionHash": "0x2e5089...1652",
   "contractAddress": "0x0000000000000000000000000000000000000000",
   "gasUsed": "0xd115",
-  "blockHash": "0x00f4ed3b32a400eb5d66eb10f874c01318900fd02c4747ce9190a4f1beefb9af",
+  "blockHash": "0x00f4e...efb9af",
   "blockNumber": "0x26f859",
   "transactionIndex": "0x1"
 }
@@ -397,10 +392,19 @@ new test network), and you might need to specify gas-price explicitly. If you do
 To verify that the config value was updated, run:
 
 ```
-ubikom-cli bc lookup config test666 --config-name=dms-endpoint --mode=test
+ubikom-cli bc lookup config test666 --config-name=dms-endpoint \
+  --network=sepolia
+... some logs omitted...
 18:55:41 WRN using Sepolia testnet
-18:55:41 DBG using node node-url=https://sepolia.infura.io/v3/8f540714acb24862a8c9a5c3d8568f23
-18:55:41 WRN using Sepolia testnet
-18:55:41 DBG about to look up config config-name=dms-endpoint name=test666
 alpha.ubikom.cc:8826
 ```
+
+## Sending and Receiving Encrypted Messages
+
+### Sending Messages
+
+[TODO]
+
+### Receiving Messages
+
+[TODO]
