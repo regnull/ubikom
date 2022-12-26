@@ -26,21 +26,21 @@ You must have Go installed. If you don't, follow the instructions [here](https:/
 The easiest way to install Ubikom CLI is by using go get command:
 
 ```
-go get github.com/regnull/ubikom/cmd/ubikom-cli
+$ go get github.com/regnull/ubikom/cmd/ubikom-cli
 ```
 
 Or, if you've already cloned ubikom repo, do:
 
 ```
-cd ubikom-directory/cmd/ubikom-cli
-go install
+$ cd ubikom-directory/cmd/ubikom-cli
+$ go install
 ```
 
 The binary will appear under your $GOROOT/bin directory, by default it will be $HOME/go/bin.
 Either go to that directory or add it to path. Run ubikom-cli to see the list of available commands:
 
 ```
-bikom-cli allows you to run local and remote Ubikom commands
+$ ubikom-cli allows you to run local and remote Ubikom commands
 
 Usage:
   ubikom-cli [flags]
@@ -95,7 +95,8 @@ for example, to transmit a private key over as a "user name" and "password", whe
 "user name". Email clients use it to send the email key over to Ubikom proxy using POP3 or SMTP protocol.
 
 ```
-$ ubikom-cli create key --from-password=supersecretpassword123 --salt=123456 --out=secret1.key
+$ ubikom-cli create key --from-password=supersecretpassword123 --salt=123456 \
+  --out=secret1.key
 Passphrase (enter for none):
 Confirm passphrase (enter for none):
 14:37:01 WRN saving private key without passphrase
@@ -107,7 +108,8 @@ If you later use this command with --salt flag and specify the same salt, you wi
 Let's make sure this is the case. Generate another key using the same password and salt:
 
 ```
-$ ubikom-cli create key --from-password=supersecretpassword123 --salt=123456 --out=secret2.key
+$ ubikom-cli create key --from-password=supersecretpassword123 --salt=123456 \
+  --out=secret2.key
 ```
 
 Now we can compute SHA256 hash of both files and compare the hashes:
