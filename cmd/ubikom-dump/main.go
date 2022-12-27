@@ -148,13 +148,14 @@ func getLookupService(args *CmdArgs) (pb.LookupServiceClient, func(), error) {
 	}
 
 	// Standalone lookup service - to be deprecated.
+	log.Warn().Str("url", args.LookupServerURL).Msg("using legacy lookup service")
 	lookupService, conn, err := connectToLookupService(args.LookupServerURL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to lookup server")
 	}
 
 	// Old-style blockchain lookup service - to be deprecated.
-	log.Info().Str("url", args.BlockchainNodeURL).Msg("connecting to blockchain node")
+	log.Warn().Str("url", args.BlockchainNodeURL).Msg("using legacy blockchain")
 	client, err := ethclient.Dial(args.BlockchainNodeURL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to blockchain node")

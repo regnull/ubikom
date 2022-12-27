@@ -29,7 +29,11 @@ func (b *LookupServiceV2) LookupName(ctx context.Context, in *pb.LookupNameReque
 	res, err := b.main.LookupName(ctx, in, opts...)
 	if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
 		log.Warn().Str("name", in.GetName()).Msg("using fallback lookup service to lookup name")
-		return b.fallback.LookupName(ctx, in, opts...)
+		res, err := b.fallback.LookupName(ctx, in, opts...)
+		if err == nil {
+			log.Debug().Str("name", in.GetName()).Msg("successful name lookup using fallback service")
+		}
+		return res, err
 	}
 	return res, err
 }
@@ -38,7 +42,11 @@ func (b *LookupServiceV2) LookupAddress(ctx context.Context, in *pb.LookupAddres
 	res, err := b.main.LookupAddress(ctx, in, opts...)
 	if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
 		log.Warn().Str("name", in.GetName()).Msg("using fallback lookup service to lookup address")
-		return b.fallback.LookupAddress(ctx, in, opts...)
+		res, err := b.fallback.LookupAddress(ctx, in, opts...)
+		if err == nil {
+			log.Debug().Str("name", in.GetName()).Msg("successful address lookup using fallback service")
+		}
+		return res, err
 	}
 	return res, err
 }
