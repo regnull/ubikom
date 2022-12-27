@@ -65,11 +65,15 @@ func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRes
 func (s *DumpServer) Receive(ctx context.Context, req *pb.ReceiveRequest) (*pb.ReceiveResponse, error) {
 	log.Debug().Msg("got receive request")
 
-	if !protoutil.VerifySignature(req.GetIdentityProof().GetSignature(), req.GetIdentityProof().GetKey(),
-		req.GetIdentityProof().GetContent()) {
-		log.Warn().Msg("signature verification failed")
+	err := protoutil.VerifyIdentity(req.GetIdentityProof(), time.Now(), 10.0)
+	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "bad signature")
 	}
+	// if !protoutil.VerifySignature(req.GetIdentityProof().GetSignature(), req.GetIdentityProof().GetKey(),
+	// 	req.GetIdentityProof().GetContent()) {
+	// 	log.Warn().Msg("signature verification failed")
+	// 	return nil, status.Error(codes.InvalidArgument, "bad signature")
+	// }
 
 	msg, err := s.store.GetNext(req.GetIdentityProof().GetKey())
 	if err != nil {

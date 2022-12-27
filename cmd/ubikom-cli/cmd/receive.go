@@ -81,20 +81,25 @@ var receiveMessageCmd = &cobra.Command{
 		}
 		defer dumpConn.Close()
 
-		hash := util.Hash256([]byte("we need a bigger boat"))
-		sig, err := privateKey.Sign(hash)
+		// hash := util.Hash256([]byte("we need a bigger boat"))
+		// sig, err := privateKey.Sign(hash)
+		// if err != nil {
+		// 	log.Fatal().Err(err).Msg("failed to sign message")
+		// }
+
+		signed, err := protoutil.IdentityProof(privateKey, time.Now())
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to sign message")
+			log.Fatal().Err(err).Msg("failed to create identity proof")
 		}
 
-		signed := &pb.Signed{
-			Content: []byte("we need a bigger boat"),
-			Signature: &pb.Signature{
-				R: sig.R.Bytes(),
-				S: sig.S.Bytes(),
-			},
-			Key: privateKey.PublicKey().SerializeCompressed(),
-		}
+		// signed := &pb.Signed{
+		// 	Content: []byte("we need a bigger boat"),
+		// 	Signature: &pb.Signature{
+		// 		R: sig.R.Bytes(),
+		// 		S: sig.S.Bytes(),
+		// 	},
+		// 	Key: privateKey.PublicKey().SerializeCompressed(),
+		// }
 
 		ctx := context.Background()
 		client := pb.NewDMSDumpServiceClient(dumpConn)
