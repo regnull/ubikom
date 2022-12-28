@@ -28,7 +28,7 @@ func (b *LookupServiceV2) LookupKey(ctx context.Context, in *pb.LookupKeyRequest
 func (b *LookupServiceV2) LookupName(ctx context.Context, in *pb.LookupNameRequest, opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
 	res, err := b.main.LookupName(ctx, in, opts...)
 	if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
-		log.Warn().Str("name", in.GetName()).Msg("using fallback lookup service to lookup name")
+		log.Debug().Str("name", in.GetName()).Msg("using fallback lookup service to lookup name")
 		res, err := b.fallback.LookupName(ctx, in, opts...)
 		if err == nil {
 			log.Debug().Str("name", in.GetName()).Msg("successful name lookup using fallback service")

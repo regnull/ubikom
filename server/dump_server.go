@@ -67,16 +67,16 @@ func (s *DumpServer) Receive(ctx context.Context, req *pb.ReceiveRequest) (*pb.R
 
 	err := protoutil.VerifyIdentity(req.GetIdentityProof(), time.Now(), 10.0)
 	if err != nil {
-		log.Error().Err(err).Msg("identity verification failed, using fallback")
+		log.Debug().Err(err).Msg("identity verification failed, using fallback")
 		// return nil, status.Error(codes.InvalidArgument, "bad signature")
-	}
-
-	// For now, we fallback to the old verification algorithm. To be removed later.
-	// TODO: remove this once all the clients are migrated.
-	if !protoutil.VerifySignature(req.GetIdentityProof().GetSignature(), req.GetIdentityProof().GetKey(),
-		req.GetIdentityProof().GetContent()) {
-		log.Warn().Msg("signature verification failed")
-		return nil, status.Error(codes.InvalidArgument, "bad signature")
+		// For now, we fallback to the old verification algorithm. To be removed later.
+		// TODO: remove this once all the clients are migrated.
+		if !protoutil.VerifySignature(req.GetIdentityProof().GetSignature(), req.GetIdentityProof().GetKey(),
+			req.GetIdentityProof().GetContent()) {
+			log.Warn().Msg("signature verification failed")
+			return nil, status.Error(codes.InvalidArgument, "bad signature")
+		}
+		log.Debug().Msg("signature verification succeeded")
 	}
 
 	msg, err := s.store.GetNext(req.GetIdentityProof().GetKey())

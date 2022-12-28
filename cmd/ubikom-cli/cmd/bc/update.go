@@ -62,14 +62,16 @@ var updatePublicKeyCmd = &cobra.Command{
 		}
 
 		name := args[0]
-		nodeURL, err := cmd.Flags().GetString("node-url")
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get node URL")
 		}
-		contractAddress, err := cmd.Flags().GetString("contract-address")
+		log.Debug().Str("node-url", nodeURL).Msg("using node")
+		contractAddress, err := cmdutil.GetContractAddress(cmd.Flags())
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
+		log.Debug().Str("contract-address", contractAddress).Msg("using contract")
 		err = interactWithContract(nodeURL, key, contractAddress, 0, 0, 0,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
 				instance, err := cntv2.NewNameRegistry(addr, client)
