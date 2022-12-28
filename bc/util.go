@@ -2,20 +2,27 @@ package bc
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/regnull/ubikom/globals"
 )
 
-func GetNodeURL(network string) (string, error) {
+func GetNodeURL(network string, projectId string) (string, error) {
 	if strings.HasPrefix(network, "http://") {
 		return network, nil
 	}
+	if projectId == "" {
+		projectId = os.Getenv("INFURA_PROJECT_ID")
+	}
+	if projectId == "" {
+		return "", fmt.Errorf("invalid project id")
+	}
 	switch network {
 	case "main":
-		return globals.InfuraNodeURL, nil
+		return fmt.Sprintf(globals.InfuraNodeURL, projectId), nil
 	case "sepolia":
-		return globals.InfuraSepoliaNodeURL, nil
+		return fmt.Sprintf(globals.InfuraSepoliaNodeURL, projectId), nil
 	}
 	return "", fmt.Errorf("invalid network")
 }

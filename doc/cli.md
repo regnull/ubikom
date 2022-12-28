@@ -26,6 +26,13 @@
 
 You must have Go installed. If you don't, follow the instructions [here](https://golang.org/doc/install).
 
+In order to use blockchain-related functions, you tell ubikom-cli how to connect to an Ethereum node.
+One way to do it is to create an [Infura](https://www.infura.io/) account, and specify the project id as INFURA_PROJECT_ID 
+environment variable. You can also:
+
+* Pass your Infura project ID to any blockchain-related command as "--infura-project-id" flag;
+* Pass the node URL as "--node-url" flag.
+
 ## Install CLI
 
 The easiest way to install Ubikom CLI is by using go get command:

@@ -8,6 +8,7 @@ import (
 func init() {
 	BCCmd.PersistentFlags().String("network", "main", "mode, either live or prod")
 	BCCmd.PersistentFlags().String("node-url", "", "blockchain node location")
+	BCCmd.PersistentFlags().String("infura-project-id", "", "infura project id")
 	BCCmd.PersistentFlags().String("contract-address", "", "registry contract address")
 	BCCmd.PersistentFlags().Uint64("gas-price", 0, "gas price")
 	BCCmd.PersistentFlags().Uint64("gas-limit", 0, "gas limit")

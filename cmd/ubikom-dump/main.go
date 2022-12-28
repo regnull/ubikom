@@ -36,6 +36,7 @@ type CmdArgs struct {
 	BlockchainNodeURL      string
 	UseLegacyLookupService bool
 	Network                string
+	InfuraProjectId        string
 	ContractAddress        string
 	LogLevel               string
 	LogNoColor             bool
@@ -53,6 +54,7 @@ func main() {
 	flag.StringVar(&args.BlockchainNodeURL, "blockchain-node-url", globals.BlockchainNodeURL, "DEPRECATES: blockchain node url (use network flag instead)")
 	flag.BoolVar(&args.UseLegacyLookupService, "use-legacy-lookup-service", false, "DEPRECATED: use legacy lookup service")
 	flag.StringVar(&args.Network, "network", defaultNetwork, "ethereum network to use")
+	flag.StringVar(&args.InfuraProjectId, "infura-project-id", "", "infura project id")
 	flag.StringVar(&args.ContractAddress, "contract-address", "", "name registry contract address")
 	flag.StringVar(&args.LogLevel, "log-level", defaultLogLevel, "log level")
 	flag.BoolVar(&args.LogNoColor, "log-no-color", false, "disable colors for logging")
@@ -123,7 +125,7 @@ func getLookupService(args *CmdArgs) (pb.LookupServiceClient, func(), error) {
 	// If arguments for the legacy lookup service are specified, we will use
 	// them as fallback.
 
-	nodeURL, err := bc.GetNodeURL(args.Network)
+	nodeURL, err := bc.GetNodeURL(args.Network, args.InfuraProjectId)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get network URL: %w", err)
 	}

@@ -2,6 +2,7 @@ package cmdutil
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/globals"
@@ -56,11 +57,21 @@ func GetNodeURL(flags *pflag.FlagSet) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get network")
 	}
+	infuraId, err := flags.GetString("infura-project-id")
+	if err != nil {
+		return "", fmt.Errorf("failed to get infura project id")
+	}
+	if infuraId == "" {
+		infuraId = os.Getenv("INFURA_PROJECT_ID")
+	}
+	if infuraId == "" {
+		return "", fmt.Errorf("infura project id must be specified")
+	}
 	if mode == "main" {
-		return globals.InfuraNodeURL, nil
+		return fmt.Sprintf(globals.InfuraNodeURL, infuraId), nil
 	} else if mode == "sepolia" {
 		log.Warn().Msg("using Sepolia testnet")
-		return globals.InfuraSepoliaNodeURL, nil
+		return fmt.Sprintf(globals.InfuraSepoliaNodeURL, infuraId), nil
 	}
 	return "", fmt.Errorf("invalid network, must be main or sepolia")
 }
@@ -77,6 +88,7 @@ func GetContractAddress(flags *pflag.FlagSet) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get network")
 	}
+
 	if mode == "main" {
 		return globals.MainnetNameRegistryAddress, nil
 	} else if mode == "sepolia" {

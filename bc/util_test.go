@@ -1,6 +1,7 @@
 package bc
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/regnull/ubikom/globals"
@@ -10,19 +11,22 @@ import (
 func TestGetNodeURL(t *testing.T) {
 	assert := assert.New(t)
 
-	url, err := GetNodeURL("http://18.223.40.196:8545")
+	url, err := GetNodeURL("http://18.223.40.196:8545", "")
 	assert.NoError(err)
 	assert.Equal("http://18.223.40.196:8545", url)
 
-	url, err = GetNodeURL("main")
+	url, err = GetNodeURL("main", "123456")
 	assert.NoError(err)
-	assert.Equal(globals.InfuraNodeURL, url)
+	assert.Equal(fmt.Sprintf(globals.InfuraNodeURL, "123456"), url)
 
-	url, err = GetNodeURL("sepolia")
+	url, err = GetNodeURL("sepolia", "123456")
 	assert.NoError(err)
-	assert.Equal(globals.InfuraSepoliaNodeURL, url)
+	assert.Equal(fmt.Sprintf(globals.InfuraSepoliaNodeURL, "123456"), url)
 
-	_, err = GetNodeURL("foo")
+	_, err = GetNodeURL("foo", "123456")
+	assert.Error(err)
+
+	_, err = GetNodeURL("main", "")
 	assert.Error(err)
 }
 
