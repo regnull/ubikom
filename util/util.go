@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -348,4 +349,22 @@ func HexStringToBytes(s string) ([]byte, error) {
 
 func EqualHexStrings(s1, s2 string) bool {
 	return strings.EqualFold(strings.TrimPrefix(s1, "0x"), strings.TrimPrefix(s2, "0x"))
+}
+
+// CheckUserNameAndPassword verifies user name and password by generating a public key and comparing it with
+// the key in the identity registry.
+func CheckUserNameAndPassword(ctx context.Context, name, password string, lookupClient pb.LookupServiceClient) error {
+	n := strings.TrimSpace(name)
+	n = StripDomainName(n)
+	n = strings.ToLower(n)
+	privateKey := easyecc.NewPrivateKeyFromPassword([]byte(password),
+		Hash256([]byte(strings.ToLower(n))))
+	res, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: n})
+	if err != nil {
+		return fmt.Errorf("failed to lookup name: %w", err)
+	}
+	if !bytes.Equal(res.GetKey(), privateKey.PublicKey().SerializeCompressed()) {
+		return fmt.Errorf("keys do not match")
+	}
+	return nil
 }
