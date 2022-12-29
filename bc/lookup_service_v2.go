@@ -20,6 +20,14 @@ func NewLookupServiceV2(main, fallback pb.LookupServiceClient) *LookupServiceV2 
 	return &LookupServiceV2{main: main, fallback: fallback}
 }
 
+func (b *LookupServiceV2) GetMain() pb.LookupServiceClient {
+	return b.main
+}
+
+func (b *LookupServiceV2) GetFallback() pb.LookupServiceClient {
+	return b.fallback
+}
+
 func (b *LookupServiceV2) LookupKey(ctx context.Context, in *pb.LookupKeyRequest, opts ...grpc.CallOption) (*pb.LookupKeyResponse, error) {
 	// Blockchain V2 does not implement this, so we don't allow this.
 	return nil, fmt.Errorf("not implemented")
