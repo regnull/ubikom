@@ -356,7 +356,6 @@ func EqualHexStrings(s1, s2 string) bool {
 func CheckUserNameAndPassword(ctx context.Context, name, password string, lookupClient pb.LookupServiceClient) error {
 	n := strings.TrimSpace(name)
 	n = StripDomainName(n)
-	n = strings.ToLower(n)
 	privateKey := easyecc.NewPrivateKeyFromPassword([]byte(password),
 		Hash256([]byte(strings.ToLower(n))))
 	res, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: n})
