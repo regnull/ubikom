@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/regnull/easyecc"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -19,6 +20,8 @@ func init() {
 
 	getPublicKeyCmd.Flags().String("key", "", "Location for the private key file")
 
+	getUserPublicKey.Flags().String("name", "", "User name")
+
 	getMnemonicCmd.Flags().String("key", "", "Location for the private key file")
 
 	getCmd.AddCommand(getAddressCmd)
@@ -26,6 +29,7 @@ func init() {
 	getCmd.AddCommand(getBitcoinAddressCmd)
 	getCmd.AddCommand(getPublicKeyCmd)
 	getCmd.AddCommand(getMnemonicCmd)
+	getCmd.AddCommand(getUserPublicKey)
 
 	rootCmd.AddCommand(getCmd)
 }
@@ -130,35 +134,37 @@ var getPublicKeyCmd = &cobra.Command{
 	Short: "Get public key",
 	Long:  "Get public key",
 	Run: func(cmd *cobra.Command, args []string) {
-		keyFile, err := cmd.Flags().GetString("key")
+		privateKey, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get key location")
+			log.Fatal().Err(err).Msg("failed to load private key")
 		}
 
-		if keyFile == "" {
-			keyFile, err = util.GetDefaultKeyLocation()
-			if err != nil {
-				log.Fatal().Err(err).Msg("failed to get private key")
-			}
-		}
+		fmt.Printf("0x%0x\n", privateKey.PublicKey().SerializeCompressed())
+	},
+}
 
-		encrypted, err := util.IsKeyEncrypted(keyFile)
+var getUserPublicKey = &cobra.Command{
+	Use:   "user-public-key",
+	Short: "Get public key by user name and password",
+	Long:  "Get public key which is generated from user name and password",
+	Run: func(cmd *cobra.Command, args []string) {
+		name, err := cmd.Flags().GetString("name")
 		if err != nil {
-			log.Fatal().Err(err).Msg("cannot find key file")
+			log.Fatal().Err(err).Msg("failed to get name")
 		}
 
-		passphrase := ""
-		if encrypted {
-			passphrase, err = util.ReadPassphase()
-			if err != nil {
-				log.Fatal().Err(err).Msg("cannot read passphrase")
-			}
+		if name == "" {
+			log.Fatal().Msg("--name must be specified")
 		}
 
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
+		password, err := util.ReadPassphase()
 		if err != nil {
-			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
+			log.Fatal().Err(err).Msg("failed to read passphrase")
 		}
+		n := strings.TrimSpace(name)
+		n = util.StripDomainName(n)
+		privateKey := easyecc.NewPrivateKeyFromPassword([]byte(password),
+			util.Hash256([]byte(strings.ToLower(n))))
 
 		fmt.Printf("0x%0x\n", privateKey.PublicKey().SerializeCompressed())
 	},
