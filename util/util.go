@@ -367,3 +367,10 @@ func CheckUserNameAndPassword(ctx context.Context, name, password string, lookup
 	}
 	return nil
 }
+
+func GetPrivateKeyFromNameAndPassword(name, password string) *easyecc.PrivateKey {
+	n := strings.TrimSpace(name)
+	n = StripDomainName(n)
+	return easyecc.NewPrivateKeyFromPassword([]byte(password),
+		Hash256([]byte(strings.ToLower(n))))
+}

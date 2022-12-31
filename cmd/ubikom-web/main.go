@@ -1,27 +1,20 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/dchest/captcha"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/google/uuid"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/bc"
 	"github.com/regnull/ubikom/event"
 	"github.com/regnull/ubikom/globals"
-	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
@@ -177,261 +170,6 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusServiceUnavailable)
 	return
 
-	name := ""
-	password := ""
-	captchaId := ""
-	captchaSolution := ""
-	language := ""
-	useMainKey := true
-	log.Debug().Str("method", r.Method).Msg("got method")
-	if r.Method == "POST" {
-		defer r.Body.Close()
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Warn().Err(err).Msg("failed to read request body")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		var req EasySetupRequest
-		err = json.Unmarshal(body, &req)
-		if err != nil {
-			log.Warn().Err(err).Msg("failed to parse request json")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		name = req.Name
-		password = req.Password
-		useMainKey = !req.EmailKeyOnly
-		captchaId = req.CaptchaId
-		captchaSolution = req.CaptchaSolution
-		if req.Language != "" {
-			language = req.Language
-		} else {
-			language = "en"
-		}
-	} else {
-		name = r.URL.Query().Get("name")
-		password = r.URL.Query().Get("password")
-		if r.URL.Query().Get("email_key_only") != "" {
-			useMainKey = false
-		}
-	}
-
-	captchaOk := captcha.VerifyString(captchaId, captchaSolution)
-	log.Debug().Str("captcha_id", captchaId).
-		Str("captcha_solution", captchaSolution).Bool("ok", captchaOk).
-		Msg("captcha data")
-	if !captchaOk {
-		log.Warn().Msg("captcha verification failed")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	if len(name) < minNameLength {
-		log.Warn().Str("name", name).Msg("name is too short")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if !util.ValidateName(name) {
-		log.Warn().Str("name", name).Msg("invalid name")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if len(password) < minPasswordLength {
-		log.Warn().Str("name", name).Msg("password is too short")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	_, err := s.lookupClient.LookupName(r.Context(), &pb.LookupNameRequest{Name: name})
-	if err == nil {
-		// This name is taken.
-		log.Warn().Str("name", name).Msg("name is not available")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if err != nil && util.StatusCodeFromError(err) != codes.NotFound {
-		log.Error().Err(err).Msg("failed to check name availability")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	var mainKey *easyecc.PrivateKey
-	if useMainKey {
-		mainKey, err = easyecc.NewRandomPrivateKey()
-		if err != nil {
-			log.Error().Err(err).Msg("failed to generate private key")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		// Register the main key.
-
-		err = protoutil.RegisterKey(r.Context(), s.identityClient, mainKey, s.powStrength)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to register the main key")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		log.Info().Msg("main key is registered")
-	}
-
-	// Create the email key.
-
-	salt := util.Hash256([]byte(strings.ToLower(name)))
-	emailKey := easyecc.NewPrivateKeyFromPassword([]byte(password), salt)
-
-	// Register the email key.
-
-	err = protoutil.RegisterKey(r.Context(), s.identityClient, emailKey, s.powStrength)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to register the email key")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	log.Info().Msg("email key is registered")
-
-	if useMainKey {
-		// Register email key as a child of main key.
-
-		err = protoutil.RegisterChildKey(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), s.powStrength)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to register email key as a child of main key")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		log.Info().Msg("key relationship is updated")
-	} else {
-		mainKey = emailKey
-	}
-
-	// Register name.
-
-	err = protoutil.RegisterName(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, s.powStrength)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to register name")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	log.Info().Str("name", name).Msg("name is registered")
-
-	// Register address.
-
-	err = protoutil.RegisterAddress(r.Context(), s.identityClient, mainKey, emailKey.PublicKey(), name, globals.PublicDumpServiceURL, s.powStrength)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to register address")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	log.Info().Msg("address is registered")
-
-	//go func() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*120)
-	defer cancel()
-	s.blockchain.MaybeRegisterUser(ctx, name, name, password)
-	//}()
-
-	var mnemonicQuoted []string
-	var keyID string
-	if useMainKey {
-		keyID = uuid.New().String()
-		s.keys[keyID] = mainKey.Secret().Bytes()
-
-		mnemonic, err := mainKey.Mnemonic()
-		if err != nil {
-			log.Error().Err(err).Msg("failed to get key mnemonic")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		mnemonicList := strings.Split(mnemonic, " ")
-		mnemonicQuoted = make([]string, len(mnemonicList))
-		for i := range mnemonicList {
-			mnemonicQuoted[i] = "\"" + mnemonicList[i] + "\""
-		}
-	}
-
-	if s.privateKey != nil && s.name != "" && s.notificationName != "" {
-		body := fmt.Sprintf(notificationMessage, s.notificationName, s.name,
-			time.Now().Format("02 Jan 06 15:04:05 -0700"), name)
-		body, err = mail.AddReceivedHeader(body, []string{"by Ubikom client"})
-		if err != nil {
-			log.Error().Err(err).Msg("error adding received header")
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		err = protoutil.SendEmail(r.Context(), s.privateKey, []byte(body), s.name, s.notificationName, s.lookupClient)
-		if err != nil {
-			log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending notification message")
-		}
-	}
-
-	if s.privateKey != nil && s.name != "" {
-		welcomeMessage, err := getWelcomeMessage(s.welcomeMessageDir, language)
-		if err != nil {
-			welcomeMessage, err = getWelcomeMessage(s.welcomeMessageDir, "en")
-			if err == nil {
-				log.Info().Str("language", "en").Msg("found welcome message")
-			}
-		} else {
-			log.Info().Str("language", language).Msg("found welcome message")
-		}
-
-		if err == nil {
-			// Succeeded in getting welcome message template.
-			body := fmt.Sprintf(welcomeMessage, name, s.name,
-				time.Now().Format("02 Jan 06 15:04:05 -0700"))
-			body, err = mail.AddReceivedHeader(body, []string{"by Ubikom client"})
-			if err != nil {
-				log.Error().Err(err).Msg("error adding received header")
-				w.WriteHeader(http.StatusInternalServerError)
-			}
-			err = protoutil.SendEmail(r.Context(), s.privateKey, []byte(body), s.name, name, s.lookupClient)
-			if err != nil {
-				log.Error().Err(err).Str("from", s.name).Str("to", s.notificationName).Msg("error sending welcome message")
-			}
-		} else {
-			log.Error().Err(err).Msg("failed to get welcome message")
-		}
-	} else {
-		log.Warn().Msg("cannot send welcome message")
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-	if useMainKey {
-		fmt.Fprintf(w, `{
-		"name": "%s",
-		"email": "%s@ubikom.cc",
-		"user_name": "%s", 
-		"server_url": "alpha.ubikom.cc",
-		"incoming_server_url": "imap.ubikom.cc",
-		"outgoing_server_url": "smtp.ubikom.cc",
-		"incoming_server_port": "993",
-		"outgoing_server_port": "495",
-		"key_mnemonic": [%s],
-		"key_id": "%s",
-		"password": "%s"
-}`, name, name, name, strings.Join(mnemonicQuoted, ", "), keyID, password)
-	} else {
-		fmt.Fprintf(w, `{
-			"name": "%s",
-			"email": "%s@ubikom.cc",
-			"user_name": "%s", 
-			"server_url": "alpha.ubikom.cc",
-			"incoming_server_url": "imap.ubikom.cc",
-			"outgoing_server_url": "smtp.ubikom.cc",
-			"incoming_server_port": "993",
-			"outgoing_server_port": "495",
-			"password": "%s"
-	}`, name, name, name, password)
-	}
-
-	err = s.eventSender.WebPageServed(r.Context(), "easy_setup", name,
-		emailKey.PublicKey().Address(), r.UserAgent())
-	if err != nil {
-		log.Error().Err(err).Msg("failed to send event")
-	}
 }
 
 type ChangePasswordRequest struct {
@@ -570,37 +308,53 @@ func (s *Server) HandleNewCaptcha(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getCurrentExecDir() (dir string, err error) {
-	path, err := exec.LookPath(os.Args[0])
-	if err != nil {
-		fmt.Printf("exec.LookPath(%s), err: %s\n", os.Args[0], err)
-		return "", err
-	}
-
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return "", err
-	}
-
-	dir = filepath.Dir(absPath)
-
-	return dir, nil
+type CheckMailboxKeyRequest struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
 }
 
-func getWelcomeMessage(dir string, lang string) (string, error) {
-	filePath := path.Join(dir, fmt.Sprintf("welcome_%s.txt", lang))
-	if !path.IsAbs(filePath) {
-		execDir, err := getCurrentExecDir()
-		if err != nil {
-			return "", err
-		}
-		filePath = path.Join(execDir, filePath)
+func (s *Server) HandleCheckMailboxKey(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+
+	if r.Method != "POST" {
+		log.Warn().Str("method", r.Method).Msg("invalid HTTP method")
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
-	b, err := ioutil.ReadFile(filePath)
+
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		return "", err
+		log.Warn().Err(err).Msg("failed to read request body")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	return string(b), nil
+	var req CheckMailboxKeyRequest
+	err = json.Unmarshal(body, &req)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to parse request json")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	privateKey := util.GetPrivateKeyFromNameAndPassword(req.Name, req.Password)
+
+	log.Info().Str("user", req.Name).Msg("received check mailbox key request")
+	if s.proxyManagementClient != nil {
+		req := &pb.CheckMailboxKeyRequest{
+			Name: req.Name,
+			Key:  privateKey.Secret().Bytes(),
+		}
+		_, err := s.proxyManagementClient.CheckMailboxKey(r.Context(), req)
+		if err != nil {
+			log.Error().Err(err).Msg("check mailbox key failed")
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		log.Info().Msg("maibox key is ok")
+	} else {
+		log.Warn().Msg("not connected to proxy management service, will not check key")
+	}
 }
 
 func main() {
@@ -703,6 +457,7 @@ func main() {
 	http.HandleFunc("/getKey", server.HandleGetKey)
 	http.HandleFunc("/changePassword", server.HandleChangePassword)
 	http.HandleFunc("/new_captcha", server.HandleNewCaptcha)
+	http.HandleFunc("/check_mailbox_key", server.HandleCheckMailboxKey)
 	http.Handle("/captcha/", captcha.Server(captcha.StdWidth, captcha.StdHeight))
 	log.Info().Int("port", args.Port).Msg("listening...")
 
