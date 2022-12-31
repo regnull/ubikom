@@ -18,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion6
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ProxyServiceClient interface {
 	CopyMailboxes(ctx context.Context, in *CopyMailboxesRequest, opts ...grpc.CallOption) (*CopyMailboxesResponse, error)
+	CheckMailboxKey(ctx context.Context, in *CheckMailboxKeyRequest, opts ...grpc.CallOption) (*CheckMailboxKeyResponse, error)
 }
 
 type proxyServiceClient struct {
@@ -37,11 +38,21 @@ func (c *proxyServiceClient) CopyMailboxes(ctx context.Context, in *CopyMailboxe
 	return out, nil
 }
 
+func (c *proxyServiceClient) CheckMailboxKey(ctx context.Context, in *CheckMailboxKeyRequest, opts ...grpc.CallOption) (*CheckMailboxKeyResponse, error) {
+	out := new(CheckMailboxKeyResponse)
+	err := c.cc.Invoke(ctx, "/Ubikom.ProxyService/CheckMailboxKey", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProxyServiceServer is the server API for ProxyService service.
 // All implementations must embed UnimplementedProxyServiceServer
 // for forward compatibility
 type ProxyServiceServer interface {
 	CopyMailboxes(context.Context, *CopyMailboxesRequest) (*CopyMailboxesResponse, error)
+	CheckMailboxKey(context.Context, *CheckMailboxKeyRequest) (*CheckMailboxKeyResponse, error)
 	mustEmbedUnimplementedProxyServiceServer()
 }
 
@@ -51,6 +62,9 @@ type UnimplementedProxyServiceServer struct {
 
 func (*UnimplementedProxyServiceServer) CopyMailboxes(context.Context, *CopyMailboxesRequest) (*CopyMailboxesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CopyMailboxes not implemented")
+}
+func (*UnimplementedProxyServiceServer) CheckMailboxKey(context.Context, *CheckMailboxKeyRequest) (*CheckMailboxKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckMailboxKey not implemented")
 }
 func (*UnimplementedProxyServiceServer) mustEmbedUnimplementedProxyServiceServer() {}
 
@@ -76,6 +90,24 @@ func _ProxyService_CopyMailboxes_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProxyService_CheckMailboxKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckMailboxKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProxyServiceServer).CheckMailboxKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ubikom.ProxyService/CheckMailboxKey",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProxyServiceServer).CheckMailboxKey(ctx, req.(*CheckMailboxKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _ProxyService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "Ubikom.ProxyService",
 	HandlerType: (*ProxyServiceServer)(nil),
@@ -83,6 +115,10 @@ var _ProxyService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CopyMailboxes",
 			Handler:    _ProxyService_CopyMailboxes_Handler,
+		},
+		{
+			MethodName: "CheckMailboxKey",
+			Handler:    _ProxyService_CheckMailboxKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

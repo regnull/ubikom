@@ -124,6 +124,13 @@ message CopyMailboxesRequest {
 
 message CopyMailboxesResponse {}
 
+message CheckMailboxKeyRequest {
+    bytes key = 1;
+}
+
+message CheckMailboxKeyResponse {}
+
 service ProxyService {
     rpc CopyMailboxes(CopyMailboxesRequest) returns(CopyMailboxesResponse);
+    rpc CheckMailboxKey(CheckMailboxKeyRequest) returns (CheckMailboxKeyResponse);
 }
