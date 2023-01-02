@@ -8,7 +8,6 @@ import (
 	"github.com/regnull/easyecc"
 	cntv2 "github.com/regnull/ubchain/gocontract/v2"
 	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
-	"github.com/regnull/ubikom/globals"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +16,6 @@ func init() {
 	buyNameCmd.Flags().String("key", "", "key to authorize the transaction")
 	buyNameCmd.Flags().String("enc-key", "", "encryption key")
 	buyNameCmd.Flags().Int64("value", 0, "value")
-	buyNameCmd.Flags().String("contract-address", globals.NameRegistryContractAddress, "contract address")
 
 	buyCmd.AddCommand(buyNameCmd)
 
@@ -38,6 +36,17 @@ var buyNameCmd = &cobra.Command{
 	Short: "Buy name",
 	Long:  "Buy name",
 	Run: func(cmd *cobra.Command, args []string) {
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get node URL")
+		}
+		log.Debug().Str("node-url", nodeURL).Msg("using node")
+		contractAddress, err := cmdutil.GetContractAddress(cmd.Flags())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load contract address")
+		}
+		log.Debug().Str("contract-address", contractAddress).Msg("using contract address")
+
 		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
@@ -66,14 +75,6 @@ var buyNameCmd = &cobra.Command{
 		value, err := cmd.Flags().GetInt64("value")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get value")
-		}
-		nodeURL, err := cmd.Flags().GetString("node-url")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get node URL")
-		}
-		contractAddress, err := cmd.Flags().GetString("contract-address")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
 		err = interactWithContract(nodeURL, key, contractAddress, value, 0, 0,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
