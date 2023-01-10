@@ -374,3 +374,33 @@ func GetPrivateKeyFromNameAndPassword(name, password string) *easyecc.PrivateKey
 	return easyecc.NewPrivateKeyFromPassword([]byte(password),
 		Hash256([]byte(strings.ToLower(n))))
 }
+
+// LoadKey reads a private key from file, asking for the passphrase, if needed.
+func LoadKey(keyFile string) (*easyecc.PrivateKey, error) {
+	var err error
+	if keyFile == "" {
+		keyFile, err = GetDefaultKeyLocation()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	encrypted, err := IsKeyEncrypted(keyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	passphrase := ""
+	if encrypted {
+		passphrase, err = ReadPassphase()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
+	if err != nil {
+		return nil, err
+	}
+	return privateKey, nil
+}
