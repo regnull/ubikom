@@ -28,7 +28,8 @@ func connectToLookupService(url string) (pb.LookupServiceClient, *grpc.ClientCon
 }
 
 func Get(network string, projectId string, contractAddress string,
-	legacyLookupServerUrl string, legacyNodeUrl string, useLegacyLookupService bool) (pb.LookupServiceClient, func(), error) {
+	legacyLookupServerUrl string, legacyNodeUrl string,
+	useLegacyLookupService bool) (pb.LookupServiceClient, func(), error) {
 	// We always use the new blockchain lookup service as the first priority.
 	// If arguments for the legacy lookup service are specified, we will use
 	// them as fallback.

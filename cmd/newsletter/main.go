@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"flag"
+	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/regnull/ubikom/lookup"
+	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -14,6 +19,7 @@ type CmdArgs struct {
 	KeyLocation     string
 	Name            string
 	MessageFile     string
+	RecipientsFile  string
 	Network         string
 	NodeUrl         string
 	ProjectId       string
@@ -28,6 +34,7 @@ func main() {
 	flag.StringVar(&args.KeyLocation, "key", "", "sender's key location")
 	flag.StringVar(&args.Name, "name", "", "ubikom name of the sender")
 	flag.StringVar(&args.MessageFile, "message", "", "message file")
+	flag.StringVar(&args.RecipientsFile, "recipients", "", "recipients file")
 	flag.StringVar(&args.Network, "network", "main", "Ethereum network")
 	flag.StringVar(&args.NodeUrl, "node-url", "", "Ethereum node URL")
 	flag.StringVar(&args.ProjectId, "project-id", "", "Infura project ID")
@@ -37,13 +44,12 @@ func main() {
 	assertStringFlagSet(args.KeyLocation, "key")
 	assertStringFlagSet(args.Name, "name")
 	assertStringFlagSet(args.MessageFile, "message")
+	assertStringFlagSet(args.RecipientsFile, "recipients")
 
 	privateKey, err := util.LoadKey(args.KeyLocation)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load the private key")
 	}
-
-	_ = privateKey // To calm the compiler down.
 
 	lookupService, cleanup, err := lookup.Get(args.Network, args.ProjectId, args.ContractAddress, "", "", false)
 	if err != nil {
@@ -51,11 +57,36 @@ func main() {
 	}
 	defer cleanup()
 
-	_ = lookupService // To calm the compiler down.
+	content, err := ioutil.ReadFile(args.MessageFile)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to read the message file")
+	}
 
-	// TODO: Read the message file.
-	// TODO: Read the list of recipients.
-	// TODO: Send messages.
+	recipientsFile, err := os.Open(args.RecipientsFile)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to read the recipients file")
+	}
+	defer recipientsFile.Close()
+
+	ctx := context.Background()
+
+	scanner := bufio.NewScanner(recipientsFile)
+	for scanner.Scan() {
+		name := scanner.Text()
+		name = util.StripDomainName(name)
+		name = strings.ToLower(name)
+
+		err = protoutil.SendEmail(ctx, privateKey, []byte(content), args.Name, name, lookupService)
+		if err != nil {
+			log.Fatal().Err(err).Msg("error sending message")
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal().Err(err).Msg("error scanning recipients file")
+	}
+
+	log.Info().Msg("Done!")
 }
 
 func assertStringFlagSet(value string, name string) {
