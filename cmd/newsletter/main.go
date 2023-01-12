@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/regnull/ubikom/lookup"
+	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog"
@@ -24,6 +25,7 @@ type CmdArgs struct {
 	NodeUrl         string
 	ProjectId       string
 	ContractAddress string
+	Subject         string
 }
 
 func main() {
@@ -39,12 +41,14 @@ func main() {
 	flag.StringVar(&args.NodeUrl, "node-url", "", "Ethereum node URL")
 	flag.StringVar(&args.ProjectId, "project-id", "", "Infura project ID")
 	flag.StringVar(&args.ContractAddress, "contract-address", "", "contract address")
+	flag.StringVar(&args.Subject, "subject", "", "email subject")
 	flag.Parse()
 
 	assertStringFlagSet(args.KeyLocation, "key")
 	assertStringFlagSet(args.Name, "name")
 	assertStringFlagSet(args.MessageFile, "message")
 	assertStringFlagSet(args.RecipientsFile, "recipients")
+	assertStringFlagSet(args.Subject, "subject")
 
 	privateKey, err := util.LoadKey(args.KeyLocation)
 	if err != nil {
@@ -55,7 +59,9 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get lookup service")
 	}
-	defer cleanup()
+	if cleanup != nil {
+		defer cleanup()
+	}
 
 	content, err := ioutil.ReadFile(args.MessageFile)
 	if err != nil {
@@ -76,7 +82,9 @@ func main() {
 		name = util.StripDomainName(name)
 		name = strings.ToLower(name)
 
-		err = protoutil.SendEmail(ctx, privateKey, []byte(content), args.Name, name, lookupService)
+		mailMessage := mail.NewMessage(name, args.Name, args.Subject, string(content))
+
+		err = protoutil.SendEmail(ctx, privateKey, []byte(mailMessage), args.Name, name, lookupService)
 		if err != nil {
 			log.Fatal().Err(err).Msg("error sending message")
 		}

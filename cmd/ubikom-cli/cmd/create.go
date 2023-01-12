@@ -7,7 +7,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -23,7 +22,6 @@ const (
 func init() {
 	createKeyCmd.Flags().String("out", "", "Location for the private key file")
 	createKeyCmd.Flags().String("from-password", "", "Create private key from the given password")
-	createKeyCmd.Flags().Bool("base58-salt", false, "use base58 salt")
 	createKeyCmd.Flags().Bool("from-mnemonic", false, "create private key from mnemonic")
 	createKeyCmd.Flags().String("salt", "", "Salt used for private key creation")
 	createKeyCmd.Flags().Bool("skip-passphrase", false, "skip passphrase")
@@ -79,11 +77,6 @@ var createKeyCmd = &cobra.Command{
 		var privateKey *easyecc.PrivateKey
 		if fromPassword != "" {
 
-			base58salt, err := cmd.Flags().GetBool("base58-salt")
-			if err != nil {
-				log.Fatal().Err(err).Msg("failed to get --base58-salt flag")
-			}
-
 			if len(fromPassword) < 8 {
 				log.Fatal().Err(err).Msg("password must be at least 8 characters long")
 			}
@@ -94,12 +87,7 @@ var createKeyCmd = &cobra.Command{
 			if saltStr == "" {
 				log.Fatal().Msg("--salt required")
 			}
-			var salt []byte
-			if base58salt {
-				salt = base58.Decode(saltStr)
-			} else {
-				salt = util.Hash256([]byte(saltStr))
-			}
+			salt := util.Hash256([]byte(saltStr))
 			privateKey = easyecc.NewPrivateKeyFromPassword([]byte(fromPassword), salt[:])
 		} else if fromMnemonic {
 			var words []string
