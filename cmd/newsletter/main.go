@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/lookup"
 	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/protoutil"
@@ -17,15 +18,17 @@ import (
 )
 
 type CmdArgs struct {
-	KeyLocation     string
-	Name            string
-	MessageFile     string
-	RecipientsFile  string
-	Network         string
-	NodeUrl         string
-	ProjectId       string
-	ContractAddress string
-	Subject         string
+	KeyLocation           string
+	Name                  string
+	MessageFile           string
+	RecipientsFile        string
+	Network               string
+	NodeUrl               string
+	ProjectId             string
+	ContractAddress       string
+	Subject               string
+	LegacyLookupServerUrl string
+	legacyNodeUrl         string
 }
 
 func main() {
@@ -42,6 +45,8 @@ func main() {
 	flag.StringVar(&args.ProjectId, "project-id", "", "Infura project ID")
 	flag.StringVar(&args.ContractAddress, "contract-address", "", "contract address")
 	flag.StringVar(&args.Subject, "subject", "", "email subject")
+	flag.StringVar(&args.LegacyLookupServerUrl, "legacy-lookup-url", globals.PublicLookupServiceURL, "legacy lookup server URL")
+	flag.StringVar(&args.legacyNodeUrl, "legacy-node-url", globals.BlockchainNodeURL, "legacy blockchain node URL")
 	flag.Parse()
 
 	assertStringFlagSet(args.KeyLocation, "key")
@@ -55,7 +60,8 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to load the private key")
 	}
 
-	lookupService, cleanup, err := lookup.Get(args.Network, args.ProjectId, args.ContractAddress, "", "", false)
+	lookupService, cleanup, err := lookup.Get(args.Network, args.ProjectId, args.ContractAddress,
+		args.LegacyLookupServerUrl, args.legacyNodeUrl, false)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get lookup service")
 	}
@@ -84,6 +90,7 @@ func main() {
 
 		mailMessage := mail.NewMessage(name, args.Name, args.Subject, string(content))
 
+		log.Info().Str("recipient", name).Msg("sending message")
 		err = protoutil.SendEmail(ctx, privateKey, []byte(mailMessage), args.Name, name, lookupService)
 		if err != nil {
 			log.Fatal().Err(err).Msg("error sending message")
