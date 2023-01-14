@@ -1,0 +1,94 @@
+We started Ubikom (https://ubikom.cc) with a vision of decentralized private identity and secure communications,
+where you are in control of both your identity and the encryption keys. While you’ve been enjoying secure
+communication, we are now ready to deliver another key part - decentralized identity registry.
+As of now, we are running  a mix of database-centered identity registry and private blockchain.
+Today, with crypto prices much lower than a year ago and Ethereum’s “merge” complete, we are
+ready to switch to Ethereum blockchain and accomplish the goal of delivering private
+decentralized identity to our users. We are finalizing testing on the new Ethereum testnet,
+Sepolia (https://sepolia.dev/).
+
+We are inviting all our users to switch their registration to Ethereum blockchain.
+This will require a small gas fee of about $1.5 to perform the name registration transactions
+(and ONLY Ethereum gas fees - we are not charging anything for interaction with our smart contract).
+You don’t waste your money - you receive something of value, which is your name registered on blockchain.
+Later, you can transfer name ownership to another account, if you so desire, or sell it for Ether.
+It’s like an NFT, but this one is actually useful. With the cost being so low, why not grab a few other names
+(consider some popular words). Maybe they will be worth something in the future, who knows?
+
+So what to expect? Let’s go over some key milestones:
+
+-- We will continue testing on Sepolia testnet for at least a few more weeks (roughly until the end of January, 2023).
+   You can participate on our website (https://ubikom.cc) where you can register your name on
+   Sepolia without paying real crypto (you pay SepoliaETH, which you can get for free).
+
+-- Once the testing is complete, we will switch to Ethereum mainnet. At this point, names registered on
+   the mainnet will have priority over the current identity registry. Which is to say, you need to act quickly
+   lest someone else chooses the same name (this is very unlikely, but you need to know). Rest assured, current
+   infrastructure will still work until the switch is complete, see below.
+
+-- Finally, March 1st is the day when we will turn off the legacy infrastructure, and rely ONLY on the Ethereum mainnet.
+   Names that were not migrated by that time will stop functioning.
+
+-- Obviously, this is a work in progress and all dates may change.
+
+If you do nothing, your service will terminate around March 1st. If you want to continue using Ubikom, here’s what you can do:
+
+-- Follow the announcements on our Twitter page and Reddit. We will not email future updates to all users, unless absolutely necessary.
+
+-- If you would like to help with testing on Sepolia testnet, we have written the instructions. (https://ubikom.cc/testing_eth.html).
+
+--- Look out for the instructions on how to migrate your account to the mainnet, which should be sent out (via Twitter and Reddit) around February 1st.
+
+Migrate your account to the mainnet when the migration tools are available (sometime in February).
+
+This migration will complete the first stage of the service. But we are not going to stop there. Future enhancements will include
+decentralized storage of the encrypted messages, supporting multiple internet gateways, instant messenger and other
+services based on the decentralized user-owned identity.
+
+Thank you for being our loyal users. We hope you are as excited about the future as we are.
+
+Ubikom Founders
+
+Leo (lgx@ubikom.cc)
+Sasha (sasha@ubikom.cc)
+
+
+FAQ
+
+Q: How does the decentralized identity on the blockchain work?
+
+A: An Ethereum smart contract (https://github.com/regnull/ubchain/blob/master/contracts/v2/registry.sol) maintains the
+registry of names, public keys, and endpoints where messages should be delivered. This registry is used every time a message is sent,
+to construct a shared encryption key and find out the address where the message will be delivered.
+
+Q: Will I truly own the name after I register it on the Ethereum mainnet?
+
+A: Yes. Our smart contract is public (https://github.com/regnull/ubchain/blob/master/contracts/v2/registry.sol).
+Once you register a name, it is associated with your address, and only you can perform operations on it (update the configuration, update
+the public key, transfer it to another owner or sell it).
+
+Q: How expensive is it to register a name on the blockchain?
+
+A: You pay only the gas fees (i.e. you pay to miners to include this transaction into the next block). Our experiments showed that the
+one-time cost of adding your name to Ubikom’s smart contract on Ethereum can be  as little as $1.5. Again, this is not the fee charged
+by Ubikom. If you are not in a rush, you can offer even less - but confirmation might take longer. Obviously, gas prices can and do
+change, and we have no way to predict future prices.
+
+Q: I understand that the cost is trivial, but this is still more than I can afford.
+
+A: We are working on ways to get our loyal users migrated, even if they can’t afford the fees. Stay tuned.
+
+Q: Isn’t crypto a scam?
+
+A: Glad that you asked! No, only 95% of crypto is a scam. We believe the crypto foundations are solid, and this is one reason why we
+decided to use Ethereum - it’s the network second only to Bitcoin (and we can’t use Bitcoin since we need smart contract support). We
+also believe that the current crypto contraction is healthy in the long run - let’s get rid of hype and fraud, and keep building.
+
+Q: How do I get started with crypto?
+
+A: You need to do two things: get a crypto wallet (for example, Metamask: https://metamask.io/), and fund your account. 
+There are many ways to get the initial funds, which vary by country. Please consult your local user community. Beware:
+crypto message boards and Discord servers are inundated by scammers. If someone is contacting you out of the blue, it’s a scam, no
+matter what they say. Never share any passwords or recovery phrases with anyone. Consider using a hardware wallet - it’s more reliable
+and secure than a software one.
+
