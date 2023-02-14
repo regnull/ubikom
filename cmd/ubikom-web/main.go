@@ -23,6 +23,7 @@ import (
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var notificationMessage = `To: %s@ubikom.cc
@@ -347,8 +348,17 @@ func (s *Server) HandleCheckMailboxKey(w http.ResponseWriter, r *http.Request) {
 		}
 		_, err := s.proxyManagementClient.CheckMailboxKey(r.Context(), req)
 		if err != nil {
+			code := status.Code(err)
+			if code == codes.PermissionDenied {
+				w.WriteHeader((http.StatusForbidden))
+				return
+			}
+			if code == codes.NotFound {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
 			log.Error().Err(err).Msg("check mailbox key failed")
-			w.WriteHeader(http.StatusForbidden)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		log.Info().Msg("maibox key is ok")
