@@ -350,10 +350,12 @@ func (s *Server) HandleCheckMailboxKey(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			code := status.Code(err)
 			if code == codes.PermissionDenied {
+				log.Info().Str("user", req.Name).Msg("permission denied")
 				w.WriteHeader((http.StatusForbidden))
 				return
 			}
 			if code == codes.NotFound {
+				log.Info().Str("user", req.Name).Msg("not found")
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
