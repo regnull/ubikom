@@ -315,6 +315,15 @@ type CheckMailboxKeyRequest struct {
 }
 
 func (s *Server) HandleCheckMailboxKey(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		// This is a "pre-flight" request, see https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.Header().Add("Access-Control-Allow-Methods", "POST")
+		w.Header().Add("Access-Control-Allow-Headers", "*")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	if r.Method != "POST" {
