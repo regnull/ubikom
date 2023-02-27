@@ -24,7 +24,7 @@ const (
 	defaultHomeSubDir         = ".ubikom"
 	defaultDataSubDir         = "dump"
 	defaultMaxMessageAgeHours = 14 * 24
-	defaultNetwork            = "sepolia"
+	defaultNetwork            = "main"
 	defaultLogLevel           = "info"
 )
 
