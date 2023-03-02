@@ -122,3 +122,22 @@ func Test_FileNameNoExtension(t *testing.T) {
 	assert.Equal("foo", FileNameNoExtension("foo.bar"))
 	assert.Equal("foo", FileNameNoExtension("/bar/baz/foo.xyz"))
 }
+
+func Test_FixName(t *testing.T) {
+	assert := assert.New(t)
+
+	assert.Equal("foo", FixName("foo"))
+	assert.Equal("foo", FixName("FoO"))
+	assert.Equal("foo", FixName(" fOo  "))
+	assert.Equal("foo", FixName("foo@bar.com"))
+}
+
+func Test_GetPrivateKeyFromNameAndPassword(t *testing.T) {
+	assert := assert.New(t)
+
+	pk := GetPrivateKeyFromNameAndPassword("foo", "bar")
+	assert.Equal("1M6DhqJEyo6XVfrVH7qvrAGPyj4tE38UFU", pk.PublicKey().Address())
+
+	pk = GetPrivateKeyFromNameAndPassword(" fOo@zzz.xxx   ", "bar")
+	assert.Equal("1M6DhqJEyo6XVfrVH7qvrAGPyj4tE38UFU", pk.PublicKey().Address())
+}

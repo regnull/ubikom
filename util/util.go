@@ -351,15 +351,19 @@ func EqualHexStrings(s1, s2 string) bool {
 	return strings.EqualFold(strings.TrimPrefix(s1, "0x"), strings.TrimPrefix(s2, "0x"))
 }
 
-// CheckUserNameAndPassword verifies user name and password by generating a public key and comparing it with
-// the key in the identity registry.
-func CheckUserNameAndPassword(ctx context.Context, name, password string, lookupClient pb.LookupServiceClient) error {
+// FixName processes user-provided name to obtain a valid blockchain-registered name.
+func FixName(name string) string {
 	n := strings.TrimSpace(name)
 	n = StripDomainName(n)
 	n = strings.ToLower(n)
-	privateKey := easyecc.NewPrivateKeyFromPassword([]byte(password),
-		Hash256([]byte(strings.ToLower(n))))
-	res, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: n})
+	return n
+}
+
+// CheckUserNameAndPassword verifies user name and password by generating a public key and comparing it with
+// the key in the identity registry.
+func CheckUserNameAndPassword(ctx context.Context, name, password string, lookupClient pb.LookupServiceClient) error {
+	privateKey := GetPrivateKeyFromNameAndPassword(name, password)
+	res, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: FixName(name)})
 	if err != nil {
 		return fmt.Errorf("failed to lookup name: %w", err)
 	}
