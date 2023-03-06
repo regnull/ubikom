@@ -162,8 +162,6 @@ func (s *Server) HandleEasySetup(w http.ResponseWriter, r *http.Request) {
 	// !!!!! Registration disabled.
 	log.Warn().Msg("registration disabled")
 	w.WriteHeader(http.StatusServiceUnavailable)
-	return
-
 }
 
 type ChangePasswordRequest struct {
@@ -173,6 +171,8 @@ type ChangePasswordRequest struct {
 }
 
 func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusServiceUnavailable)
+
 	/*
 		if r.Method == "OPTIONS" {
 			// This is a "pre-flight" request, see https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
