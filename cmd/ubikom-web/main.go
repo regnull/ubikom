@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -371,17 +373,19 @@ func main() {
 	flag.StringVar(&args.ContractAddress, "contract-address", "", "name registry contract address")
 	flag.Parse()
 
-	opts := []grpc.DialOption{
-		grpc.WithInsecure(),
-		grpc.WithBlock(),
-		grpc.WithTimeout(args.Timeout),
-	}
+	ctx := context.Background()
 
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	}
 	var proxyManagementClient pb.ProxyServiceClient
 
 	if args.ProxyManagementServiceURL != "" {
 		log.Info().Str("url", args.ProxyManagementServiceURL).Msg("connecting to proxy management service")
-		proxyManagementConn, err := grpc.Dial(args.ProxyManagementServiceURL, opts...)
+		ctx1, cancel := context.WithTimeout(ctx, args.Timeout)
+		defer cancel()
+		proxyManagementConn, err := grpc.DialContext(ctx1, args.ProxyManagementServiceURL, opts...)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to connect to the proxy management service")
 		}
