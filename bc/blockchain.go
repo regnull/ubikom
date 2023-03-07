@@ -15,24 +15,24 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type BlockchainV2 struct {
+type Blockchain struct {
 	client          *ethclient.Client
 	contractAddress string
 }
 
-func NewBlockchainV2(url string, contractAddress string) (*BlockchainV2, error) {
+func NewBlockchain(url string, contractAddress string) (*Blockchain, error) {
 	client, err := ethclient.Dial(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to blockchain node: %w", err)
 	}
-	return &BlockchainV2{client: client, contractAddress: contractAddress}, nil
+	return &Blockchain{client: client, contractAddress: contractAddress}, nil
 }
 
-func (b *BlockchainV2) LookupKey(ctx context.Context, in *pb.LookupKeyRequest, opts ...grpc.CallOption) (*pb.LookupKeyResponse, error) {
+func (b *Blockchain) LookupKey(ctx context.Context, in *pb.LookupKeyRequest, opts ...grpc.CallOption) (*pb.LookupKeyResponse, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (b *BlockchainV2) LookupName(ctx context.Context, in *pb.LookupNameRequest, opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
+func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest, opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
 	instance, err := cntv2.NewNameRegistryCaller(common.HexToAddress(b.contractAddress), b.client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contract instance")
@@ -53,7 +53,7 @@ func (b *BlockchainV2) LookupName(ctx context.Context, in *pb.LookupNameRequest,
 	}, nil
 }
 
-func (b *BlockchainV2) LookupAddress(ctx context.Context, in *pb.LookupAddressRequest, opts ...grpc.CallOption) (*pb.LookupAddressResponse, error) {
+func (b *Blockchain) LookupAddress(ctx context.Context, in *pb.LookupAddressRequest, opts ...grpc.CallOption) (*pb.LookupAddressResponse, error) {
 	instance, err := cntv2.NewNameRegistryCaller(common.HexToAddress(b.contractAddress), b.client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contract instance")
