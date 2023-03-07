@@ -69,7 +69,6 @@ type CmdArgs struct {
 
 type Server struct {
 	proxyManagementClient pb.ProxyServiceClient
-	keys                  map[string][]byte
 	privateKey            *easyecc.PrivateKey
 	name                  string
 	notificationName      string
@@ -84,7 +83,6 @@ func NewServer(proxyManagementClient pb.ProxyServiceClient,
 	rateLimitPerHour int, blockhain *bc.Blockchain, welcomeMessageDir string) *Server {
 	return &Server{
 		proxyManagementClient: proxyManagementClient,
-		keys:                  make(map[string][]byte),
 		privateKey:            privateKey,
 		name:                  name,
 		notificationName:      notificationName,
@@ -167,22 +165,6 @@ func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Warn().Msg("not connected to proxy management service, will not copy mailboxes")
 	}
-}
-
-func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Access-Control-Allow-Origin", "*")
-
-	keyID := r.URL.Query().Get("key_id")
-	key, ok := s.keys[keyID]
-	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	w.Header().Add("Content-Type", "application/octet-stream")
-	w.Header().Add("Content-Disposition", "attachment; filename=\"ubikom.private_key\"")
-	w.Write(key)
-	// TODO: Remove this after the testing is done.
-	// delete(s.keys, keyID)
 }
 
 type CheckMailboxKeyRequest struct {
@@ -327,7 +309,6 @@ func main() {
 	server := NewServer(proxyManagementClient, privateKey, args.UbikomName,
 		args.NotificationName, args.PowStrength, args.RateLimitPerHour, blockchain, args.WelcomeMessageDir)
 
-	http.HandleFunc("/getKey", server.HandleGetKey)
 	http.HandleFunc("/changePassword", server.HandleChangePassword)
 	http.HandleFunc("/check_mailbox_key", server.HandleCheckMailboxKey)
 	log.Info().Int("port", args.Port).Msg("listening...")
