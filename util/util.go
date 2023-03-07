@@ -15,7 +15,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/pb"
 	"golang.org/x/crypto/ripemd160"
@@ -36,6 +35,7 @@ func NowMs() int64 {
 	return time.Now().UnixNano() / 1000000
 }
 
+// TimeFromMs returns time given milliseconds from epoch.
 func TimeFromMs(ts int64) time.Time {
 	return time.Unix(ts/1000, (ts%1000)*1000000)
 }
@@ -160,6 +160,8 @@ func SerializedCompressedToAddress(key []byte) string {
 	return publicKey.Address()
 }
 
+// StatusCodeFromError returns gRPC status code from error, or codes.Unknown if the error does
+// not contain gRPC code.
 func StatusCodeFromError(err error) codes.Code {
 	if err == nil {
 		return codes.OK
@@ -245,67 +247,6 @@ func StripDomainName(s string) string {
 		n = n[:i]
 	}
 	return n
-}
-
-// GenerateCanonicalKeyFromNamePassword generates a canonical key from name and password.
-// Notice that many currently registered keys are not canonical (they were generated from
-// Base-58 encoded salt, or without lowercasing the name).
-func GenerateCanonicalKeyFromNamePassword(name, password string) *easyecc.PrivateKey {
-	n := StripDomainName(name)
-
-	return easyecc.NewPrivateKeyFromPassword([]byte(password),
-		Hash256([]byte(strings.ToLower(n))))
-}
-
-// GetKeyFromNameAndPassword attempts to construct a private key from name and password and verify it with
-// key lookup service.
-func GetKeyFromNamePassword(ctx context.Context, name string, pass string,
-	lookupClient pb.LookupServiceClient) (*easyecc.PrivateKey, error) {
-	n := StripDomainName(name)
-
-	// Try hash of the user name as salt first.
-	privateKey := easyecc.NewPrivateKeyFromPassword([]byte(pass),
-		Hash256([]byte(strings.ToLower(n))))
-	res, err := lookupClient.LookupKey(ctx, &pb.LookupKeyRequest{
-		Key: privateKey.PublicKey().SerializeCompressed()})
-	if err == nil {
-		if res.Disabled {
-			return nil, fmt.Errorf("the key is disabled")
-		}
-		return privateKey, nil
-	}
-
-	// Try without lowercasing the user id, so that the clients who created
-	// the user id before can still work.
-	privateKey = easyecc.NewPrivateKeyFromPassword([]byte(pass),
-		Hash256([]byte(n)))
-	res, err = lookupClient.LookupKey(ctx, &pb.LookupKeyRequest{
-		Key: privateKey.PublicKey().SerializeCompressed()})
-	if err == nil {
-		if res.Disabled {
-			return nil, fmt.Errorf("the key is disabled")
-		}
-		return privateKey, nil
-	}
-
-	// We used to have user name as Base 58 representation of a random 8 byte number,
-	// try that.
-	salt := base58.Decode(name)
-	if len(salt) != 8 {
-		return nil, fmt.Errorf("invalid user name or password")
-	}
-	privateKey = easyecc.NewPrivateKeyFromPassword([]byte(pass), salt)
-
-	// Confirm that this key is registered.
-	res, err = lookupClient.LookupKey(ctx, &pb.LookupKeyRequest{
-		Key: privateKey.PublicKey().SerializeCompressed()})
-	if err != nil {
-		return nil, err
-	}
-	if res.Disabled {
-		return nil, fmt.Errorf("the key is disabled")
-	}
-	return privateKey, nil
 }
 
 func NowUint32() uint32 {
