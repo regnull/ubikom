@@ -16,7 +16,6 @@ import (
 	"github.com/regnull/ubikom/event"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
-	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -180,6 +179,7 @@ type ChangePasswordRequest struct {
 }
 
 func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusServiceUnavailable)
 	if r.Method == "OPTIONS" {
 		// This is a "pre-flight" request, see https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
 		w.Header().Add("Access-Control-Allow-Origin", "*")
@@ -214,58 +214,35 @@ func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Str("user", req.Name).Msg("received change password request")
 
-	key, err := util.GetKeyFromNamePassword(r.Context(), req.Name, req.Password, s.lookupClient)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to get private key")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	key := util.GetPrivateKeyFromNameAndPassword(req.Name, req.Password)
+	newKey := util.GetPrivateKeyFromNameAndPassword(req.Name, req.NewPassword)
 
-	newKey := util.GenerateCanonicalKeyFromNamePassword(req.Name, req.NewPassword)
-
-	err = protoutil.RegisterKey(r.Context(), s.identityClient, newKey, s.powStrength)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to register new key")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	log.Info().Msg("new key is registered")
-
+	log.Info().Str("user", req.Name).Msg("received check mailbox key request")
 	if s.proxyManagementClient != nil {
-		req := &pb.CopyMailboxesRequest{
+		req1 := &pb.CopyMailboxesRequest{
 			OldKey: key.Secret().Bytes(),
 			NewKey: newKey.Secret().Bytes(),
 		}
-		_, err := s.proxyManagementClient.CopyMailboxes(r.Context(), req)
+		_, err := s.proxyManagementClient.CopyMailboxes(r.Context(), req1)
 		if err != nil {
-			log.Error().Err(err).Msg("failed to copy mailboxes")
+			code := status.Code(err)
+			if code == codes.PermissionDenied {
+				log.Info().Str("user", req.Name).Msg("permission denied")
+				w.WriteHeader((http.StatusForbidden))
+				return
+			}
+			if code == codes.NotFound {
+				log.Info().Str("user", req.Name).Msg("not found")
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			log.Error().Err(err).Msg("copy mailboxes request failed")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		log.Info().Msg("mailboxes are copied")
+		log.Info().Msg("copy mailboxes request succeeded")
 	} else {
 		log.Warn().Msg("not connected to proxy management service, will not copy mailboxes")
-	}
-
-	err = protoutil.RegisterName(r.Context(), s.identityClient, key, newKey.PublicKey(), req.Name, s.powStrength)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to register name")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	log.Info().Str("name", req.Name).Msg("name registration changed")
-
-	err = protoutil.DisableKey(r.Context(), s.identityClient, key, s.powStrength)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to disable the old key")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	err = s.eventSender.WebPageServed(r.Context(), "change_password",
-		req.Name, newKey.PublicKey().Address(), r.UserAgent())
-	if err != nil {
-		log.Error().Err(err).Msg("failed to send event")
 	}
 }
 
