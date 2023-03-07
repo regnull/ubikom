@@ -115,7 +115,7 @@ func getLookupService(args *CmdArgs) (pb.LookupServiceClient, error) {
 	// This is our main blockchain-based lookup service. Eventually, it will be the only one.
 	// For now, we will fallback on the existing old-style blockchain lookup service, or
 	// standalone lookup service. Those will go away.
-	blockchainV2Lookup, err := bc.NewBlockchainV2(nodeURL, contractAddress)
+	blockchainV2Lookup, err := bc.NewBlockchain(nodeURL, contractAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to blockchain node: %w", err)
 	}
