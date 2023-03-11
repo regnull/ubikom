@@ -23,21 +23,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var notificationMessage = `To: %s@ubikom.cc
-From: Ubikom Web <%s@ubikom.cc>
-Subject: New registration
-Date: %s
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Transfer-Encoding: 7bit
-Content-Language: en-US
-
-Rejoice! For a new user just registered via the Ubikom Web!
-
-The newly registered name is %s.
-
-That is all. Have a nice day!
-`
-
 const (
 	defaultPowStrength      = 23
 	minNameLength           = 3
