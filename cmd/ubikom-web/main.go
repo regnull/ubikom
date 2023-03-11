@@ -212,32 +212,32 @@ func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 	newKey := util.GetPrivateKeyFromNameAndPassword(req.Name, req.NewPassword)
 
 	log.Info().Str("user", req.Name).Msg("received check mailbox key request")
-	if s.proxyManagementClient != nil {
-		req1 := &pb.CopyMailboxesRequest{
-			OldKey: key.Secret().Bytes(),
-			NewKey: newKey.Secret().Bytes(),
-		}
-		_, err := s.proxyManagementClient.CopyMailboxes(r.Context(), req1)
-		if err != nil {
-			code := status.Code(err)
-			if code == codes.PermissionDenied {
-				log.Info().Str("user", req.Name).Msg("permission denied")
-				w.WriteHeader((http.StatusForbidden))
-				return
-			}
-			if code == codes.NotFound {
-				log.Info().Str("user", req.Name).Msg("not found")
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			log.Error().Err(err).Msg("copy mailboxes request failed")
-			w.WriteHeader(http.StatusInternalServerError)
+	if s.proxyManagementClient == nil {
+		log.Warn().Msg("not connected to proxy management service, will not copy mailboxes")
+		return
+	}
+	req1 := &pb.CopyMailboxesRequest{
+		OldKey: key.Secret().Bytes(),
+		NewKey: newKey.Secret().Bytes(),
+	}
+	_, err = s.proxyManagementClient.CopyMailboxes(r.Context(), req1)
+	if err != nil {
+		code := status.Code(err)
+		if code == codes.PermissionDenied {
+			log.Info().Str("user", req.Name).Msg("permission denied")
+			w.WriteHeader((http.StatusForbidden))
 			return
 		}
-		log.Info().Msg("copy mailboxes request succeeded")
-	} else {
-		log.Warn().Msg("not connected to proxy management service, will not copy mailboxes")
+		if code == codes.NotFound {
+			log.Info().Str("user", req.Name).Msg("not found")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		log.Error().Err(err).Msg("copy mailboxes request failed")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+	log.Info().Msg("copy mailboxes request succeeded")
 }
 
 func (s *Server) HandleGetKey(w http.ResponseWriter, r *http.Request) {
