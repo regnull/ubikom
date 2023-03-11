@@ -17,9 +17,11 @@ import (
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/net/context"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -247,11 +249,11 @@ func main() {
 	flag.Parse()
 
 	opts := []grpc.DialOption{
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
-		grpc.WithTimeout(args.Timeout),
 	}
 
+	ctx := context.Background()
 	var err error
 
 	log.Info().Str("url", args.LookupServiceURL).Msg("connecting to lookup service")
@@ -260,10 +262,12 @@ func main() {
 
 	if args.ProxyManagementServiceURL != "" {
 		log.Info().Str("url", args.ProxyManagementServiceURL).Msg("connecting to proxy management service")
-		proxyManagementConn, err := grpc.Dial(args.ProxyManagementServiceURL, opts...)
+		timeoutCtx, cancel := context.WithTimeout(ctx, args.Timeout)
+		proxyManagementConn, err := grpc.DialContext(timeoutCtx, args.ProxyManagementServiceURL, opts...)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to connect to the proxy management service")
 		}
+		defer cancel()
 
 		proxyManagementClient = pb.NewProxyServiceClient(proxyManagementConn)
 	} else {
