@@ -95,7 +95,6 @@ func setPreflightHeaders(w http.ResponseWriter) {
 }
 
 func (s *Server) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusServiceUnavailable)
 	if r.Method == "OPTIONS" {
 		setPreflightHeaders(w)
 		return
