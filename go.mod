@@ -36,6 +36,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/crypto v0.4.0
+	golang.org/x/net v0.3.0 // indirect
 	golang.org/x/term v0.3.0
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	google.golang.org/genproto v0.0.0-20220222213610-43724f9ea8cf // indirect
