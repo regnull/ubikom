@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
 	"github.com/regnull/ubikom/bc"
 	"github.com/regnull/ubikom/globals"
@@ -17,7 +17,6 @@ import (
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/net/context"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -30,13 +29,11 @@ const (
 	minNameLength           = 3
 	minPasswordLength       = 6
 	defaultRateLimitPerHour = 200
-	defaultKeyOwner         = "0x24fa5B1d7FBe98A9316101E311F0c409791EaA76"
+	defaultNetwork          = "main"
 )
 
 type CmdArgs struct {
 	Port                             int
-	LookupServiceURL                 string
-	IdentityServiceURL               string
 	ProxyManagementServiceURL        string
 	Timeout                          time.Duration
 	CertFile                         string
@@ -46,12 +43,12 @@ type CmdArgs struct {
 	NotificationName                 string
 	PowStrength                      int
 	RateLimitPerHour                 int
-	BlockchainNodeURL                string
-	UseLegacyLookupService           bool
 	KeyRegistryContractAddress       string
 	NameRegistryContractAddress      string
 	ConnectorRegistryContractAddress string
-	WelcomeMessageDir                string
+	Network                          string
+	InfuraProjectId                  string
+	ContractAddress                  string
 }
 
 type Server struct {
@@ -61,13 +58,11 @@ type Server struct {
 	notificationName      string
 	powStrength           int
 	rateLimiter           *rate.Limiter
-	blockchain            *bc.Blockchain
-	welcomeMessageDir     string
 }
 
 func NewServer(proxyManagementClient pb.ProxyServiceClient,
 	privateKey *easyecc.PrivateKey, name string, notificationName string, powStrength int,
-	rateLimitPerHour int, blockhain *bc.Blockchain, welcomeMessageDir string) *Server {
+	rateLimitPerHour int) *Server {
 	return &Server{
 		proxyManagementClient: proxyManagementClient,
 		privateKey:            privateKey,
@@ -75,8 +70,6 @@ func NewServer(proxyManagementClient pb.ProxyServiceClient,
 		notificationName:      notificationName,
 		powStrength:           powStrength,
 		rateLimiter:           rate.NewLimiter(rate.Every(time.Hour), rateLimitPerHour),
-		blockchain:            blockhain,
-		welcomeMessageDir:     welcomeMessageDir,
 	}
 }
 
@@ -228,8 +221,6 @@ func main() {
 
 	var args CmdArgs
 	flag.IntVar(&args.Port, "port", 8088, "HTTP port")
-	flag.StringVar(&args.LookupServiceURL, "lookup-service-url", globals.PublicLookupServiceURL, "lookup service url")
-	flag.StringVar(&args.IdentityServiceURL, "identity-service-url", globals.PublicIdentityServiceURL, "identity service url")
 	flag.DurationVar(&args.Timeout, "timeout", 5*time.Second, "timeout when connecting to the lookup service")
 	flag.StringVar(&args.CertFile, "cert-file", "", "certificate file")
 	flag.StringVar(&args.KeyFile, "key-file", "", "key file")
@@ -238,24 +229,23 @@ func main() {
 	flag.StringVar(&args.NotificationName, "notification-name", "", "where to send notifications")
 	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength")
 	flag.IntVar(&args.RateLimitPerHour, "rate-limit-per-hour", defaultRateLimitPerHour, "rate limit per hour for identity creation")
-	flag.StringVar(&args.BlockchainNodeURL, "blockchain-node-url", globals.BlockchainNodeURL, "blockchain node URL")
-	flag.BoolVar(&args.UseLegacyLookupService, "use-legacy-lookup-service", false, "use legacy lookup service")
 	flag.StringVar(&args.KeyRegistryContractAddress, "key-registry-contract-address", globals.KeyRegistryContractAddress, "key registry contract address")
 	flag.StringVar(&args.NameRegistryContractAddress, "name-registry-contract-address", globals.NameRegistryContractAddress, "name registry contract address")
 	flag.StringVar(&args.ConnectorRegistryContractAddress, "connector-registry-contract-address", globals.ConnectorRegistryContractAddress, "connector registry contract address")
 	flag.StringVar(&args.ProxyManagementServiceURL, "proxy-management-service-url", "", "proxy management service url")
-	flag.StringVar(&args.WelcomeMessageDir, "welcome-message-dir", "welcome", "directory for welcome message")
+	flag.StringVar(&args.Network, "network", defaultNetwork, "ethereum network to use")
+	flag.StringVar(&args.InfuraProjectId, "infura-project-id", "", "infura project id")
+	flag.StringVar(&args.ContractAddress, "contract-address", "", "name registry contract address")
 	flag.Parse()
+
+	ctx := context.Background()
 
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 	}
 
-	ctx := context.Background()
 	var err error
-
-	log.Info().Str("url", args.LookupServiceURL).Msg("connecting to lookup service")
 
 	var proxyManagementClient pb.ProxyServiceClient
 
@@ -281,21 +271,8 @@ func main() {
 		}
 	}
 
-	var blockchain *bc.Blockchain
-	// Connect to the blockchain node.
-	log.Info().Str("url", args.BlockchainNodeURL).Msg("connecting to blockchain node")
-	bcClient, err := ethclient.Dial(args.BlockchainNodeURL)
-	if err == nil {
-		log.Debug().Str("node-url", args.BlockchainNodeURL).Msg("connected to blockchain node")
-		blockchain = bc.NewBlockchain(bcClient, args.KeyRegistryContractAddress,
-			args.NameRegistryContractAddress, args.ConnectorRegistryContractAddress, privateKey)
-	}
-	if err != nil {
-		log.Error().Err(err).Msg("cannot connect to blockchain")
-	}
-
 	server := NewServer(proxyManagementClient, privateKey, args.UbikomName,
-		args.NotificationName, args.PowStrength, args.RateLimitPerHour, blockchain, args.WelcomeMessageDir)
+		args.NotificationName, args.PowStrength, args.RateLimitPerHour)
 
 	http.HandleFunc("/changePassword", server.HandleChangePassword)
 	http.HandleFunc("/check_mailbox_key", server.HandleCheckMailboxKey)
@@ -312,4 +289,32 @@ func main() {
 			fmt.Printf("%v\n", err)
 		}
 	}
+}
+
+func getLookupService(args *CmdArgs) (pb.LookupServiceClient, error) {
+	// We always use the new blockchain lookup service as the first priority.
+	// If arguments for the legacy lookup service are specified, we will use
+	// them as fallback.
+
+	nodeURL, err := bc.GetNodeURL(args.Network, args.InfuraProjectId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get network URL: %w", err)
+	}
+	log.Debug().Str("node-url", nodeURL).Msg("using blockchain node")
+
+	contractAddress, err := bc.GetContractAddress(args.Network, args.ContractAddress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get contract address: %w", err)
+	}
+	log.Debug().Str("contract-address", contractAddress).Msg("using contract")
+
+	// This is our main blockchain-based lookup service. Eventually, it will be the only one.
+	// For now, we will fallback on the existing old-style blockchain lookup service, or
+	// standalone lookup service. Those will go away.
+	blockchainV2Lookup, err := bc.NewBlockchain(nodeURL, contractAddress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to blockchain node: %w", err)
+	}
+
+	return blockchainV2Lookup, nil
 }
