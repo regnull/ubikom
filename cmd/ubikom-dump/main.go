@@ -8,7 +8,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/ubikom/bc"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
@@ -20,7 +19,6 @@ import (
 
 const (
 	defaultPort               = 8826
-	defaultIdentityServerURL  = "localhost:8825"
 	defaultHomeSubDir         = ".ubikom"
 	defaultDataSubDir         = "dump"
 	defaultMaxMessageAgeHours = 14 * 24
@@ -31,7 +29,6 @@ const (
 type CmdArgs struct {
 	DataDir                string
 	Port                   int
-	LookupServerURL        string
 	MaxMessageAgeHours     int
 	BlockchainNodeURL      string
 	UseLegacyLookupService bool
@@ -49,7 +46,6 @@ func main() {
 	var args CmdArgs
 	flag.IntVar(&args.Port, "port", defaultPort, "port to listen to")
 	flag.StringVar(&args.DataDir, "data-dir", "", "base directory")
-	flag.StringVar(&args.LookupServerURL, "lookup-server-url", defaultIdentityServerURL, "DEPRECATED: URL of the lookup server")
 	flag.IntVar(&args.MaxMessageAgeHours, "max-message-age-hours", defaultMaxMessageAgeHours, "max message age, in hours")
 	flag.StringVar(&args.BlockchainNodeURL, "blockchain-node-url", globals.BlockchainNodeURL, "DEPRECATES: blockchain node url (use network flag instead)")
 	flag.BoolVar(&args.UseLegacyLookupService, "use-legacy-lookup-service", false, "DEPRECATED: use legacy lookup service")
@@ -145,35 +141,5 @@ func getLookupService(args *CmdArgs) (pb.LookupServiceClient, func(), error) {
 		return nil, nil, fmt.Errorf("failed to connect to blockchain node: %w", err)
 	}
 
-	if args.LookupServerURL == "" || args.BlockchainNodeURL == "" {
-		return blockchainV2Lookup, nil, nil
-	}
-
-	// Standalone lookup service - to be deprecated.
-	log.Warn().Str("url", args.LookupServerURL).Msg("using legacy lookup service")
-	lookupService, conn, err := connectToLookupService(args.LookupServerURL)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to connect to lookup server")
-	}
-
-	// Old-style blockchain lookup service - to be deprecated.
-	log.Warn().Str("url", args.BlockchainNodeURL).Msg("using legacy blockchain")
-	client, err := ethclient.Dial(args.BlockchainNodeURL)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to connect to blockchain node")
-	}
-	blockchain := bc.NewBlockchain(client, globals.KeyRegistryContractAddress,
-		globals.NameRegistryContractAddress, globals.ConnectorRegistryContractAddress, nil)
-
-	var combinedLookupClient pb.LookupServiceClient
-	if args.UseLegacyLookupService {
-		log.Info().Msg("using legacy lookup service")
-		combinedLookupClient = lookupService
-	} else {
-		combinedLookupClient = bc.NewLookupServiceClient(blockchain, lookupService, false)
-	}
-
-	// For now, we use old lookup service as a fallback.
-	combinedLookupClient = bc.NewLookupServiceV2(blockchainV2Lookup, combinedLookupClient)
-	return combinedLookupClient, func() { conn.Close() }, nil
+	return blockchainV2Lookup, nil, nil
 }

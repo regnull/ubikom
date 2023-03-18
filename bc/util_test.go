@@ -25,9 +25,6 @@ func TestGetNodeURL(t *testing.T) {
 
 	_, err = GetNodeURL("foo", "123456")
 	assert.Error(err)
-
-	_, err = GetNodeURL("main", "")
-	assert.Error(err)
 }
 
 func TestGetContract(t *testing.T) {

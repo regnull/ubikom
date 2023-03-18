@@ -9,9 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
-	"github.com/regnull/ubikom/bc"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/util"
@@ -35,8 +33,6 @@ const (
 
 type CmdArgs struct {
 	Port                             int
-	LookupServiceURL                 string
-	IdentityServiceURL               string
 	ProxyManagementServiceURL        string
 	Timeout                          time.Duration
 	CertFile                         string
@@ -46,7 +42,6 @@ type CmdArgs struct {
 	NotificationName                 string
 	PowStrength                      int
 	RateLimitPerHour                 int
-	BlockchainNodeURL                string
 	UseLegacyLookupService           bool
 	KeyRegistryContractAddress       string
 	NameRegistryContractAddress      string
@@ -61,13 +56,12 @@ type Server struct {
 	notificationName      string
 	powStrength           int
 	rateLimiter           *rate.Limiter
-	blockchain            *bc.Blockchain
 	welcomeMessageDir     string
 }
 
 func NewServer(proxyManagementClient pb.ProxyServiceClient,
 	privateKey *easyecc.PrivateKey, name string, notificationName string, powStrength int,
-	rateLimitPerHour int, blockhain *bc.Blockchain, welcomeMessageDir string) *Server {
+	rateLimitPerHour int, welcomeMessageDir string) *Server {
 	return &Server{
 		proxyManagementClient: proxyManagementClient,
 		privateKey:            privateKey,
@@ -75,7 +69,6 @@ func NewServer(proxyManagementClient pb.ProxyServiceClient,
 		notificationName:      notificationName,
 		powStrength:           powStrength,
 		rateLimiter:           rate.NewLimiter(rate.Every(time.Hour), rateLimitPerHour),
-		blockchain:            blockhain,
 		welcomeMessageDir:     welcomeMessageDir,
 	}
 }
@@ -228,8 +221,6 @@ func main() {
 
 	var args CmdArgs
 	flag.IntVar(&args.Port, "port", 8088, "HTTP port")
-	flag.StringVar(&args.LookupServiceURL, "lookup-service-url", globals.PublicLookupServiceURL, "lookup service url")
-	flag.StringVar(&args.IdentityServiceURL, "identity-service-url", globals.PublicIdentityServiceURL, "identity service url")
 	flag.DurationVar(&args.Timeout, "timeout", 5*time.Second, "timeout when connecting to the lookup service")
 	flag.StringVar(&args.CertFile, "cert-file", "", "certificate file")
 	flag.StringVar(&args.KeyFile, "key-file", "", "key file")
@@ -238,7 +229,6 @@ func main() {
 	flag.StringVar(&args.NotificationName, "notification-name", "", "where to send notifications")
 	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength")
 	flag.IntVar(&args.RateLimitPerHour, "rate-limit-per-hour", defaultRateLimitPerHour, "rate limit per hour for identity creation")
-	flag.StringVar(&args.BlockchainNodeURL, "blockchain-node-url", globals.BlockchainNodeURL, "blockchain node URL")
 	flag.BoolVar(&args.UseLegacyLookupService, "use-legacy-lookup-service", false, "use legacy lookup service")
 	flag.StringVar(&args.KeyRegistryContractAddress, "key-registry-contract-address", globals.KeyRegistryContractAddress, "key registry contract address")
 	flag.StringVar(&args.NameRegistryContractAddress, "name-registry-contract-address", globals.NameRegistryContractAddress, "name registry contract address")
@@ -254,8 +244,6 @@ func main() {
 
 	ctx := context.Background()
 	var err error
-
-	log.Info().Str("url", args.LookupServiceURL).Msg("connecting to lookup service")
 
 	var proxyManagementClient pb.ProxyServiceClient
 
@@ -281,21 +269,8 @@ func main() {
 		}
 	}
 
-	var blockchain *bc.Blockchain
-	// Connect to the blockchain node.
-	log.Info().Str("url", args.BlockchainNodeURL).Msg("connecting to blockchain node")
-	bcClient, err := ethclient.Dial(args.BlockchainNodeURL)
-	if err == nil {
-		log.Debug().Str("node-url", args.BlockchainNodeURL).Msg("connected to blockchain node")
-		blockchain = bc.NewBlockchain(bcClient, args.KeyRegistryContractAddress,
-			args.NameRegistryContractAddress, args.ConnectorRegistryContractAddress, privateKey)
-	}
-	if err != nil {
-		log.Error().Err(err).Msg("cannot connect to blockchain")
-	}
-
 	server := NewServer(proxyManagementClient, privateKey, args.UbikomName,
-		args.NotificationName, args.PowStrength, args.RateLimitPerHour, blockchain, args.WelcomeMessageDir)
+		args.NotificationName, args.PowStrength, args.RateLimitPerHour, args.WelcomeMessageDir)
 
 	http.HandleFunc("/changePassword", server.HandleChangePassword)
 	http.HandleFunc("/check_mailbox_key", server.HandleCheckMailboxKey)
