@@ -85,7 +85,7 @@ var sendMessageCmd = &cobra.Command{
 
 		ctx := context.Background()
 
-		lookupService, err := bc.NewBlockchainV2(nodeURL, contractAddress)
+		lookupService, err := bc.NewBlockchain(nodeURL, contractAddress)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to create lookup service")
 		}

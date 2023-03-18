@@ -6,10 +6,8 @@ import (
 	"net"
 	"os"
 	"path"
-	"time"
 
 	"github.com/regnull/ubikom/bc"
-	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/server"
 	"github.com/rs/zerolog"
@@ -27,16 +25,14 @@ const (
 )
 
 type CmdArgs struct {
-	DataDir                string
-	Port                   int
-	MaxMessageAgeHours     int
-	BlockchainNodeURL      string
-	UseLegacyLookupService bool
-	Network                string
-	InfuraProjectId        string
-	ContractAddress        string
-	LogLevel               string
-	LogNoColor             bool
+	DataDir            string
+	Port               int
+	MaxMessageAgeHours int
+	Network            string
+	InfuraProjectId    string
+	ContractAddress    string
+	LogLevel           string
+	LogNoColor         bool
 }
 
 func main() {
@@ -47,8 +43,6 @@ func main() {
 	flag.IntVar(&args.Port, "port", defaultPort, "port to listen to")
 	flag.StringVar(&args.DataDir, "data-dir", "", "base directory")
 	flag.IntVar(&args.MaxMessageAgeHours, "max-message-age-hours", defaultMaxMessageAgeHours, "max message age, in hours")
-	flag.StringVar(&args.BlockchainNodeURL, "blockchain-node-url", globals.BlockchainNodeURL, "DEPRECATES: blockchain node url (use network flag instead)")
-	flag.BoolVar(&args.UseLegacyLookupService, "use-legacy-lookup-service", false, "DEPRECATED: use legacy lookup service")
 	flag.StringVar(&args.Network, "network", defaultNetwork, "ethereum network to use")
 	flag.StringVar(&args.InfuraProjectId, "infura-project-id", "", "infura project id")
 	flag.StringVar(&args.ContractAddress, "contract-address", "", "name registry contract address")
@@ -79,11 +73,10 @@ func main() {
 	}
 	log.Info().Str("data-dir", args.DataDir).Msg("got data directory")
 
-	lookupClient, cleanup, err := getLookupService(&args)
+	lookupClient, err := getLookupService(&args)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initialize lookup client")
 	}
-	defer cleanup()
 
 	dumpServer, err := server.NewDumpServer(args.DataDir, lookupClient, args.MaxMessageAgeHours)
 	if err != nil {
@@ -101,45 +94,30 @@ func main() {
 	grpcServer.Serve(lis)
 }
 
-func connectToLookupService(url string) (pb.LookupServiceClient, *grpc.ClientConn, error) {
-	opts := []grpc.DialOption{
-		grpc.WithInsecure(),
-		grpc.WithBlock(),
-		grpc.WithTimeout(time.Second * 5),
-	}
-
-	conn, err := grpc.Dial(url, opts...)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to lookup service: %w", err)
-	}
-
-	return pb.NewLookupServiceClient(conn), conn, nil
-}
-
-func getLookupService(args *CmdArgs) (pb.LookupServiceClient, func(), error) {
+func getLookupService(args *CmdArgs) (pb.LookupServiceClient, error) {
 	// We always use the new blockchain lookup service as the first priority.
 	// If arguments for the legacy lookup service are specified, we will use
 	// them as fallback.
 
 	nodeURL, err := bc.GetNodeURL(args.Network, args.InfuraProjectId)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get network URL: %w", err)
+		return nil, fmt.Errorf("failed to get network URL: %w", err)
 	}
 	log.Debug().Str("node-url", nodeURL).Msg("using blockchain node")
 
 	contractAddress, err := bc.GetContractAddress(args.Network, args.ContractAddress)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get contract address: %w", err)
+		return nil, fmt.Errorf("failed to get contract address: %w", err)
 	}
 	log.Debug().Str("contract-address", contractAddress).Msg("using contract")
 
 	// This is our main blockchain-based lookup service. Eventually, it will be the only one.
 	// For now, we will fallback on the existing old-style blockchain lookup service, or
 	// standalone lookup service. Those will go away.
-	blockchainV2Lookup, err := bc.NewBlockchainV2(nodeURL, contractAddress)
+	blockchainV2Lookup, err := bc.NewBlockchain(nodeURL, contractAddress)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to connect to blockchain node: %w", err)
+		return nil, fmt.Errorf("failed to connect to blockchain node: %w", err)
 	}
 
-	return blockchainV2Lookup, nil, nil
+	return blockchainV2Lookup, nil
 }
