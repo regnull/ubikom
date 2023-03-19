@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/regnull/easyecc"
-	"github.com/regnull/ubikom/bc"
-	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog"
@@ -33,22 +31,19 @@ const (
 )
 
 type CmdArgs struct {
-	Port                             int
-	ProxyManagementServiceURL        string
-	Timeout                          time.Duration
-	CertFile                         string
-	KeyFile                          string
-	UbikomKeyFile                    string
-	UbikomName                       string
-	NotificationName                 string
-	PowStrength                      int
-	RateLimitPerHour                 int
-	KeyRegistryContractAddress       string
-	NameRegistryContractAddress      string
-	ConnectorRegistryContractAddress string
-	Network                          string
-	InfuraProjectId                  string
-	ContractAddress                  string
+	Port                      int
+	ProxyManagementServiceURL string
+	Timeout                   time.Duration
+	CertFile                  string
+	KeyFile                   string
+	UbikomKeyFile             string
+	UbikomName                string
+	NotificationName          string
+	PowStrength               int
+	RateLimitPerHour          int
+	Network                   string
+	InfuraProjectId           string
+	ContractAddress           string
 }
 
 type Server struct {
@@ -229,9 +224,6 @@ func main() {
 	flag.StringVar(&args.NotificationName, "notification-name", "", "where to send notifications")
 	flag.IntVar(&args.PowStrength, "pow-strength", defaultPowStrength, "POW strength")
 	flag.IntVar(&args.RateLimitPerHour, "rate-limit-per-hour", defaultRateLimitPerHour, "rate limit per hour for identity creation")
-	flag.StringVar(&args.KeyRegistryContractAddress, "key-registry-contract-address", globals.KeyRegistryContractAddress, "key registry contract address")
-	flag.StringVar(&args.NameRegistryContractAddress, "name-registry-contract-address", globals.NameRegistryContractAddress, "name registry contract address")
-	flag.StringVar(&args.ConnectorRegistryContractAddress, "connector-registry-contract-address", globals.ConnectorRegistryContractAddress, "connector registry contract address")
 	flag.StringVar(&args.ProxyManagementServiceURL, "proxy-management-service-url", "", "proxy management service url")
 	flag.StringVar(&args.Network, "network", defaultNetwork, "ethereum network to use")
 	flag.StringVar(&args.InfuraProjectId, "infura-project-id", "", "infura project id")
@@ -289,32 +281,4 @@ func main() {
 			fmt.Printf("%v\n", err)
 		}
 	}
-}
-
-func getLookupService(args *CmdArgs) (pb.LookupServiceClient, error) {
-	// We always use the new blockchain lookup service as the first priority.
-	// If arguments for the legacy lookup service are specified, we will use
-	// them as fallback.
-
-	nodeURL, err := bc.GetNodeURL(args.Network, args.InfuraProjectId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get network URL: %w", err)
-	}
-	log.Debug().Str("node-url", nodeURL).Msg("using blockchain node")
-
-	contractAddress, err := bc.GetContractAddress(args.Network, args.ContractAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get contract address: %w", err)
-	}
-	log.Debug().Str("contract-address", contractAddress).Msg("using contract")
-
-	// This is our main blockchain-based lookup service. Eventually, it will be the only one.
-	// For now, we will fallback on the existing old-style blockchain lookup service, or
-	// standalone lookup service. Those will go away.
-	blockchainV2Lookup, err := bc.NewBlockchain(nodeURL, contractAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to blockchain node: %w", err)
-	}
-
-	return blockchainV2Lookup, nil
 }
