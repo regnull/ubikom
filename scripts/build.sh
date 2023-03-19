@@ -7,7 +7,7 @@ GOOS="linux darwin"
 #GOARCH="amd64 arm64"
 GOARCH="amd64"
 WIN_EXE=".exe"
-for BIN_NAME in ubikom-server ubikom-dump ubikom-cli easy-setup ubikom-web dbexport dbimport event-processor daily-report
+for BIN_NAME in ubikom-dump ubikom-cli ubikom-web
 do
     MAIN_DIR="$SCRIPT_DIR/../cmd/$BIN_NAME"
     pushd $MAIN_DIR > /dev/null
