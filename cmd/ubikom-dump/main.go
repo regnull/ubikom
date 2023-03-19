@@ -92,10 +92,16 @@ func InitConfig() {
 	}
 
 	viper.BindPFlags(flag.CommandLine)
+
+	if viper.GetString(configInfuraProjectId) == "" {
+		log.Fatal().Msg("infura project id must be specified")
+	}
 }
 
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "01/02 15:04:05", NoColor: viper.GetBool(configLogNoColor)})
+
+	InitConfig()
 
 	logLevel, err := zerolog.ParseLevel(viper.GetString(configLogLevel))
 	if err != nil {
