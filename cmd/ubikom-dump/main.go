@@ -18,8 +18,6 @@ import (
 
 const (
 	defaultPort               = 8826
-	defaultHomeSubDir         = ".ubikom"
-	defaultDataSubDir         = "dump"
 	defaultDataDir            = "$HOME/.ubikom/dump"
 	defaultMaxMessageAgeHours = 14 * 24
 	defaultNetwork            = "main"
