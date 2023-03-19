@@ -47,12 +47,6 @@ type CmdArgs struct {
 	ConfigFile         string
 }
 
-func SetIfNotDefault(name string, v any, def any) {
-	if v != def {
-		viper.Set(name, v)
-	}
-}
-
 func InitConfigOrDie() {
 	// Init log with temporary values.
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
