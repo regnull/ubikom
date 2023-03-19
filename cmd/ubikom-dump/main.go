@@ -53,18 +53,21 @@ func SetIfNotDefault(name string, v any, def any) {
 	}
 }
 
-func InitConfig() {
+func InitConfigOrDie() {
+	// Init log with temporary values.
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
+	// Set defaults.
 	viper.SetDefault(configPort, defaultPort)
-	viper.SetDefault(configDataDir, "$HOME/.ubikom/dump")
+	viper.SetDefault(configDataDir, defaultDataDir)
 	viper.SetDefault(configMaxMessageAgeHours, defaultMaxMessageAgeHours)
 	viper.SetDefault(configNetwork, defaultNetwork)
 	viper.SetDefault(configLogLevel, defaultLogLevel)
 	viper.SetDefault(configLogNoColor, defaultLogNoColor)
 	viper.SetDefault(configContractAddress, globals.MainnetNameRegistryAddress)
 
+	// Command line flags.
 	var args CmdArgs
 	flag.IntVar(&args.Port, configPort, 0, "port to listen to")
 	flag.StringVar(&args.DataDir, configDataDir, "", "base directory")
@@ -76,13 +79,16 @@ func InitConfig() {
 	flag.BoolVar(&args.LogNoColor, configLogNoColor, false, "disable colors for logging")
 	flag.StringVar(&args.ConfigFile, "config", "", "config file location")
 	flag.Parse()
+	viper.BindPFlags(flag.CommandLine)
 
+	// Environment variables overrides.
 	viper.BindEnv(configNetwork, "UBK_NETWORK")
 	viper.BindEnv(configInfuraProjectId, "UBK_INFURA_PROJECT_ID")
 	viper.BindEnv(configContractAddress, "UBK_CONTRACT_ADDRESS")
 	viper.BindEnv(configLogLevel, "UBK_LOG_LEVEL")
 	viper.BindEnv(configLogNoColor, "UBK_LOG_NO_COLOR")
 
+	// Config file overrides.
 	if args.ConfigFile != "" {
 		viper.SetConfigFile(args.ConfigFile)
 		viper.AddConfigPath(".")
@@ -91,8 +97,7 @@ func InitConfig() {
 		}
 	}
 
-	viper.BindPFlags(flag.CommandLine)
-
+	// Validate config.
 	if viper.GetString(configInfuraProjectId) == "" {
 		log.Fatal().Msg("infura project id must be specified")
 	}
@@ -101,7 +106,7 @@ func InitConfig() {
 func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "01/02 15:04:05", NoColor: viper.GetBool(configLogNoColor)})
 
-	InitConfig()
+	InitConfigOrDie()
 
 	logLevel, err := zerolog.ParseLevel(viper.GetString(configLogLevel))
 	if err != nil {
