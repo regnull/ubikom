@@ -6,110 +6,48 @@ import (
 	"os"
 
 	"github.com/regnull/ubikom/bc"
-	"github.com/regnull/ubikom/globals"
+	"github.com/regnull/ubikom/cfg"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/server"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 )
 
-const (
-	defaultPort               = 8826
-	defaultDataDir            = "$HOME/.ubikom/dump"
-	defaultMaxMessageAgeHours = 14 * 24
-	defaultNetwork            = "main"
-	defaultLogLevel           = "info"
-	defaultLogNoColor         = false
+func main() {
+	err := cfg.InitConfig([]cfg.ConfigEntry{
+		cfg.NewIntConfig("port", 8826, "port to listen to", ""),
+		cfg.NewStringConfig("data-dir", "$HOME/.ubikom/dump", "data directory", ""),
+		cfg.NewIntConfig("max-message-age-hours", 24*14, "max message age in hours", ""),
+		cfg.NewStringConfig("network", "main", "ethereum network to use", "UBK_NETWORK"),
+		cfg.NewStringConfig("infura-project-id", "", "infura project id", "UBK_INFURA_PROJECT_ID"),
+		cfg.NewStringConfig("contract-address", "", "contract address", "UBK_CONTRACT_ADDRESS"),
+		cfg.NewStringConfig("log-level", "info", "log level", "UBK_LOG_LEVEL"),
+		cfg.NewBoolConfig("log-no-color", false, "disable colors for logging", "UBK_LOG_NO_COLOR"),
+	})
 
-	// Configuration options names.
-	configPort               = "port"
-	configDataDir            = "data-dir"
-	configMaxMessageAgeHours = "max-message-age-hours"
-	configNetwork            = "network"
-	configLogLevel           = "log-level"
-	configLogNoColor         = "log-no-color"
-	configInfuraProjectId    = "infura-project-id"
-	configContractAddress    = "contract-address"
-)
-
-type CmdArgs struct {
-	DataDir            string
-	Port               int
-	MaxMessageAgeHours int
-	Network            string
-	InfuraProjectId    string
-	ContractAddress    string
-	LogLevel           string
-	LogNoColor         bool
-	ConfigFile         string
-}
-
-func InitConfigOrDie() {
-	// Init log with temporary values.
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-
-	// Set defaults.
-	viper.SetDefault(configPort, defaultPort)
-	viper.SetDefault(configDataDir, defaultDataDir)
-	viper.SetDefault(configMaxMessageAgeHours, defaultMaxMessageAgeHours)
-	viper.SetDefault(configNetwork, defaultNetwork)
-	viper.SetDefault(configLogLevel, defaultLogLevel)
-	viper.SetDefault(configLogNoColor, defaultLogNoColor)
-	viper.SetDefault(configContractAddress, globals.MainnetNameRegistryAddress)
-
-	// Command line flags.
-	var args CmdArgs
-	flag.IntVar(&args.Port, configPort, 0, "port to listen to")
-	flag.StringVar(&args.DataDir, configDataDir, "", "base directory")
-	flag.IntVar(&args.MaxMessageAgeHours, configMaxMessageAgeHours, 0, "max message age, in hours")
-	flag.StringVar(&args.Network, configNetwork, "", "ethereum network to use")
-	flag.StringVar(&args.InfuraProjectId, configInfuraProjectId, "", "infura project id")
-	flag.StringVar(&args.ContractAddress, configContractAddress, "", "name registry contract address")
-	flag.StringVar(&args.LogLevel, configLogLevel, "", "log level")
-	flag.BoolVar(&args.LogNoColor, configLogNoColor, false, "disable colors for logging")
-	flag.StringVar(&args.ConfigFile, "config", "", "config file location")
-	flag.Parse()
-	viper.BindPFlags(flag.CommandLine)
-
-	// Environment variables overrides.
-	viper.BindEnv(configNetwork, "UBK_NETWORK")
-	viper.BindEnv(configInfuraProjectId, "UBK_INFURA_PROJECT_ID")
-	viper.BindEnv(configContractAddress, "UBK_CONTRACT_ADDRESS")
-	viper.BindEnv(configLogLevel, "UBK_LOG_LEVEL")
-	viper.BindEnv(configLogNoColor, "UBK_LOG_NO_COLOR")
-
-	// Config file overrides.
-	if args.ConfigFile != "" {
-		viper.SetConfigFile(args.ConfigFile)
-		viper.AddConfigPath(".")
-		if err := viper.ReadInConfig(); err != nil {
-			log.Fatal().Err(err).Str("path", args.ConfigFile).Msg("failed to read config file")
-		}
+	if err != nil {
+		log.Fatal().Err(err).Msg("invalid configuration")
 	}
 
-	// Validate config.
-	if viper.GetString(configInfuraProjectId) == "" {
+	fmt.Println(viper.GetString("log-level"))
+	return
+
+	if viper.GetString("infura-project-id") == "" {
 		log.Fatal().Msg("infura project id must be specified")
 	}
-}
 
-func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "01/02 15:04:05", NoColor: viper.GetBool(configLogNoColor)})
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "01/02 15:04:05", NoColor: viper.GetBool("log-no-color")})
 
-	InitConfigOrDie()
-
-	logLevel, err := zerolog.ParseLevel(viper.GetString(configLogLevel))
+	logLevel, err := zerolog.ParseLevel(viper.GetString("log-level"))
 	if err != nil {
-		log.Fatal().Str("level", viper.GetString(configLogLevel)).Msg("invalid log level")
+		log.Fatal().Str("level", viper.GetString("log-level")).Msg("invalid log level")
 	}
 
 	zerolog.SetGlobalLevel(logLevel)
 
-	dataDir := os.ExpandEnv(viper.GetString(configDataDir))
+	dataDir := os.ExpandEnv(viper.GetString("data-dir"))
 	log.Info().Str("data-dir", dataDir).Msg("got data directory")
 
 	lookupClient, err := getLookupService()
@@ -117,30 +55,30 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to initialize lookup client")
 	}
 
-	dumpServer, err := server.NewDumpServer(dataDir, lookupClient, viper.GetInt(configMaxMessageAgeHours))
+	dumpServer, err := server.NewDumpServer(dataDir, lookupClient, viper.GetInt("max-message-age-hours"))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create data store")
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt(configPort)))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt("port")))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to listen")
 	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterDMSDumpServiceServer(grpcServer, dumpServer)
-	log.Info().Int("port", viper.GetInt(configPort)).Msg("server is up and running")
+	log.Info().Int("port", viper.GetInt("port")).Msg("server is up and running")
 	grpcServer.Serve(lis)
 }
 
 func getLookupService() (pb.LookupServiceClient, error) {
-	nodeURL, err := bc.GetNodeURL(viper.GetString(configNetwork), viper.GetString(configInfuraProjectId))
+	nodeURL, err := bc.GetNodeURL(viper.GetString("network"), viper.GetString("infura-project-id"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get network URL: %w", err)
 	}
 	log.Debug().Str("node-url", nodeURL).Msg("using blockchain node")
 
-	contractAddress, err := bc.GetContractAddress(viper.GetString(configNetwork), viper.GetString(configContractAddress))
+	contractAddress, err := bc.GetContractAddress(viper.GetString("network"), viper.GetString("contract-address"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contract address: %w", err)
 	}
