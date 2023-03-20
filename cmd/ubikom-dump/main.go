@@ -31,9 +31,6 @@ func main() {
 		log.Fatal().Err(err).Msg("invalid configuration")
 	}
 
-	fmt.Println(viper.GetString("log-level"))
-	return
-
 	if viper.GetString("infura-project-id") == "" {
 		log.Fatal().Msg("infura project id must be specified")
 	}
