@@ -72,6 +72,7 @@ message ImapMessage {
     uint64 received_timestamp = 3;
     uint64 size = 4;
     uint32 uid = 5;
+    string contentRef = 6;
 }
 
 enum EventType {
