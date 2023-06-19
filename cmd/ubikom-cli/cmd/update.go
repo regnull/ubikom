@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	cntv2 "github.com/regnull/ubchain/gocontract"
+	cnt "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -74,7 +74,7 @@ var updatePublicKeyCmd = &cobra.Command{
 		log.Debug().Str("contract-address", contractAddress).Msg("using contract")
 		err = interactWithContract(nodeURL, key, contractAddress, 0, 0, 0,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
-				instance, err := cntv2.NewNameRegistry(addr, client)
+				instance, err := cnt.NewNameRegistry(addr, client)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to get contract instance")
 				}
@@ -120,7 +120,7 @@ var updateOwnerCmd = &cobra.Command{
 		}
 		err = interactWithContract(nodeURL, key, contractAddress, 0, 0, 0,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
-				instance, err := cntv2.NewNameRegistry(addr, client)
+				instance, err := cnt.NewNameRegistry(addr, client)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to get contract instance")
 				}
@@ -167,7 +167,7 @@ var updatePriceCmd = &cobra.Command{
 		}
 		err = interactWithContract(nodeURL, key, contractAddress, 0, 0, 0,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
-				instance, err := cntv2.NewNameRegistry(addr, client)
+				instance, err := cnt.NewNameRegistry(addr, client)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to get contract instance")
 				}
@@ -230,7 +230,7 @@ var updateConfigCmd = &cobra.Command{
 		}
 		err = interactWithContract(nodeURL, key, contractAddress, 0, gasPrice, gasLimit,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
-				instance, err := cntv2.NewNameRegistry(addr, client)
+				instance, err := cnt.NewNameRegistry(addr, client)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to get contract instance")
 				}

@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	cntv2 "github.com/regnull/ubchain/gocontract"
+	cnt "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -33,7 +33,7 @@ func (b *Blockchain) LookupKey(ctx context.Context, in *pb.LookupKeyRequest, opt
 }
 
 func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest, opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
-	instance, err := cntv2.NewNameRegistryCaller(common.HexToAddress(b.contractAddress), b.client)
+	instance, err := cnt.NewNameRegistryCaller(common.HexToAddress(b.contractAddress), b.client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contract instance")
 	}
@@ -54,7 +54,7 @@ func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest, o
 }
 
 func (b *Blockchain) LookupAddress(ctx context.Context, in *pb.LookupAddressRequest, opts ...grpc.CallOption) (*pb.LookupAddressResponse, error) {
-	instance, err := cntv2.NewNameRegistryCaller(common.HexToAddress(b.contractAddress), b.client)
+	instance, err := cnt.NewNameRegistryCaller(common.HexToAddress(b.contractAddress), b.client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contract instance")
 	}

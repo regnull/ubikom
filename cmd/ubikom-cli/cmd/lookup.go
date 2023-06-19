@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
-	cntv2 "github.com/regnull/ubchain/gocontract"
+	cnt "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -66,7 +66,7 @@ var lookupNameCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to connect to blockchain node")
 		}
 
-		instance, err := cntv2.NewNameRegistryCaller(common.HexToAddress(contractAddress), client)
+		instance, err := cnt.NewNameRegistryCaller(common.HexToAddress(contractAddress), client)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get contract instance")
 		}
@@ -134,7 +134,7 @@ var lookupConfigCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to connect to blockchain node")
 		}
 
-		instance, err := cntv2.NewNameRegistryCaller(common.HexToAddress(contractAddress), client)
+		instance, err := cnt.NewNameRegistryCaller(common.HexToAddress(contractAddress), client)
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get contract instance")
 		}

@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
-	cntv2 "github.com/regnull/ubchain/gocontract"
+	cnt "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -81,7 +81,7 @@ var registerNameCmd = &cobra.Command{
 		log.Debug().Str("contract-address", contractAddress).Msg("using contract")
 		err = interactWithContract(nodeURL, key, contractAddress, 0, gasPrice, gasLimit,
 			func(client *ethclient.Client, auth *bind.TransactOpts, addr common.Address) (*types.Transaction, error) {
-				instance, err := cntv2.NewNameRegistry(addr, client)
+				instance, err := cnt.NewNameRegistry(addr, client)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to get contract instance")
 				}
