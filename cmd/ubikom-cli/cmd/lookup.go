@@ -1,197 +1,150 @@
 package cmd
 
 import (
-	"context"
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"time"
+	"math/big"
 
-	"github.com/btcsuite/btcutil/base58"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
-	"github.com/regnull/ubikom/globals"
-	"github.com/regnull/ubikom/pb"
-	"github.com/regnull/ubikom/util"
+	cntv2 "github.com/regnull/ubchain/gocontract"
+	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 )
 
 func init() {
-	lookupCmd.PersistentFlags().String("url", globals.PublicLookupServiceURL, "server URL")
+	lookupConfigCmd.Flags().String("config-name", "", "protocol to look up")
 
-	lookupAddressCmd.Flags().String("protocol", "PL_DMS", "protocol")
-	lookupKeyCmd.Flags().String("key", "", "Location for the private key file")
-
-	lookupCmd.AddCommand(lookupKeyCmd)
 	lookupCmd.AddCommand(lookupNameCmd)
-	lookupCmd.AddCommand(lookupAddressCmd)
+	lookupCmd.AddCommand(lookupConfigCmd)
+
 	rootCmd.AddCommand(lookupCmd)
 }
 
 var lookupCmd = &cobra.Command{
 	Use:   "lookup",
-	Short: "Look stuff up",
-	Long:  "Look stuff up",
+	Short: "Lookup stuff on the blockchain",
+	Long:  "Lookup stuff on the blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
 	},
 }
 
-var lookupKeyCmd = &cobra.Command{
-	Use:   "key",
-	Short: "Lookup key",
-	Long:  "Lookup key",
-	Run: func(cmd *cobra.Command, args []string) {
-		keyFile, err := cmd.Flags().GetString("key")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get key location")
-		}
-
-		if keyFile == "" {
-			keyFile, err = util.GetDefaultKeyLocation()
-			if err != nil {
-				log.Fatal().Err(err).Msg("failed to get private key")
-			}
-		}
-
-		encrypted, err := util.IsKeyEncrypted(keyFile)
-		if err != nil {
-			log.Fatal().Err(err).Msg("cannot find key file")
-		}
-
-		passphrase := ""
-		if encrypted {
-			passphrase, err = util.ReadPassphase()
-			if err != nil {
-				log.Fatal().Err(err).Msg("cannot read passphrase")
-			}
-		}
-
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
-		if err != nil {
-			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
-		}
-
-		url, err := cmd.Flags().GetString("url")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get server URL")
-		}
-
-		opts := []grpc.DialOption{
-			grpc.WithInsecure(),
-		}
-		conn, err := grpc.Dial(url, opts...)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to connect to the server")
-		}
-		defer conn.Close()
-
-		req := &pb.LookupKeyRequest{
-			Key: privateKey.PublicKey().SerializeCompressed()}
-
-		client := pb.NewLookupServiceClient(conn)
-		ctx := context.Background()
-		res, err := client.LookupKey(ctx, req)
-		if err != nil {
-			log.Fatal().Err(err).Msg("key lookup request failed")
-		}
-
-		if res.GetDisabled() {
-			fmt.Printf("THIS KEY IS DISABLED\n")
-			disabledTs := util.TimeFromMs(res.GetDisabledTimestamp())
-			fmt.Printf("disabled timestamp: %s\n", disabledTs.Format(time.RFC822))
-			fmt.Printf("disabled by: %x\n", res.GetDisabledBy())
-		}
-		ts := util.TimeFromMs(res.GetRegistrationTimestamp())
-		fmt.Printf("registration timestamp: %s\n", ts.Format(time.RFC822))
-
-		for _, parentKey := range res.GetParentKey() {
-			fmt.Printf("parent key: %x\n", parentKey)
-		}
-	},
+type lookupNameRes struct {
+	PublicKey string
+	Owner     string
+	Price     int64
 }
 
 var lookupNameCmd = &cobra.Command{
 	Use:   "name",
-	Short: "Lookup name",
-	Long:  "Lookup name",
-	Args:  cobra.ExactArgs(1),
+	Short: "Get name",
+	Long:  "Get name",
 	Run: func(cmd *cobra.Command, args []string) {
-		url, err := cmd.Flags().GetString("url")
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get server URL")
+			log.Fatal().Err(err).Msg("failed to get node URL")
+		}
+		log.Debug().Str("node-url", nodeURL).Msg("using node")
+		contractAddress, err := cmdutil.GetContractAddress(cmd.Flags())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load contract address")
+		}
+		log.Debug().Str("contract-address", contractAddress).Msg("using contract")
+
+		if len(args) < 1 {
+			log.Fatal().Msg("name must be specified")
 		}
 
-		opts := []grpc.DialOption{
-			grpc.WithInsecure(),
-		}
-		conn, err := grpc.Dial(url, opts...)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to connect to the server")
-		}
-		defer conn.Close()
+		name := args[0]
 
-		req := &pb.LookupNameRequest{
-			Name: args[0]}
+		// Connect to the node.
+		client, err := ethclient.Dial(nodeURL)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to connect to blockchain node")
+		}
 
-		client := pb.NewLookupServiceClient(conn)
-		ctx := context.Background()
-		res, err := client.LookupName(ctx, req)
-		if err != nil && util.StatusCodeFromError(err) == codes.NotFound {
-			log.Fatal().Msg("not found")
-		}
+		instance, err := cntv2.NewNameRegistryCaller(common.HexToAddress(contractAddress), client)
 		if err != nil {
-			log.Fatal().Err(err).Msg("name lookup request failed")
+			log.Fatal().Err(err).Msg("failed to get contract instance")
 		}
-		publicKey, err := easyecc.NewPublicFromSerializedCompressed(res.GetKey())
+
+		res, err := instance.LookupName(nil, name)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to parse key")
+			log.Fatal().Err(err).Msg("failed to query the key")
 		}
-		fmt.Printf("hex: %0x\n", res.GetKey())
-		fmt.Printf("base58: %s\n", base58.Encode(res.GetKey()))
-		fmt.Printf("btc addr: %s\n", publicKey.Address())
-		fmt.Printf("eth addr: %s\n", publicKey.EthereumAddress())
+
+		zeroAddress := common.BigToAddress(big.NewInt(0))
+		if bytes.Equal(res.Owner.Bytes(), zeroAddress.Bytes()) {
+			fmt.Printf("name is not registered\n")
+			return
+		}
+
+		publicKey, err := easyecc.NewPublicFromSerializedCompressed(res.PublicKey)
+		if err != nil {
+			log.Fatal().Err(err).Msg("invalid key returned")
+		}
+
+		cmdRes := &lookupNameRes{
+			PublicKey: fmt.Sprintf("0x%x", publicKey.SerializeCompressed()),
+			Owner:     fmt.Sprintf("0x%x", res.Owner),
+			Price:     res.Price.Int64(),
+		}
+
+		s, err := json.MarshalIndent(cmdRes, "", "  ")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to marshal json")
+		}
+
+		fmt.Printf("%s\n", s)
 	},
 }
 
-var lookupAddressCmd = &cobra.Command{
-	Use:   "address",
-	Short: "Lookup address",
-	Long:  "Lookup address",
-	Args:  cobra.ExactArgs(1),
+var lookupConfigCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Get config",
+	Long:  "Get config",
 	Run: func(cmd *cobra.Command, args []string) {
-		url, err := cmd.Flags().GetString("url")
+		nodeURL, err := cmdutil.GetNodeURL(cmd.Flags())
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get server URL")
+			log.Fatal().Err(err).Msg("failed to get node URL")
+		}
+		log.Debug().Str("node-url", nodeURL).Msg("using node")
+		contractAddress, err := cmdutil.GetContractAddress(cmd.Flags())
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load contract address")
 		}
 
-		protocolStr, err := cmd.Flags().GetString("protocol")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get protocol")
-		}
-		protocol, ok := pb.Protocol_value[protocolStr]
-		if !ok {
-			log.Fatal().Str("protocol", protocolStr).Msg("invalid protocol")
+		if len(args) < 1 {
+			log.Fatal().Err(err).Msg("name must be specified")
 		}
 
-		opts := []grpc.DialOption{
-			grpc.WithInsecure(),
-		}
-		conn, err := grpc.Dial(url, opts...)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to connect to the server")
-		}
-		defer conn.Close()
+		name := args[0]
 
-		req := &pb.LookupAddressRequest{
-			Name:     args[0],
-			Protocol: pb.Protocol(protocol)}
-
-		client := pb.NewLookupServiceClient(conn)
-		ctx := context.Background()
-		res, err := client.LookupAddress(ctx, req)
+		configName, err := cmd.Flags().GetString("config-name")
 		if err != nil {
-			log.Fatal().Err(err).Msg("address lookup request failed")
+			log.Fatal().Err(err).Msg("failed to load protocol")
 		}
-		fmt.Printf("%s\n", res.GetAddress())
+
+		// Connect to the node.
+		client, err := ethclient.Dial(nodeURL)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to connect to blockchain node")
+		}
+
+		instance, err := cntv2.NewNameRegistryCaller(common.HexToAddress(contractAddress), client)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get contract instance")
+		}
+
+		log.Debug().Str("name", name).Str("config-name", configName).Msg("about to look up config")
+		configValue, err := instance.LookupConfig(nil, name, configName)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to query the config")
+		}
+
+		fmt.Printf("%s\n", configValue)
 	},
 }
