@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	cntv2 "github.com/regnull/ubchain/gocontract/v2"
+	cntv2 "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

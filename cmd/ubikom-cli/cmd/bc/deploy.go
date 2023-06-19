@@ -12,30 +12,17 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc"
-	"github.com/regnull/ubchain/gocontract"
-	gocontv2 "github.com/regnull/ubchain/gocontract/v2"
+	gocontv2 "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	deployKeyRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
-
-	deployNameRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
-	deployNameRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
-
 	deployRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
-
-	deployConnectorRegistryCmd.Flags().String("key", "", "key to authorize the transaction")
-	deployConnectorRegistryCmd.Flags().String("key-registry-address", "", "key registry contract address")
-	deployConnectorRegistryCmd.Flags().String("name-registry-address", "", "name registry contract address")
 
 	deployCmd.PersistentFlags().Uint64("gas-limit", 2000000, "gas limit")
 
-	deployCmd.AddCommand(deployKeyRegistryCmd)
-	deployCmd.AddCommand(deployNameRegistryCmd)
-	deployCmd.AddCommand(deployConnectorRegistryCmd)
 	deployCmd.AddCommand(deployRegistryCmd)
 
 	BCCmd.AddCommand(deployCmd)
@@ -47,140 +34,6 @@ var deployCmd = &cobra.Command{
 	Long:  "Deploy contract on a blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Fatal().Msg("sub-command requried (do 'ubikom-cli bc deploy --help' to see them)")
-	},
-}
-
-var deployKeyRegistryCmd = &cobra.Command{
-	Use:   "key-registry",
-	Short: "Deploy key registry",
-	Long:  "Deploy key registry",
-	Run: func(cmd *cobra.Command, args []string) {
-		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load key")
-		}
-
-		nodeURL, err := cmd.Flags().GetString("node-url")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get node URL")
-		}
-
-		gasLimit, err := cmd.Flags().GetUint64("gas-limit")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get gas limit")
-		}
-
-		txAddr, tx, _, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
-			client *ethclient.Client) (common.Address, *types.Transaction, error) {
-			txAddr, tx, _, err := gocontract.DeployKeyRegistry(auth, client)
-			return txAddr, tx, err
-		})
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to deploy")
-		}
-
-		fmt.Printf("contract address: %s\n", txAddr.Hex())
-		fmt.Printf("tx: %s\n", tx.Hash().Hex())
-	},
-}
-
-var deployNameRegistryCmd = &cobra.Command{
-	Use:   "name-registry",
-	Short: "Deploy name registry",
-	Long:  "Deploy name registry",
-	Run: func(cmd *cobra.Command, args []string) {
-		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load key")
-		}
-
-		nodeURL, err := cmd.Flags().GetString("node-url")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get node URL")
-		}
-
-		gasLimit, err := cmd.Flags().GetUint64("gas-limit")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get gas limit")
-		}
-
-		keyRegistryAddress, err := cmd.Flags().GetString("key-registry-address")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get key registry address")
-		}
-
-		if keyRegistryAddress == "" {
-			log.Fatal().Msg("--key-registry-address must be specified")
-		}
-
-		keyRegistryAddr := common.HexToAddress(keyRegistryAddress)
-
-		txAddr, tx, _, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
-			client *ethclient.Client) (common.Address, *types.Transaction, error) {
-			txAddr, tx, _, err := gocontract.DeployNameRegistry(auth, client, keyRegistryAddr)
-			return txAddr, tx, err
-		})
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to deploy")
-		}
-
-		fmt.Printf("contract address: %s\n", txAddr.Hex())
-		fmt.Printf("tx: %s\n", tx.Hash().Hex())
-	},
-}
-
-var deployConnectorRegistryCmd = &cobra.Command{
-	Use:   "connector-registry",
-	Short: "Deploy connector registry",
-	Long:  "Deploy connector registry",
-	Run: func(cmd *cobra.Command, args []string) {
-		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load key")
-		}
-
-		nodeURL, err := cmd.Flags().GetString("node-url")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get node URL")
-		}
-
-		gasLimit, err := cmd.Flags().GetUint64("gas-limit")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get gas limit")
-		}
-
-		keyRegistryAddress, err := cmd.Flags().GetString("key-registry-address")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get key registry address")
-		}
-
-		if keyRegistryAddress == "" {
-			log.Fatal().Msg("--key-registry-address must be specified")
-		}
-
-		nameRegistryAddress, err := cmd.Flags().GetString("name-registry-address")
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to get name registry address")
-		}
-
-		if nameRegistryAddress == "" {
-			log.Fatal().Msg("--name-registry-address must be specified")
-		}
-
-		keyRegistryAddr := common.HexToAddress(keyRegistryAddress)
-		nameRegistryAddr := common.HexToAddress(nameRegistryAddress)
-
-		txAddr, tx, _, err := deploy(nodeURL, key, gasLimit, func(auth *bind.TransactOpts,
-			client *ethclient.Client) (common.Address, *types.Transaction, error) {
-			txAddr, tx, _, err := gocontract.DeployConnectorRegistry(auth, client, keyRegistryAddr, nameRegistryAddr)
-			return txAddr, tx, err
-		})
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to deploy")
-		}
-
-		fmt.Printf("contract address: %s\n", txAddr.Hex())
-		fmt.Printf("tx: %s\n", tx.Hash().Hex())
 	},
 }
 

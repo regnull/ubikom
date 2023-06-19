@@ -10,7 +10,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0
 	github.com/regnull/easyecc v0.2.1
-	github.com/regnull/ubchain v0.0.0-20221216162132-ab3cf6198874
+	github.com/regnull/ubchain v0.0.0-20230619005355-5f925ecc59c7
 	github.com/rs/zerolog v1.21.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5

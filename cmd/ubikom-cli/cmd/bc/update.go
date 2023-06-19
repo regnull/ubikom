@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	cntv2 "github.com/regnull/ubchain/gocontract/v2"
+	cntv2 "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
