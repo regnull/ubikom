@@ -1,4 +1,4 @@
-package bc
+package cmd
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -19,7 +19,7 @@ func init() {
 
 	buyCmd.AddCommand(buyNameCmd)
 
-	BCCmd.AddCommand(buyCmd)
+	rootCmd.AddCommand(buyCmd)
 }
 
 var buyCmd = &cobra.Command{

@@ -1,4 +1,4 @@
-package bc
+package cmd
 
 import (
 	"context"
@@ -27,7 +27,7 @@ func init() {
 	transferCmd.Flags().Uint64("gas-limit", 21000, "gas limit")
 	transferCmd.Flags().String("value", "", "value to transfer")
 
-	BCCmd.AddCommand(transferCmd)
+	rootCmd.AddCommand(transferCmd)
 }
 
 var transferCmd = &cobra.Command{

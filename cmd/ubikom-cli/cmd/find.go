@@ -1,4 +1,4 @@
-package bc
+package cmd
 
 import (
 	"context"
@@ -15,7 +15,7 @@ func init() {
 
 	findCmd.AddCommand(findTxCmd)
 
-	BCCmd.AddCommand(findCmd)
+	rootCmd.AddCommand(findCmd)
 }
 
 var findCmd = &cobra.Command{

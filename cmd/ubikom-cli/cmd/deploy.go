@@ -1,4 +1,4 @@
-package bc
+package cmd
 
 import (
 	"context"
@@ -25,7 +25,7 @@ func init() {
 
 	deployCmd.AddCommand(deployRegistryCmd)
 
-	BCCmd.AddCommand(deployCmd)
+	rootCmd.AddCommand(deployCmd)
 }
 
 var deployCmd = &cobra.Command{

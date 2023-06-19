@@ -1,4 +1,4 @@
-package bc
+package cmd
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -18,7 +18,7 @@ func init() {
 
 	registerCmd.AddCommand(registerNameCmd)
 
-	BCCmd.AddCommand(registerCmd)
+	rootCmd.AddCommand(registerCmd)
 }
 
 var registerCmd = &cobra.Command{

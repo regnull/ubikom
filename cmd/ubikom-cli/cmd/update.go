@@ -1,4 +1,4 @@
-package bc
+package cmd
 
 import (
 	"math/big"
@@ -32,7 +32,7 @@ func init() {
 	updateCmd.AddCommand(updatePriceCmd)
 	updateCmd.AddCommand(updateConfigCmd)
 
-	BCCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(updateCmd)
 }
 
 var updateCmd = &cobra.Command{

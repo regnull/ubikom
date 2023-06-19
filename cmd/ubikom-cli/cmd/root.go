@@ -3,7 +3,6 @@ package cmd
 import (
 	"os"
 
-	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/bc"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -19,7 +18,12 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(bc.BCCmd)
+	rootCmd.PersistentFlags().String("network", "main", "mode, either live or prod")
+	rootCmd.PersistentFlags().String("node-url", "", "blockchain node location")
+	rootCmd.PersistentFlags().String("infura-project-id", "", "infura project id")
+	rootCmd.PersistentFlags().String("contract-address", "", "registry contract address")
+	rootCmd.PersistentFlags().Uint64("gas-price", 0, "gas price")
+	rootCmd.PersistentFlags().Uint64("gas-limit", 0, "gas limit")
 }
 
 func Execute() {

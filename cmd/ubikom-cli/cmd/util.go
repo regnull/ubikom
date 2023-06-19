@@ -1,4 +1,4 @@
-package bc
+package cmd
 
 import (
 	"context"
