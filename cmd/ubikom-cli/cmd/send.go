@@ -101,7 +101,7 @@ var sendMessageCmd = &cobra.Command{
 			if text == ".\n" {
 				break
 			}
-			lines = append(lines, text)
+			lines = append(lines, strings.ReplaceAll(text, "\n", ""))
 		}
 		body := strings.Join(lines, "\n")
 
