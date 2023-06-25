@@ -1,55 +1,105 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
-	"os"
 
-	"github.com/emersion/go-message"
+	"github.com/emersion/go-message/mail"
 )
 
+// Create a mail message with attachment.
+
 func main() {
+	var (
+		contentType        string // application/pdf
+		fileName           string
+		attachmentFileName string
+		subject            string
+		from               string
+		to                 string
+		text               string
+	)
+	flag.StringVar(&contentType, "content-type", "", "content type")
+	flag.StringVar(&fileName, "file-name", "", "file name")
+	flag.StringVar(&attachmentFileName, "attach-file-name", "", "attachment file name")
+	flag.StringVar(&subject, "subject", "", "subject")
+	flag.StringVar(&from, "from", "", "from")
+	flag.StringVar(&to, "to", "", "to")
+	flag.StringVar(&text, "text", "Please see attached", "email body text")
+	flag.Parse()
+
+	if contentType == "" {
+		log.Fatal("--content-type must be specified")
+	}
+
+	if fileName == "" {
+		log.Fatal("--file-name must be specified")
+	}
+
+	if attachmentFileName == "" {
+		log.Fatal("--attach-file-name must be specified")
+	}
+
+	if subject == "" {
+		log.Fatal("--subject must be specified")
+	}
+
+	if from == "" {
+		log.Fatal("--from must be specified")
+	}
+
+	if to == "" {
+		log.Fatal("--to must be specified")
+	}
+
 	var b bytes.Buffer
 
-	var h message.Header
+	var h mail.Header
 	h.SetContentType("multipart/alternative", nil)
-	h.SetText("To", "lgx@ubikom.cc")
-	h.SetText("From", "sot@ubikom.cc")
-	h.SetText("Subject", "Updated SMA200/10 SPY strategy")
-	w, err := message.CreateWriter(&b, h)
+	h.SetText("To", to)
+	h.SetText("From", from)
+	h.SetText("Subject", subject)
+	w, err := mail.CreateWriter(&b, h)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var h1 message.Header
-	h1.SetContentType("text/html", nil)
-	w1, err := w.CreatePart(h1)
+	// Create an attachment
+	var ah mail.AttachmentHeader
+	ah.Set("Content-Type", contentType)
+	ah.SetFilename(attachmentFileName)
+	w1, err := w.CreateAttachment(ah)
 	if err != nil {
 		log.Fatal(err)
 	}
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		io.WriteString(w1, scanner.Text())
-		// fmt.Println(scanner.Text()) // Println will add back the final '\n'
+	bb, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		log.Fatal(err)
 	}
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading standard input:", err)
-	}
+	w1.Write(bb)
 	w1.Close()
 
-	var h2 message.Header
-	h2.SetContentType("text/plain", nil)
-	w2, err := w.CreatePart(h2)
+	// Write the email body.
+	tw, err := w.CreateInline()
 	if err != nil {
 		log.Fatal(err)
 	}
-	io.WriteString(w2, "Hello World!\n\nThis is a text part.")
+	var th mail.InlineHeader
+	th.Set("Content-Type", "text/plain")
+	w2, err := tw.CreatePart(th)
+	if err != nil {
+		log.Fatal(err)
+	}
+	io.WriteString(w2, text)
 	w2.Close()
+	tw.Close()
 
 	w.Close()
 
+	// Write the output.
 	fmt.Println(b.String())
 }
