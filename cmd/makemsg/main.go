@@ -12,6 +12,10 @@ import (
 )
 
 // Create a mail message with attachment.
+// Example:
+// makemsg --content-type=application/pdf --file-name=report.pdf --attach-file-name=report.pdf \
+//     --subject="Updated SMA200/10 SPY report" --from="sot@ubikom.cc" --to=lgx@ubikom.cc \
+//     --text="Please see the attached report"
 
 func main() {
 	var (
@@ -41,6 +45,7 @@ func main() {
 	}
 
 	if attachmentFileName == "" {
+		// TODO: This can be derived from the file name.
 		log.Fatal("--attach-file-name must be specified")
 	}
 
