@@ -1,6 +1,4 @@
 # Ubikom Project
-![Coverage](https://img.shields.io/badge/Coverage-25.2%25-red)
-
 ![GitHub Workflow Status](https://github.com/regnull/ubikom/actions/workflows/go.yml/badge.svg)
 [![GoDoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/regnull/ubikom)
 [![GoReportCard](https://goreportcard.com/badge/github.com/regnull/ubikom)](https://goreportcard.com/report/github.com/regnull/ubikom)
