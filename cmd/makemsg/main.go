@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/emersion/go-message/mail"
 )
@@ -15,7 +20,7 @@ import (
 // Example:
 // makemsg --content-type=application/pdf --file-name=report.pdf --attach-file-name=report.pdf \
 //     --subject="Updated SMA200/10 SPY report" --from="sot@ubikom.cc" --to=lgx@ubikom.cc \
-//     --text="Please see the attached report"
+//    < message_body.txt
 
 func main() {
 	var (
@@ -25,7 +30,6 @@ func main() {
 		subject            string
 		from               string
 		to                 string
-		text               string
 	)
 	flag.StringVar(&contentType, "content-type", "", "content type")
 	flag.StringVar(&fileName, "file-name", "", "file name")
@@ -33,21 +37,7 @@ func main() {
 	flag.StringVar(&subject, "subject", "", "subject")
 	flag.StringVar(&from, "from", "", "from")
 	flag.StringVar(&to, "to", "", "to")
-	flag.StringVar(&text, "text", "Please see attached", "email body text")
 	flag.Parse()
-
-	if contentType == "" {
-		log.Fatal("--content-type must be specified")
-	}
-
-	if fileName == "" {
-		log.Fatal("--file-name must be specified")
-	}
-
-	if attachmentFileName == "" {
-		// TODO: This can be derived from the file name.
-		log.Fatal("--attach-file-name must be specified")
-	}
 
 	if subject == "" {
 		log.Fatal("--subject must be specified")
@@ -61,6 +51,21 @@ func main() {
 		log.Fatal("--to must be specified")
 	}
 
+	var lines []string
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter your message, dot on an empty line to finish: \n")
+	for {
+		text, err := reader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		if text == ".\n" {
+			break
+		}
+		lines = append(lines, strings.ReplaceAll(text, "\n", ""))
+	}
+	body := strings.Join(lines, "\n")
+
 	var b bytes.Buffer
 
 	var h mail.Header
@@ -68,25 +73,36 @@ func main() {
 	h.SetText("To", to)
 	h.SetText("From", from)
 	h.SetText("Subject", subject)
+	h.SetText("Date", time.Now().Format("02 Jan 06 15:04:05 -0700"))
 	w, err := mail.CreateWriter(&b, h)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create an attachment
-	var ah mail.AttachmentHeader
-	ah.Set("Content-Type", contentType)
-	ah.SetFilename(attachmentFileName)
-	w1, err := w.CreateAttachment(ah)
-	if err != nil {
-		log.Fatal(err)
+	if fileName != "" {
+		if contentType == "" {
+			log.Fatal("--content-type must be specified")
+		}
+
+		if attachmentFileName == "" {
+			attachmentFileName = filepath.Base(fileName)
+		}
+
+		var ah mail.AttachmentHeader
+		ah.Set("Content-Type", contentType)
+		ah.SetFilename(attachmentFileName)
+		w1, err := w.CreateAttachment(ah)
+		if err != nil {
+			log.Fatal(err)
+		}
+		bb, err := ioutil.ReadFile(fileName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		w1.Write(bb)
+		w1.Close()
 	}
-	bb, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	w1.Write(bb)
-	w1.Close()
 
 	// Write the email body.
 	tw, err := w.CreateInline()
@@ -99,7 +115,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	io.WriteString(w2, text)
+	io.WriteString(w2, body)
 	w2.Close()
 	tw.Close()
 
