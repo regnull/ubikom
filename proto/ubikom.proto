@@ -30,6 +30,20 @@ message SignedWithPow {
     bytes pow = 4;
 }
 
+enum EllipticCurve {
+    EC_UNKNOWN = 0;
+    EC_SECP256P1 = 1;
+    EC_P_256 = 2;
+    EC_P_384 = 3;
+    EC_P_521 = 4;
+}
+
+message CryptoContext {
+    EllipticCurve elliptic_curve = 1;
+    int32 ecdh_version = 2;
+    int32 ecdsa_version = 3;
+}
+
 message LookupKeyRequest {
     bytes key = 1;
 }
@@ -76,6 +90,8 @@ message DMSMessage {
     bytes content = 3;
 
     Signature signature = 4;
+
+    CryptoContext cryto_context = 5;
 }
 
 message SendRequest {
@@ -87,6 +103,7 @@ message SendResponse {
 
 message ReceiveRequest {
     Signed identity_proof = 1;
+    CryptoContext cryto_context = 2;
 }
 
 message ReceiveResponse {
