@@ -41,7 +41,8 @@ func interactWithContract(nodeURL string, key *easyecc.PrivateKey,
 	ctx := context.Background()
 
 	// Get nonce.
-	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(key.PublicKey().EthereumAddress()))
+	ethereumAddress, _ := key.PublicKey().EthereumAddress()
+	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(ethereumAddress))
 	if err != nil {
 		return err
 	}

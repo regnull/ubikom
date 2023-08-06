@@ -99,7 +99,8 @@ func deploy(nodeURL string, key *easyecc.PrivateKey, gasLimit uint64,
 	ctx := context.Background()
 
 	// Get nonce.
-	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(key.PublicKey().EthereumAddress()))
+	etheriumAddress, _ := key.PublicKey().EthereumAddress()
+	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(etheriumAddress))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}

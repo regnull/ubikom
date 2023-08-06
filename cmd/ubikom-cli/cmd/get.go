@@ -84,7 +84,8 @@ var getEthereumAddressCmd = &cobra.Command{
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
 
-		fmt.Printf("%s\n", privateKey.PublicKey().EthereumAddress())
+		ethereumAddress, _ := privateKey.PublicKey().EthereumAddress()
+		fmt.Printf("%s\n", ethereumAddress)
 	},
 }
 
@@ -132,7 +133,8 @@ var getBitcoinAddressCmd = &cobra.Command{
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
 
-		fmt.Printf("%s\n", privateKey.PublicKey().Address())
+		bitcoinAddress, _ := privateKey.PublicKey().BitcoinAddress()
+		fmt.Printf("%s\n", bitcoinAddress)
 	},
 }
 

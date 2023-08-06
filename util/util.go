@@ -157,7 +157,8 @@ func SerializedCompressedToAddress(key []byte) string {
 	if err != nil {
 		return "**invalid key**"
 	}
-	return publicKey.Address()
+	bitcoinAddress, _ := publicKey.BitcoinAddress()
+	return bitcoinAddress
 }
 
 // StatusCodeFromError returns gRPC status code from error, or codes.Unknown if the error does

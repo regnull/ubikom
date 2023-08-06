@@ -87,7 +87,8 @@ var transferCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to load key")
 			}
-			accountAddress = common.HexToAddress(key.PublicKey().EthereumAddress())
+			ethereumAddress, _ := key.PublicKey().EthereumAddress()
+			accountAddress = common.HexToAddress(ethereumAddress)
 		}
 
 		to, err := cmd.Flags().GetString("to")

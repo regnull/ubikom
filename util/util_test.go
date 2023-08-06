@@ -79,8 +79,10 @@ func Test_GetPrivateKeyFromNameAndPassword(t *testing.T) {
 	assert := assert.New(t)
 
 	pk := GetPrivateKeyFromNameAndPassword("foo", "bar")
-	assert.Equal("1M6DhqJEyo6XVfrVH7qvrAGPyj4tE38UFU", pk.PublicKey().Address())
+	bitcoinAddress, _ := pk.PublicKey().BitcoinAddress()
+	assert.Equal("1M6DhqJEyo6XVfrVH7qvrAGPyj4tE38UFU", bitcoinAddress)
 
 	pk = GetPrivateKeyFromNameAndPassword(" fOo@zzz.xxx   ", "bar")
-	assert.Equal("1M6DhqJEyo6XVfrVH7qvrAGPyj4tE38UFU", pk.PublicKey().Address())
+	bitcoinAddress, _ = pk.PublicKey().BitcoinAddress()
+	assert.Equal("1M6DhqJEyo6XVfrVH7qvrAGPyj4tE38UFU", bitcoinAddress)
 }

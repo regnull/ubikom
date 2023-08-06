@@ -49,7 +49,8 @@ var registerNameCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to generate public key")
 			}
-			log.Info().Str("key", string(encKey.PublicKey().EthereumAddress())).Msg("generated new encryption key")
+			ethereumAddress, _ := encKey.PublicKey().EthereumAddress()
+			log.Info().Str("key", ethereumAddress).Msg("generated new encryption key")
 		} else {
 			encKey, err = cmdutil.LoadKeyFromFlag(cmd, "enc-key")
 			if err != nil {

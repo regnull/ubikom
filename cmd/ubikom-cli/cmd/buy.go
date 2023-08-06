@@ -61,11 +61,12 @@ var buyNameCmd = &cobra.Command{
 		}
 		var encKey *easyecc.PrivateKey
 		if encKeyPath == "" {
-			encKey, err = easyecc.NewRandomPrivateKey()
+			encKey, err = easyecc.GeneratePrivateKey(easyecc.SECP256K1)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to generate public key")
 			}
-			log.Info().Str("key", string(encKey.PublicKey().EthereumAddress())).Msg("generated new encryption key")
+			entheriumAddress, _ := encKey.PublicKey().EthereumAddress()
+			log.Info().Str("key", entheriumAddress).Msg("generated new encryption key")
 		} else {
 			encKey, err = cmdutil.LoadKeyFromFlag(cmd, "enc-key")
 			if err != nil {
