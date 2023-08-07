@@ -9,7 +9,7 @@ require (
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
-	github.com/regnull/easyecc v1.0.2
+	github.com/regnull/easyecc v1.0.3
 	github.com/regnull/ubchain v0.0.0-20230619005355-5f925ecc59c7
 	github.com/rs/zerolog v1.30.0
 	github.com/spf13/cobra v1.7.0

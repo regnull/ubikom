@@ -25,6 +25,8 @@ func init() {
 	createKeyCmd.Flags().Bool("from-mnemonic", false, "create private key from mnemonic")
 	createKeyCmd.Flags().String("salt", "", "Salt used for private key creation")
 	createKeyCmd.Flags().Bool("skip-passphrase", false, "skip passphrase")
+	createKeyCmd.Flags().Bool("jwk", false, "save key in JWK format")
+	createKeyCmd.Flags().String("curve", "secp256k1", "elliptic curve to use")
 	createCmd.AddCommand(createKeyCmd)
 	rootCmd.AddCommand(createCmd)
 }
@@ -74,6 +76,20 @@ var createKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to get --skip-passphrase flag")
 		}
 
+		curveStr, err := cmd.Flags().GetString("curve")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get --curve flag")
+		}
+		curve := easyecc.StringToEllipticCurve(curveStr)
+		if curve == easyecc.INVALID_CURVE {
+			log.Fatal().Msg("invalid curve")
+		}
+
+		useJWK, err := cmd.Flags().GetBool("jwk")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get --jwk flag")
+		}
+
 		var privateKey *easyecc.PrivateKey
 		if fromPassword != "" {
 
@@ -88,7 +104,7 @@ var createKeyCmd = &cobra.Command{
 				log.Fatal().Msg("--salt required")
 			}
 			salt := util.Hash256([]byte(saltStr))
-			privateKey = easyecc.NewPrivateKeyFromPassword([]byte(fromPassword), salt[:])
+			privateKey = easyecc.CreatePrivateKeyFromPassword(curve, []byte(fromPassword), salt[:])
 		} else if fromMnemonic {
 			var words []string
 			reader := bufio.NewReader(os.Stdin)
@@ -104,12 +120,12 @@ var createKeyCmd = &cobra.Command{
 				words = append(words, word)
 			}
 			mnemonic := strings.Join(words, " ")
-			privateKey, err = easyecc.NewPrivateKeyFromMnemonic(mnemonic)
+			privateKey, err = easyecc.CreatePrivateKeyFromMnemonic(curve, mnemonic)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to create key from mnemonic")
 			}
 		} else {
-			privateKey, err = easyecc.NewRandomPrivateKey()
+			privateKey, err = easyecc.GeneratePrivateKey(curve)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to generate private key")
 			}
@@ -126,7 +142,11 @@ var createKeyCmd = &cobra.Command{
 		if passphrase == "" {
 			log.Warn().Msg("saving private key without passphrase")
 		}
-		err = privateKey.Save(out, passphrase)
+		if useJWK || strings.HasSuffix(strings.ToLower(out), ".jwk") {
+			err = privateKey.SaveAsJWK(out, passphrase)
+		} else {
+			err = privateKey.Save(out, passphrase)
+		}
 		if err != nil {
 			log.Fatal().Err(err).Str("location", out).Msg("failed to save private key")
 		}

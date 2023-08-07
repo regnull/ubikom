@@ -814,6 +814,8 @@ github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40T
 github.com/protolambda/bls12-381-util v0.0.0-20220416220906-d8552aa452c7/go.mod h1:IToEjHuttnUzwZI5KBSM/LOOW3qLbbrHOEfp3SbECGY=
 github.com/regnull/easyecc v1.0.2 h1:DpPghVF9j1m0SF3joebRVha0sy16h0Wff/EASvWMqI8=
 github.com/regnull/easyecc v1.0.2/go.mod h1:eiz0tfW0TnVC+jJQaKvBcoGmHA0XOhV8JLRCRXsR9po=
+github.com/regnull/easyecc v1.0.3 h1:oyUaXiEmJKp72wgwZG6j8odA6OSWKTty/h4KnXgmApU=
+github.com/regnull/easyecc v1.0.3/go.mod h1:eiz0tfW0TnVC+jJQaKvBcoGmHA0XOhV8JLRCRXsR9po=
 github.com/regnull/ubchain v0.0.0-20230619005355-5f925ecc59c7 h1:3J2yvRmUVQAUJrcKEEbk8gcGT72veOtFG36+8c6JPNg=
 github.com/regnull/ubchain v0.0.0-20230619005355-5f925ecc59c7/go.mod h1:VXcXOhIuEfKL3Cl++mqobPmpsp6cs5C7fbc/5SdQYto=
 github.com/retailnext/hllpp v1.0.1-0.20180308014038-101a6d2f8b52/go.mod h1:RDpi1RftBQPUCDRw6SmxeaREsAaRKnOclghuzp/WRzc=
