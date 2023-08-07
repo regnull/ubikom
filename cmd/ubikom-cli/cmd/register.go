@@ -12,6 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	REGISTER_NAME_DEFAULT_GAS_LIMIT = 200_000
+)
+
 func init() {
 	registerNameCmd.Flags().String("key", "", "key to authorize the transaction")
 	registerNameCmd.Flags().String("enc-key", "", "encryption key")
@@ -45,7 +49,7 @@ var registerNameCmd = &cobra.Command{
 		}
 		var encKey *easyecc.PrivateKey
 		if encKeyPath == "" {
-			encKey, err = easyecc.NewRandomPrivateKey()
+			encKey, err = easyecc.GeneratePrivateKey(easyecc.SECP256K1)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to generate public key")
 			}
@@ -64,6 +68,9 @@ var registerNameCmd = &cobra.Command{
 		gasLimit, err := cmd.Flags().GetUint64("gas-limit")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get gas-limit flag")
+		}
+		if gasLimit == 0 {
+			gasLimit = REGISTER_NAME_DEFAULT_GAS_LIMIT
 		}
 		if len(args) < 1 {
 			log.Fatal().Msg("name must be specified")

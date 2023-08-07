@@ -79,7 +79,7 @@ var getEthereumAddressCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
+		privateKey, err := easyecc.CreatePrivateKeyFromFile(easyecc.SECP256K1, keyFile, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -128,7 +128,7 @@ var getBitcoinAddressCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
+		privateKey, err := easyecc.CreatePrivateKeyFromFile(easyecc.SECP256K1, keyFile, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}
@@ -172,7 +172,7 @@ var getUserPublicKey = &cobra.Command{
 		}
 		n := strings.TrimSpace(name)
 		n = util.StripDomainName(n)
-		privateKey := easyecc.NewPrivateKeyFromPassword([]byte(password),
+		privateKey := easyecc.CreatePrivateKeyFromPassword(easyecc.SECP256K1, []byte(password),
 			util.Hash256([]byte(strings.ToLower(n))))
 
 		fmt.Printf("0x%0x\n", privateKey.PublicKey().SerializeCompressed())
@@ -209,7 +209,7 @@ var getMnemonicCmd = &cobra.Command{
 			}
 		}
 
-		privateKey, err := easyecc.NewPrivateKeyFromFile(keyFile, passphrase)
+		privateKey, err := easyecc.CreatePrivateKeyFromFile(easyecc.SECP256K1, keyFile, passphrase)
 		if err != nil {
 			log.Fatal().Err(err).Str("location", keyFile).Msg("cannot load private key")
 		}

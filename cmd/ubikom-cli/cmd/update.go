@@ -237,12 +237,12 @@ var updateConfigCmd = &cobra.Command{
 
 				tx, err := instance.UpdateConfig(auth, name, configName, configValue)
 				if err != nil {
-					log.Fatal().Err(err).Msg("failed to update price")
+					log.Fatal().Err(err).Msg("failed to update config")
 				}
 				return tx, err
 			})
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to update price")
+			log.Fatal().Err(err).Msg("failed to update config")
 		}
 	},
 }

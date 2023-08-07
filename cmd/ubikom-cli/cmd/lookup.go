@@ -82,7 +82,7 @@ var lookupNameCmd = &cobra.Command{
 			return
 		}
 
-		publicKey, err := easyecc.NewPublicFromSerializedCompressed(res.PublicKey)
+		publicKey, err := easyecc.DeserializeCompressed(easyecc.SECP256K1, res.PublicKey)
 		if err != nil {
 			log.Fatal().Err(err).Msg("invalid key returned")
 		}
