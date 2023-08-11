@@ -26,7 +26,7 @@ func main() {
 
 	b, err := os.ReadFile(input)
 	if err != nil {
-		log.Fatal("failed to load private key: %v", err)
+		log.Fatal(err)
 	}
 	secret := new(big.Int)
 	secret.SetBytes(b)
