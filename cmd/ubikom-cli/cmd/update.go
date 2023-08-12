@@ -79,7 +79,7 @@ var updatePublicKeyCmd = &cobra.Command{
 					log.Fatal().Err(err).Msg("failed to get contract instance")
 				}
 
-				tx, err := instance.UpdatePublicKey(auth, encKey.PublicKey().SerializeCompressed(), name)
+				tx, err := instance.UpdatePublicKey(auth, encKey.PublicKey().CompressedBytes(), name)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to update public key")
 				}

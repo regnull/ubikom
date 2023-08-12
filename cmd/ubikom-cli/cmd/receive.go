@@ -102,7 +102,7 @@ var receiveMessageCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to get receiver public key")
 		}
-		senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+		senderKey, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, lookupRes.GetKey())
 		if err != nil {
 			log.Fatal().Err(err).Msg("invalid receiver public key")
 		}
@@ -188,7 +188,7 @@ var receiveEventCmd = &cobra.Command{
 				R: sig.R.Bytes(),
 				S: sig.S.Bytes(),
 			},
-			Key: privateKey.PublicKey().SerializeCompressed(),
+			Key: privateKey.PublicKey().CompressedBytes(),
 		}
 
 		ctx := context.Background()
@@ -211,7 +211,7 @@ var receiveEventCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to get sender public key")
 			}
-			senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+			senderKey, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, lookupRes.GetKey())
 			if err != nil {
 				log.Fatal().Err(err).Msg("invalid sender public key")
 			}

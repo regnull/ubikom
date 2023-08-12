@@ -49,7 +49,7 @@ func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRes
 
 	// Verify signature.
 	if !protoutil.VerifySignature(req.GetMessage().GetSignature(),
-		enderKey, req.GetMessage().GetContent()) {
+		senderKey, req.GetMessage().GetContent()) {
 		log.Warn().Msg("signature verification failed")
 		return nil, status.Error(codes.InvalidArgument, "bad signature")
 	}

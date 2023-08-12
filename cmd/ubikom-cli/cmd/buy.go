@@ -84,7 +84,7 @@ var buyNameCmd = &cobra.Command{
 					log.Fatal().Err(err).Msg("failed to get contract instance")
 				}
 
-				tx, err := instance.BuyName(auth, name, encKey.PublicKey().SerializeCompressed())
+				tx, err := instance.BuyName(auth, name, encKey.PublicKey().CompressedBytes())
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to buy name")
 				}

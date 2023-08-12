@@ -148,7 +148,7 @@ var getPublicKeyCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("failed to load private key")
 		}
 
-		fmt.Printf("0x%0x\n", privateKey.PublicKey().SerializeCompressed())
+		fmt.Printf("0x%0x\n", privateKey.PublicKey().CompressedBytes())
 	},
 }
 

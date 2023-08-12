@@ -94,7 +94,7 @@ var registerNameCmd = &cobra.Command{
 					log.Fatal().Err(err).Msg("failed to get contract instance")
 				}
 
-				tx, err := instance.RegisterName(auth, encKey.PublicKey().SerializeCompressed(), name)
+				tx, err := instance.RegisterName(auth, encKey.PublicKey().CompressedBytes(), name)
 				if err != nil {
 					log.Fatal().Err(err).Msg("failed to register name")
 				}
