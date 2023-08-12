@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/regnull/easyecc"
+	"github.com/regnull/easyecc/v2"
 	"github.com/regnull/ubikom/globals"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"

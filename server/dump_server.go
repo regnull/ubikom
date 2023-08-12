@@ -22,7 +22,8 @@ type DumpServer struct {
 	store        store.Store
 }
 
-func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient, maxMessageAgeHours int) (*DumpServer, error) {
+func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient,
+	maxMessageAgeHours int) (*DumpServer, error) {
 	store, err := store.NewBadger(baseDir, time.Duration(maxMessageAgeHours)*time.Hour)
 	if err != nil {
 		return nil, err
@@ -47,7 +48,8 @@ func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRes
 	}
 
 	// Verify signature.
-	if !protoutil.VerifySignature(req.GetMessage().GetSignature(), senderKey, req.GetMessage().GetContent()) {
+	if !protoutil.VerifySignature(req.GetMessage().GetSignature(),
+		enderKey, req.GetMessage().GetContent()) {
 		log.Warn().Msg("signature verification failed")
 		return nil, status.Error(codes.InvalidArgument, "bad signature")
 	}

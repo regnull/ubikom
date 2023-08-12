@@ -91,7 +91,7 @@ message DMSMessage {
 
     Signature signature = 4;
 
-    CryptoContext cryto_context = 5;
+    CryptoContext crypto_context = 5;
 }
 
 message SendRequest {

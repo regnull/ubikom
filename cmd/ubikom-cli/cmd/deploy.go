@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/regnull/easyecc"
+	"github.com/regnull/easyecc/v2"
 	gocontv2 "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"

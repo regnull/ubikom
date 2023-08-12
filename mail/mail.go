@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/regnull/easyecc"
+	"github.com/regnull/easyecc/v2"
 	"github.com/regnull/ubikom/pb"
 	"github.com/rs/zerolog/log"
 )
@@ -281,7 +281,7 @@ func AddUbikomHeaders(ctx context.Context, body string, sender, receiver string,
 	if err != nil {
 		return "", fmt.Errorf("failed to get receiver public key: %w", err)
 	}
-	receiverKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+	receiverKey, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, lookupRes.GetKey())
 	if err != nil {
 		return "", err
 	}

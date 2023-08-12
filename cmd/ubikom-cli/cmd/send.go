@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
-	"github.com/regnull/easyecc"
+	"github.com/regnull/easyecc/v2"
 	"github.com/regnull/ubikom/bc"
 	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/regnull/ubikom/pb"

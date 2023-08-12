@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"hash"
 	"io/ioutil"
@@ -231,13 +232,24 @@ func ReadPassphase() (string, error) {
 }
 
 func IsKeyEncrypted(filePath string) (bool, error) {
-	fi, err := os.Stat(filePath)
+	b, err := os.ReadFile(filePath)
 	if err != nil {
-		return false, fmt.Errorf("file not found")
+		return false, err
 	}
-	// get the size
-	size := fi.Size()
-	return size > 32, nil
+	var i interface{}
+	err = json.Unmarshal(b, &i)
+	if err != nil {
+		return false, err
+	}
+	m, ok := i.(map[string]interface{})
+	if !ok {
+		return false, fmt.Errorf("invalid content")
+	}
+	_, ok = m["ciphertext"]
+	if ok {
+		return true, nil
+	}
+	return false, nil
 }
 
 func StripDomainName(s string) string {

@@ -5,7 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/regnull/easyecc"
+	"github.com/regnull/easyecc/v2"
 	cnt "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
@@ -49,7 +49,7 @@ var registerNameCmd = &cobra.Command{
 		}
 		var encKey *easyecc.PrivateKey
 		if encKeyPath == "" {
-			encKey, err = easyecc.GeneratePrivateKey(easyecc.SECP256K1)
+			encKey, err = easyecc.NewPrivateKey(easyecc.SECP256K1)
 			if err != nil {
 				log.Fatal().Err(err).Msg("failed to generate public key")
 			}

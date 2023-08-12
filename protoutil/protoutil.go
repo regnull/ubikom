@@ -10,11 +10,11 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/regnull/easyecc"
+	easyeccv1 "github.com/regnull/easyecc"
+	"github.com/regnull/easyecc/v2"
 
 	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
-	"github.com/regnull/ubikom/pow"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -26,31 +26,9 @@ var (
 	ErrTimeDifferenceTooLarge      = errors.New("time difference is too large")
 )
 
-// CreateSignedWithPOW creates a request signed with the given private key and generates POW of the given strength.
-func CreateSignedWithPOW(privateKey *easyecc.PrivateKey, content []byte, powStrength int) (*pb.SignedWithPow, error) {
-	//compressedKey := privateKey.PublicKey().SerializeCompressed()
-
-	log.Debug().Msg("generating POW...")
-	reqPow := pow.Compute(content, powStrength)
-	log.Debug().Hex("pow", reqPow).Msg("POW found")
-
-	signed, err := CreateSigned(privateKey, content)
-	if err != nil {
-		return nil, err
-	}
-
-	req := &pb.SignedWithPow{
-		Content:   content,
-		Pow:       reqPow,
-		Signature: signed.Signature,
-		Key:       signed.Key,
-	}
-	return req, nil
-}
-
 // CreateSigned creates a signature for the given content.
 func CreateSigned(privateKey *easyecc.PrivateKey, content []byte) (*pb.Signed, error) {
-	compressedKey := privateKey.PublicKey().SerializeCompressed()
+	compressedKey := privateKey.PublicKey().CompressedBytes()
 	hash := util.Hash256(content)
 	sig, err := privateKey.Sign(hash)
 	if err != nil {
@@ -70,7 +48,7 @@ func CreateSigned(privateKey *easyecc.PrivateKey, content []byte) (*pb.Signed, e
 
 // VerifySignature returns true if the provided signature is valid for the given key and content.
 func VerifySignature(sig *pb.Signature, serializedKey []byte, content []byte) bool {
-	key, err := easyecc.NewPublicFromSerializedCompressed(serializedKey)
+	key, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, serializedKey)
 	if err != nil {
 		log.Printf("invalid serialized compressed key")
 		return false
@@ -109,6 +87,46 @@ func CreateMessage(privateKey *easyecc.PrivateKey, body []byte, sender, receiver
 			R: sig.R.Bytes(),
 			S: sig.S.Bytes(),
 		},
+		CryptoContext: &pb.CryptoContext{
+			EllipticCurve: getProtoEC(privateKey.Curve()),
+			EcdhVersion:   2,
+			EcdsaVersion:  1,
+		},
+	}, nil
+}
+
+func CreateLegacyMessage(privateKey *easyecc.PrivateKey, body []byte, sender, receiver string,
+	receiverKey *easyecc.PublicKey) (*pb.DMSMessage, error) {
+	// We must use easyecc v1 for the legacy encryption.
+	privateKeyV1 := easyeccv1.CreatePrivateKey(easyeccv1.SECP256K1, privateKey.Secret())
+	receiverKeyV1, err := easyeccv1.NewPublicFromSerializedCompressed(receiverKey.CompressedBytes())
+	if err != nil {
+		return nil, err
+	}
+	encryptedBody, err := privateKeyV1.Encrypt(body, receiverKeyV1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt message: %w", err)
+	}
+
+	hash := util.Hash256(encryptedBody)
+	sig, err := privateKey.Sign(hash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign message, %w", err)
+	}
+
+	return &pb.DMSMessage{
+		Sender:   sender,
+		Receiver: receiver,
+		Content:  encryptedBody,
+		Signature: &pb.Signature{
+			R: sig.R.Bytes(),
+			S: sig.S.Bytes(),
+		},
+		CryptoContext: &pb.CryptoContext{
+			EllipticCurve: getProtoEC(privateKey.Curve()),
+			EcdhVersion:   1,
+			EcdsaVersion:  1,
+		},
 	}, nil
 }
 
@@ -139,7 +157,7 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	if err != nil {
 		return fmt.Errorf("failed to get receiver public key: %w", err)
 	}
-	receiverKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+	receiverKey, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, lookupRes.GetKey())
 	if err != nil {
 		log.Fatal().Err(err).Msg("invalid receiver public key")
 	}
@@ -175,12 +193,13 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	return nil
 }
 
-func DecryptMessage(ctx context.Context, lookupClient pb.LookupServiceClient, privateKey *easyecc.PrivateKey, msg *pb.DMSMessage) (string, error) {
+func DecryptMessage(ctx context.Context, lookupClient pb.LookupServiceClient,
+	privateKey *easyecc.PrivateKey, msg *pb.DMSMessage) (string, error) {
 	lookupRes, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
 	if err != nil {
 		return "", fmt.Errorf("failed to get sender public key: %w", err)
 	}
-	senderKey, err := easyecc.NewPublicFromSerializedCompressed(lookupRes.GetKey())
+	senderKey, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, lookupRes.GetKey())
 	if err != nil {
 		return "", fmt.Errorf("invalid sender public key: %w", err)
 	}
@@ -214,7 +233,7 @@ func IdentityProof(key *easyecc.PrivateKey, timestamp time.Time) (*pb.Signed, er
 			R: sig.R.Bytes(),
 			S: sig.S.Bytes(),
 		},
-		Key: key.PublicKey().SerializeCompressed(),
+		Key: key.PublicKey().CompressedBytes(),
 	}
 	return signed, nil
 }
@@ -232,10 +251,25 @@ func VerifyIdentity(signed *pb.Signed, now time.Time, allowedDeltaSeconds float6
 	}
 	log.Debug().Int64("timestamp", ts).Msg("POI got timestamp")
 
-	d := now.Unix() - ts
+	d := now.UTC().Unix() - ts
 	log.Debug().Int64("time_delta", d).Msg("time delta")
 	if math.Abs(float64(d)) > allowedDeltaSeconds {
 		return ErrTimeDifferenceTooLarge
 	}
 	return nil
+}
+
+func getProtoEC(curve easyecc.EllipticCurve) pb.EllipticCurve {
+	switch curve {
+	case easyecc.SECP256K1:
+		return pb.EllipticCurve_EC_SECP256P1
+	case easyecc.P256:
+		return pb.EllipticCurve_EC_P_256
+	case easyecc.P384:
+		return pb.EllipticCurve_EC_P_384
+	case easyecc.P521:
+		return pb.EllipticCurve_EC_P_521
+	default:
+		return pb.EllipticCurve_EC_UNKNOWN
+	}
 }

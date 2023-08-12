@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/regnull/easyecc"
+	"github.com/regnull/easyecc/v2"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_CreateSigned(t *testing.T) {
 	assert := assert.New(t)
 
-	key, err := easyecc.NewRandomPrivateKey()
+	key, err := easyecc.NewPrivateKey(easyecc.SECP256K1)
 	assert.NoError(err)
 	content := []byte("something to be signed")
 	signed, err := CreateSigned(key, content)
@@ -24,7 +24,7 @@ func Test_CreateSigned(t *testing.T) {
 func Test_VerifyIdentity(t *testing.T) {
 	assert := assert.New(t)
 
-	key, err := easyecc.NewRandomPrivateKey()
+	key, err := easyecc.NewPrivateKey(easyecc.SECP256K1)
 	assert.NoError(err)
 	ts := time.Now()
 	signed, err := IdentityProof(key, ts)
