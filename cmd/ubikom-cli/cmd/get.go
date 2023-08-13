@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -28,6 +29,9 @@ func init() {
 
 	getMnemonicCmd.Flags().String("key", "", "Location for the private key file")
 
+	getJwkCmd.Flags().String("key", "", "Location of the private key file")
+	getJwkCmd.Flags().Bool("show-secret", false, "Show private key secret")
+
 	getCmd.AddCommand(getAddressCmd)
 	getCmd.AddCommand(getEthereumAddressCmd)
 	getCmd.AddCommand(getBitcoinAddressCmd)
@@ -37,6 +41,7 @@ func init() {
 	getCmd.AddCommand(getBalanceCmd)
 	getCmd.AddCommand(getBlockCmd)
 	getCmd.AddCommand(getReceiptCmd)
+	getCmd.AddCommand(getJwkCmd)
 
 	rootCmd.AddCommand(getCmd)
 }
@@ -327,5 +332,42 @@ var getReceiptCmd = &cobra.Command{
 		fmt.Printf("gas used: %d\n", receipt.GasUsed)
 		fmt.Printf("tx index: %d\n", receipt.TransactionIndex)
 		fmt.Printf("tx type: %d\n", receipt.Type)
+	},
+}
+
+var getJwkCmd = &cobra.Command{
+	Use:   "jwk",
+	Short: "Get key in JWK format",
+	Long:  "Get key in JWK format",
+	Run: func(cmd *cobra.Command, args []string) {
+		privateKey, err := cmdutil.LoadKeyFromFlag(cmd, "key")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to load private key")
+		}
+		showSecret, err := cmd.Flags().GetBool("show-secret")
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get show-secret flag")
+		}
+		jsonStr, err := privateKey.MarshalToJSON()
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to marshal the key to JSON")
+		}
+		var i interface{}
+		err = json.Unmarshal([]byte(jsonStr), &i)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to parse JSON")
+		}
+		m, ok := i.(map[string]interface{})
+		if !ok {
+			log.Fatal().Msg("invalid JSON")
+		}
+		if !showSecret {
+			m["d"] = "***redacted***"
+		}
+		jwkStr, err := json.MarshalIndent(i, "", "  ")
+		if err != nil {
+			log.Fatal().Msg("failed to marhal JSON")
+		}
+		fmt.Printf("%s\n", jwkStr)
 	},
 }
