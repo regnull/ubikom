@@ -3,11 +3,14 @@ package bc
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/regnull/easyecc/v2"
 	cnt "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/pb"
 	"google.golang.org/grpc"
@@ -15,8 +18,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var ErrNotFound = fmt.Errorf("name not found")
+
+var zeroAddress = common.BigToAddress(big.NewInt(0))
+
 type Blockchain struct {
 	client          *ethclient.Client
+	caller          *cnt.NameRegistryCaller
 	contractAddress string
 }
 
@@ -25,14 +33,68 @@ func NewBlockchain(url string, contractAddress string) (*Blockchain, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to blockchain node: %w", err)
 	}
-	return &Blockchain{client: client, contractAddress: contractAddress}, nil
+	caller, err := cnt.NewNameRegistryCaller(common.HexToAddress(contractAddress), client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get contract instance")
+	}
+	return &Blockchain{
+		client:          client,
+		caller:          caller,
+		contractAddress: contractAddress}, nil
 }
 
-func (b *Blockchain) LookupKey(ctx context.Context, in *pb.LookupKeyRequest, opts ...grpc.CallOption) (*pb.LookupKeyResponse, error) {
+func (b *Blockchain) PublicKey(ctx context.Context, name string) (*easyecc.PublicKey, error) {
+	res, err := b.caller.LookupName(&bind.CallOpts{Context: ctx}, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query the key")
+	}
+
+	if bytes.Equal(res.Owner.Bytes(), zeroAddress.Bytes()) {
+		return nil, ErrNotFound
+	}
+
+	return easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, res.PublicKey)
+}
+
+func (b *Blockchain) getConfig(ctx context.Context, name string, configName string) (string, error) {
+	location, err := b.caller.LookupConfig(&bind.CallOpts{Context: ctx}, name, configName)
+	if err != nil {
+		return "", fmt.Errorf("failed to query config")
+	}
+
+	if location == "" {
+		return "", ErrNotFound
+	}
+	return location, nil
+}
+
+func (b *Blockchain) Endpoint(ctx context.Context, name string) (string, error) {
+	return b.getConfig(ctx, name, "dms-endpoint")
+}
+
+func (b *Blockchain) PublicKeyP256(ctx context.Context, name string) (*easyecc.PublicKey, error) {
+	keyStr, err := b.getConfig(ctx, name, "pubkey-p256")
+	if err != nil {
+		return nil, err
+	}
+	keyBytes, err := hex.DecodeString(keyStr)
+	if err != nil {
+		return nil, err
+	}
+	key, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.P256, keyBytes)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
+func (b *Blockchain) LookupKey(ctx context.Context, in *pb.LookupKeyRequest,
+	opts ...grpc.CallOption) (*pb.LookupKeyResponse, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest, opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
+func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest,
+	opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
 	instance, err := cnt.NewNameRegistryCaller(common.HexToAddress(b.contractAddress), b.client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contract instance")
@@ -53,7 +115,8 @@ func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest, o
 	}, nil
 }
 
-func (b *Blockchain) LookupAddress(ctx context.Context, in *pb.LookupAddressRequest, opts ...grpc.CallOption) (*pb.LookupAddressResponse, error) {
+func (b *Blockchain) LookupAddress(ctx context.Context, in *pb.LookupAddressRequest,
+	opts ...grpc.CallOption) (*pb.LookupAddressResponse, error) {
 	instance, err := cnt.NewNameRegistryCaller(common.HexToAddress(b.contractAddress), b.client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contract instance")

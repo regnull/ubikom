@@ -49,13 +49,15 @@ var updatePublicKeyCmd = &cobra.Command{
 	Short: "Update public key on the blockchain",
 	Long:  "Update public key on the blockchain",
 	Run: func(cmd *cobra.Command, args []string) {
+		log.Info().Msg("loading master key...")
 		key, err := cmdutil.LoadKeyFromFlag(cmd, "key")
 		if err != nil {
 			log.Fatal().Err(err).Msg("failed to load key")
 		}
-		encKey, err := cmdutil.LoadKeyFromFlag(cmd, "pub-key")
+		log.Info().Msg("loading encryption key...")
+		encKey, err := cmdutil.LoadKeyFromFlag(cmd, "enc-key")
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to load reg key")
+			log.Fatal().Err(err).Msg("failed to load encryption key")
 		}
 		if len(args) < 1 {
 			log.Fatal().Msg("name must be specified")

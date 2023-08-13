@@ -217,7 +217,7 @@ func DecryptMessage(ctx context.Context, lookupClient pb.LookupServiceClient,
 
 // IdentityProof generates an identity proof that can be used in receive requests.
 func IdentityProof(key *easyecc.PrivateKey, timestamp time.Time) (*pb.Signed, error) {
-	ts := timestamp.Unix()
+	ts := timestamp.UTC().Unix()
 	log.Debug().Int64("timestamp", ts).Msg("POI setting timestamp")
 	var buf [8]byte
 	binary.PutVarint(buf[:], ts)

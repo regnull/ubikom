@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/regnull/easyecc"
+	"github.com/regnull/easyecc/v2"
 	cnt "github.com/regnull/ubchain/gocontract"
 	"github.com/regnull/ubikom/cmd/ubikom-cli/cmd/cmdutil"
 	"github.com/rs/zerolog/log"
@@ -82,13 +82,13 @@ var lookupNameCmd = &cobra.Command{
 			return
 		}
 
-		publicKey, err := easyecc.DeserializeCompressed(easyecc.SECP256K1, res.PublicKey)
+		publicKey, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, res.PublicKey)
 		if err != nil {
 			log.Fatal().Err(err).Msg("invalid key returned")
 		}
 
 		cmdRes := &lookupNameRes{
-			PublicKey: fmt.Sprintf("0x%x", publicKey.SerializeCompressed()),
+			PublicKey: fmt.Sprintf("0x%x", publicKey.CompressedBytes()),
 			Owner:     fmt.Sprintf("0x%x", res.Owner),
 			Price:     res.Price.Int64(),
 		}
