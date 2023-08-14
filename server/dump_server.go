@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/regnull/easyecc/v2"
+	"github.com/regnull/ubikom/bc"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/protoutil"
 	"github.com/regnull/ubikom/store"
@@ -17,32 +19,52 @@ const maxAllowedIdentitySignatureDifferenceSeconds = 10000000000.0
 type DumpServer struct {
 	pb.UnimplementedDMSDumpServiceServer
 
-	baseDir      string
-	lookupClient pb.LookupServiceClient
-	store        store.Store
+	baseDir string
+	bchain  *bc.Blockchain
+	store   store.Store
 }
 
-func NewDumpServer(baseDir string, lookupClient pb.LookupServiceClient,
+func NewDumpServer(baseDir string, bchain *bc.Blockchain,
 	maxMessageAgeHours int) (*DumpServer, error) {
 	store, err := store.NewBadger(baseDir, time.Duration(maxMessageAgeHours)*time.Hour)
 	if err != nil {
 		return nil, err
 	}
 	return &DumpServer{
-		baseDir:      baseDir,
-		lookupClient: lookupClient,
-		store:        store}, nil
+		baseDir: baseDir,
+		bchain:  bchain,
+		store:   store}, nil
+}
+
+func curveFromProto(protoCurve pb.EllipticCurve) easyecc.EllipticCurve {
+	switch protoCurve {
+	case pb.EllipticCurve_EC_UNKNOWN:
+	case pb.EllipticCurve_EC_SECP256P1:
+		return easyecc.SECP256K1
+	case pb.EllipticCurve_EC_P_256:
+		return easyecc.P256
+	case pb.EllipticCurve_EC_P_384:
+		return easyecc.P384
+	case pb.EllipticCurve_EC_P_521:
+		return easyecc.P521
+	}
+	return easyecc.INVALID_CURVE
 }
 
 func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
 	log.Debug().Msg("got send request")
+	protoCurve := req.GetMessage().GetCryptoContext().GetEllipticCurve()
+	curve := curveFromProto(protoCurve)
+	if curve == easyecc.INVALID_CURVE {
+		return nil, status.Error(codes.Internal, "invalid curve")
+	}
 	// Get the public key associated with the sender's and receiver's name.
-	senderKey, resErr := getKeyByName(ctx, s.lookupClient, req.GetMessage().GetSender())
+	senderKey, resErr := s.bchain.PublicKeyByCurve(ctx, req.GetMessage().GetSender(), curve)
 	if resErr != nil {
 		return nil, status.Error(codes.Internal, "failed to lookup name")
 	}
 
-	receiverKey, resErr := getKeyByName(ctx, s.lookupClient, req.GetMessage().GetReceiver())
+	receiverKey, resErr := s.bchain.PublicKeyByCurve(ctx, req.GetMessage().GetReceiver(), curve)
 	if resErr != nil {
 		return nil, status.Error(codes.Internal, "failed to lookup name")
 	}
@@ -54,7 +76,7 @@ func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRes
 		return nil, status.Error(codes.InvalidArgument, "bad signature")
 	}
 
-	err := s.store.Save(req.GetMessage(), receiverKey)
+	err := s.store.Save(req.GetMessage(), receiverKey.CompressedBytes())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to save message")
 		return nil, status.Error(codes.Internal, "message store error")
@@ -66,14 +88,23 @@ func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRes
 
 func (s *DumpServer) Receive(ctx context.Context, req *pb.ReceiveRequest) (*pb.ReceiveResponse, error) {
 	log.Debug().Msg("got receive request")
+	protoCurve := req.GetCrytoContext().GetEllipticCurve()
+	curve := curveFromProto(protoCurve)
+	if curve == easyecc.INVALID_CURVE {
+		return nil, status.Error(codes.Internal, "invalid curve")
+	}
 
-	err := protoutil.VerifyIdentity(req.GetIdentityProof(), time.Now(), 10.0)
+	key, err := easyecc.NewPublicKeyFromCompressedBytes(curve, req.GetIdentityProof().GetKey())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid key")
+	}
+	err = protoutil.VerifyIdentity(req.GetIdentityProof(), time.Now(), 10.0, curve)
 	if err != nil {
 		log.Debug().Err(err).Msg("identity verification failed, using fallback")
 		// return nil, status.Error(codes.InvalidArgument, "bad signature")
 		// For now, we fallback to the old verification algorithm. To be removed later.
 		// TODO: remove this once all the clients are migrated.
-		if !protoutil.VerifySignature(req.GetIdentityProof().GetSignature(), req.GetIdentityProof().GetKey(),
+		if !protoutil.VerifySignature(req.GetIdentityProof().GetSignature(), key,
 			req.GetIdentityProof().GetContent()) {
 			log.Warn().Msg("signature verification failed")
 			return nil, status.Error(codes.InvalidArgument, "bad signature")
@@ -97,14 +128,4 @@ func (s *DumpServer) Receive(ctx context.Context, req *pb.ReceiveRequest) (*pb.R
 	}
 
 	return &pb.ReceiveResponse{Message: msg}, nil
-}
-
-func getKeyByName(ctx context.Context, lookupClient pb.LookupServiceClient, name string) ([]byte, error) {
-	res, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{
-		Name: name})
-	if err != nil {
-		log.Error().Err(err).Msg("failed to lookup name")
-		return nil, err
-	}
-	return res.Key, nil
 }

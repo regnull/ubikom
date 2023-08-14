@@ -7,7 +7,6 @@ import (
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/regnull/ubikom/pb"
-	"github.com/regnull/ubikom/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -31,7 +30,7 @@ func (b *Badger) Save(msg *pb.DMSMessage, receiverKey []byte) error {
 	}
 	msgID := fmt.Sprintf("%x", sha256.Sum256(bb))
 
-	dbKey := "msg_" + util.SerializedCompressedToAddress(receiverKey) + "_" + msgID
+	dbKey := "msg_" + fmt.Sprintf("%x", receiverKey) + "_" + msgID
 	err = b.db.Update(func(txn *badger.Txn) error {
 		e := badger.NewEntry([]byte(dbKey), bb).WithTTL(b.ttl)
 		err := txn.SetEntry(e)
@@ -45,7 +44,7 @@ func (b *Badger) Save(msg *pb.DMSMessage, receiverKey []byte) error {
 }
 
 func (b *Badger) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
-	prefix := []byte("msg_" + util.SerializedCompressedToAddress(receiverKey))
+	prefix := []byte("msg_" + fmt.Sprintf("%x", receiverKey))
 	var msg *pb.DMSMessage
 	err := b.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -70,7 +69,7 @@ func (b *Badger) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
 }
 
 func (b *Badger) GetAll(receiverKey []byte) ([]*pb.DMSMessage, error) {
-	prefix := []byte("msg_" + util.SerializedCompressedToAddress(receiverKey))
+	prefix := []byte("msg_" + fmt.Sprintf("%x", receiverKey))
 	var msgs []*pb.DMSMessage
 	err := b.db.View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -105,7 +104,7 @@ func (b *Badger) Remove(msg *pb.DMSMessage, receiverKey []byte) error {
 	}
 	msgID := fmt.Sprintf("%x", sha256.Sum256(bb))
 
-	dbKey := "msg_" + util.SerializedCompressedToAddress(receiverKey) + "_" + msgID
+	dbKey := "msg_" + fmt.Sprintf("%x", receiverKey) + "_" + msgID
 	err = b.db.Update(func(txn *badger.Txn) error {
 		return txn.Delete([]byte(dbKey))
 	})

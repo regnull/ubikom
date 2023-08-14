@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -77,6 +78,9 @@ func (b *Blockchain) PublicKeyP256(ctx context.Context, name string) (*easyecc.P
 	if err != nil {
 		return nil, err
 	}
+	if strings.HasPrefix(keyStr, "0x") {
+		keyStr = keyStr[2:]
+	}
 	keyBytes, err := hex.DecodeString(keyStr)
 	if err != nil {
 		return nil, err
@@ -86,6 +90,15 @@ func (b *Blockchain) PublicKeyP256(ctx context.Context, name string) (*easyecc.P
 		return nil, err
 	}
 	return key, nil
+}
+
+func (b *Blockchain) PublicKeyByCurve(ctx context.Context, name string, curve easyecc.EllipticCurve) (*easyecc.PublicKey, error) {
+	if curve == easyecc.SECP256K1 {
+		return b.PublicKey(ctx, name)
+	} else if curve == easyecc.P256 {
+		return b.PublicKeyP256(ctx, name)
+	}
+	return nil, fmt.Errorf("unsupported curve")
 }
 
 func (b *Blockchain) LookupKey(ctx context.Context, in *pb.LookupKeyRequest,

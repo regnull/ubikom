@@ -18,7 +18,7 @@ func Test_CreateSigned(t *testing.T) {
 	assert.NoError(err)
 	assert.NotNil(signed)
 
-	assert.True(VerifySignature(signed.Signature, signed.Key, content))
+	assert.True(VerifySignature(signed.Signature, key.PublicKey(), content))
 }
 
 func Test_VerifyIdentity(t *testing.T) {
@@ -29,8 +29,8 @@ func Test_VerifyIdentity(t *testing.T) {
 	ts := time.Now()
 	signed, err := IdentityProof(key, ts)
 	assert.NoError(err)
-	assert.NoError(VerifyIdentity(signed, ts, 10.0))
+	assert.NoError(VerifyIdentity(signed, ts, 10.0, easyecc.SECP256K1))
 
 	ts1 := ts.Add(time.Minute)
-	assert.Error(VerifyIdentity(signed, ts1, 10.0))
+	assert.Error(VerifyIdentity(signed, ts1, 10.0, easyecc.SECP256K1))
 }

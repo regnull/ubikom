@@ -13,6 +13,7 @@ import (
 	easyeccv1 "github.com/regnull/easyecc"
 	"github.com/regnull/easyecc/v2"
 
+	"github.com/regnull/ubikom/bc"
 	"github.com/regnull/ubikom/mail"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/util"
@@ -47,13 +48,7 @@ func CreateSigned(privateKey *easyecc.PrivateKey, content []byte) (*pb.Signed, e
 }
 
 // VerifySignature returns true if the provided signature is valid for the given key and content.
-func VerifySignature(sig *pb.Signature, serializedKey []byte, content []byte) bool {
-	key, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, serializedKey)
-	if err != nil {
-		log.Printf("invalid serialized compressed key")
-		return false
-	}
-
+func VerifySignature(sig *pb.Signature, key *easyecc.PublicKey, content []byte) bool {
 	eccSig := &easyecc.Signature{
 		R: new(big.Int).SetBytes(sig.R),
 		S: new(big.Int).SetBytes(sig.S)}
@@ -88,7 +83,7 @@ func CreateMessage(privateKey *easyecc.PrivateKey, body []byte, sender, receiver
 			S: sig.S.Bytes(),
 		},
 		CryptoContext: &pb.CryptoContext{
-			EllipticCurve: getProtoEC(privateKey.Curve()),
+			EllipticCurve: CurveToProto(privateKey.Curve()),
 			EcdhVersion:   2,
 			EcdsaVersion:  1,
 		},
@@ -123,7 +118,7 @@ func CreateLegacyMessage(privateKey *easyecc.PrivateKey, body []byte, sender, re
 			S: sig.S.Bytes(),
 		},
 		CryptoContext: &pb.CryptoContext{
-			EllipticCurve: getProtoEC(privateKey.Curve()),
+			EllipticCurve: CurveToProto(privateKey.Curve()),
 			EcdhVersion:   1,
 			EcdsaVersion:  1,
 		},
@@ -132,18 +127,18 @@ func CreateLegacyMessage(privateKey *easyecc.PrivateKey, body []byte, sender, re
 
 // SendEmail adds Ubikom headers to the email message and sends it.
 func SendEmail(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
-	sender, receiver string, lookupService pb.LookupServiceClient) error {
+	sender, receiver string, bchain *bc.Blockchain) error {
 	withHeaders, err := mail.AddUbikomHeaders(ctx, string(body), sender, receiver,
-		privateKey.PublicKey(), lookupService)
+		privateKey.PublicKey(), bchain)
 	if err != nil {
 		return err
 	}
-	return SendMessage(ctx, privateKey, []byte(withHeaders), sender, receiver, lookupService)
+	return SendMessage(ctx, privateKey, []byte(withHeaders), sender, receiver, bchain)
 }
 
 // SendMessage creates a new DMSMessage and sends it out to the appropriate address.
 func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
-	sender, receiver string, lookupService pb.LookupServiceClient) error {
+	sender, receiver string, bchain *bc.Blockchain) error {
 
 	// TODO: Pass timeout as an argument.
 	opts := []grpc.DialOption{
@@ -153,27 +148,31 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	}
 
 	// Get receiver's public key.
-	lookupRes, err := lookupService.LookupName(ctx, &pb.LookupNameRequest{Name: receiver})
-	if err != nil {
-		return fmt.Errorf("failed to get receiver public key: %w", err)
+	var receiverKey *easyecc.PublicKey
+	var err error
+	if privateKey.Curve() == easyecc.SECP256K1 {
+		receiverKey, err = bchain.PublicKey(ctx, receiver)
+		if err != nil {
+			return fmt.Errorf("failed to get receiver public key: %w", err)
+		}
+	} else if privateKey.Curve() == easyecc.P256 {
+		receiverKey, err = bchain.PublicKeyP256(ctx, receiver)
+		if err != nil {
+			return fmt.Errorf("failed to get receiver public key: %w", err)
+		}
+	} else {
+		return fmt.Errorf("unsupported key type")
 	}
-	receiverKey, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, lookupRes.GetKey())
-	if err != nil {
-		log.Fatal().Err(err).Msg("invalid receiver public key")
-	}
-
 	log.Debug().Msg("got receiver's public key")
 
 	// Get receiver's address.
-	addressLookupRes, err := lookupService.LookupAddress(ctx,
-		&pb.LookupAddressRequest{Name: receiver, Protocol: pb.Protocol_PL_DMS})
+	endpoint, err := bchain.Endpoint(ctx, receiver)
 	if err != nil {
 		return fmt.Errorf("failed to get receiver's address: %w", err)
 	}
+	log.Debug().Str("address", endpoint).Msg("got receiver's address")
 
-	log.Debug().Str("address", addressLookupRes.GetAddress()).Msg("got receiver's address")
-
-	dumpConn, err := grpc.Dial(addressLookupRes.GetAddress(), opts...)
+	dumpConn, err := grpc.Dial(endpoint, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to connect to the dump server: %w", err)
 	}
@@ -193,18 +192,28 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	return nil
 }
 
-func DecryptMessage(ctx context.Context, lookupClient pb.LookupServiceClient,
+func DecryptMessage(ctx context.Context, bchain *bc.Blockchain,
 	privateKey *easyecc.PrivateKey, msg *pb.DMSMessage) (string, error) {
-	lookupRes, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: msg.GetSender()})
-	if err != nil {
-		return "", fmt.Errorf("failed to get sender public key: %w", err)
-	}
-	senderKey, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, lookupRes.GetKey())
-	if err != nil {
-		return "", fmt.Errorf("invalid sender public key: %w", err)
+	curve := CurveFromProto(msg.GetCryptoContext().GetEllipticCurve())
+	if curve == easyecc.INVALID_CURVE {
+		return "", fmt.Errorf("unsupported curve")
 	}
 
-	if !VerifySignature(msg.GetSignature(), lookupRes.GetKey(), msg.GetContent()) {
+	var senderKey *easyecc.PublicKey
+	var err error
+	if curve == easyecc.SECP256K1 {
+		senderKey, err = bchain.PublicKey(ctx, msg.GetSender())
+		if err != nil {
+			return "", fmt.Errorf("failed to get sender public key: %w", err)
+		}
+	} else if curve == easyecc.P256 {
+		senderKey, err = bchain.PublicKeyP256(ctx, msg.GetSender())
+		if err != nil {
+			return "", fmt.Errorf("failed to get sender public key: %w", err)
+		}
+	}
+
+	if !VerifySignature(msg.GetSignature(), senderKey, msg.GetContent()) {
 		return "", fmt.Errorf("signature verification failed")
 	}
 
@@ -240,8 +249,12 @@ func IdentityProof(key *easyecc.PrivateKey, timestamp time.Time) (*pb.Signed, er
 
 // VerifyIdentity returns no error if the signed has the correct signature
 // and if it was signed within 10 seconds from now.
-func VerifyIdentity(signed *pb.Signed, now time.Time, allowedDeltaSeconds float64) error {
-	if !VerifySignature(signed.Signature, signed.Key, signed.Content) {
+func VerifyIdentity(signed *pb.Signed, now time.Time, allowedDeltaSeconds float64, curve easyecc.EllipticCurve) error {
+	key, err := easyecc.NewPublicKeyFromCompressedBytes(curve, signed.Key)
+	if err != nil {
+		return err
+	}
+	if !VerifySignature(signed.Signature, key, signed.Content) {
 		return ErrSignatureVerificationFailed
 	}
 
@@ -259,7 +272,7 @@ func VerifyIdentity(signed *pb.Signed, now time.Time, allowedDeltaSeconds float6
 	return nil
 }
 
-func getProtoEC(curve easyecc.EllipticCurve) pb.EllipticCurve {
+func CurveToProto(curve easyecc.EllipticCurve) pb.EllipticCurve {
 	switch curve {
 	case easyecc.SECP256K1:
 		return pb.EllipticCurve_EC_SECP256P1
@@ -272,4 +285,19 @@ func getProtoEC(curve easyecc.EllipticCurve) pb.EllipticCurve {
 	default:
 		return pb.EllipticCurve_EC_UNKNOWN
 	}
+}
+
+func CurveFromProto(protoCurve pb.EllipticCurve) easyecc.EllipticCurve {
+	switch protoCurve {
+	case pb.EllipticCurve_EC_UNKNOWN:
+	case pb.EllipticCurve_EC_SECP256P1:
+		return easyecc.SECP256K1
+	case pb.EllipticCurve_EC_P_256:
+		return easyecc.P256
+	case pb.EllipticCurve_EC_P_384:
+		return easyecc.P384
+	case pb.EllipticCurve_EC_P_521:
+		return easyecc.P521
+	}
+	return easyecc.INVALID_CURVE
 }
