@@ -2,6 +2,7 @@ package bc
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/regnull/ubikom/globals"
@@ -24,6 +25,19 @@ func TestGetNodeURL(t *testing.T) {
 	assert.Equal(fmt.Sprintf(globals.InfuraSepoliaNodeURL, "123456"), url)
 
 	_, err = GetNodeURL("foo", "123456")
+	assert.Error(err)
+
+	// Test using environment variable for the project ID.
+	err = os.Setenv("INFURA_PROJECT_ID", "123456")
+	assert.NoError(err)
+
+	url, err = GetNodeURL("main", "")
+	assert.Equal(fmt.Sprintf(globals.InfuraNodeURL, "123456"), url)
+
+	// If the environment variable is not set, we should get an error.
+	err = os.Unsetenv("INFURA_PROJECT_ID")
+	assert.NoError(err)
+	_, err = GetNodeURL("main", "")
 	assert.Error(err)
 }
 
