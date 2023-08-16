@@ -29,7 +29,7 @@ func Test_Blockchain_PublicKey(t *testing.T) {
 	addressBytes := base58.Decode(address)
 	addr := common.BytesToAddress(addressBytes)
 
-	caller.EXPECT().LookupName(mock.Anything, mock.Anything).Return(struct {
+	caller.EXPECT().LookupName(mock.Anything, "foo").Return(struct {
 		Owner     common.Address
 		PublicKey []byte
 		Price     *big.Int
@@ -39,9 +39,23 @@ func Test_Blockchain_PublicKey(t *testing.T) {
 		Price:     big.NewInt(0),
 	}, nil)
 
+	caller.EXPECT().LookupName(mock.Anything, "bar").Return(struct {
+		Owner     common.Address
+		PublicKey []byte
+		Price     *big.Int
+	}{
+		Owner:     zeroAddress,
+		PublicKey: []byte{},
+		Price:     big.NewInt(0),
+	}, nil)
+
 	ctx := context.Background()
 	publicKey1, err := bchain.PublicKey(ctx, "foo")
 	assert.NoError(err)
 	assert.NotNil(publicKey1)
+
+	_, err = bchain.PublicKey(ctx, "bar")
+	assert.Equal(ErrNotFound, err)
+
 	caller.AssertExpectations(t)
 }
