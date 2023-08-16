@@ -20,6 +20,10 @@ func Test_CreateSigned(t *testing.T) {
 	assert.NotNil(signed)
 
 	assert.True(VerifySignature(signed.Signature, key.PublicKey(), content))
+
+	// Let's mess with the content.
+	content = []byte("something to be signed xyz")
+	assert.False(VerifySignature(signed.Signature, key.PublicKey(), content))
 }
 
 func Test_VerifyIdentity(t *testing.T) {
@@ -106,4 +110,29 @@ func Test_CurveFromProto(t *testing.T) {
 	for _, tt := range tests {
 		assert.Equal(tt.want, CurveFromProto(tt.args))
 	}
+}
+
+func Test_CreateMessage(t *testing.T) {
+	assert := assert.New(t)
+
+	privateKey, err := easyecc.NewPrivateKey(easyecc.P521)
+	assert.NoError(err)
+
+	receiverKey, err := easyecc.NewPrivateKey(easyecc.P521)
+	assert.NoError(err)
+
+	message := []byte("All experience is preceded by mind")
+	msg, err := CreateMessage(privateKey, message, "alice", "bob", receiverKey.PublicKey())
+	assert.NoError(err)
+	assert.NotNil(msg)
+
+	assert.Equal("alice", msg.GetSender())
+	assert.Equal("bob", msg.GetReceiver())
+
+	assert.True(len(msg.GetContent()) > 10)
+	assert.True(VerifySignature(msg.GetSignature(), privateKey.PublicKey(), msg.GetContent()))
+
+	assert.Equal(pb.EllipticCurve_EC_P_521, msg.GetCryptoContext().GetEllipticCurve())
+	assert.EqualValues(2, msg.GetCryptoContext().GetEcdhVersion())
+	assert.EqualValues(1, msg.GetCryptoContext().GetEcdsaVersion())
 }
