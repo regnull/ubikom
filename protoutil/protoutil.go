@@ -18,7 +18,6 @@ import (
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/util"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/grpc"
 )
 
 var (
@@ -144,13 +143,6 @@ func SendEmail(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
 func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
 	sender, receiver string, bchain bc.Blockchain) error {
 
-	// TODO: Pass timeout as an argument.
-	opts := []grpc.DialOption{
-		grpc.WithInsecure(),
-		grpc.WithBlock(),
-		grpc.WithTimeout(time.Second * 5),
-	}
-
 	// Get receiver's public key.
 	var receiverKey *easyecc.PublicKey
 	var err error
@@ -176,18 +168,18 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	}
 	log.Debug().Str("address", endpoint).Msg("got receiver's address")
 
-	dumpConn, err := grpc.Dial(endpoint, opts...)
-	if err != nil {
-		return fmt.Errorf("failed to connect to the dump server: %w", err)
-	}
-	defer dumpConn.Close()
-
 	msg, err := CreateMessage(privateKey, body, sender, receiver, receiverKey)
 	if err != nil {
 		return err
 	}
-
-	client := pb.NewDMSDumpServiceClient(dumpConn)
+	clientFactory := NewDumpServiceClientFactory()
+	client, cleanup, err := clientFactory.CreateDumpServiceClient(ctx, endpoint, 0)
+	if err != nil {
+		return err
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
 	_, err = client.Send(ctx, &pb.SendRequest{Message: msg})
 	if err != nil {
 		return fmt.Errorf("failed to send message: %w", err)
