@@ -59,7 +59,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/regnull/easyecc v1.0.3 // indirect
-	github.com/regnull/easyecc/v2 v2.0.1-alpha // indirect
+	github.com/regnull/easyecc/v2 v2.0.3-alpha // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/spf13/afero v1.9.5 // indirect
