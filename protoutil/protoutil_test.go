@@ -69,3 +69,41 @@ func Test_CurveToProto(t *testing.T) {
 		assert.Equal(tt.want, CurveToProto(tt.args))
 	}
 }
+
+func Test_CurveFromProto(t *testing.T) {
+	assert := assert.New(t)
+
+	tests := []struct {
+		args pb.EllipticCurve
+		want easyecc.EllipticCurve
+	}{
+		{
+			args: pb.EllipticCurve_EC_UNKNOWN,
+			want: easyecc.SECP256K1,
+		},
+		{
+			args: pb.EllipticCurve_EC_SECP256P1,
+			want: easyecc.SECP256K1,
+		},
+		{
+			args: pb.EllipticCurve_EC_P_256,
+			want: easyecc.P256,
+		},
+		{
+			args: pb.EllipticCurve_EC_P_384,
+			want: easyecc.P384,
+		},
+		{
+			args: pb.EllipticCurve_EC_P_521,
+			want: easyecc.P521,
+		},
+		{
+			args: pb.EllipticCurve(999),
+			want: easyecc.INVALID_CURVE,
+		},
+	}
+
+	for _, tt := range tests {
+		assert.Equal(tt.want, CurveFromProto(tt.args))
+	}
+}

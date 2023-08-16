@@ -290,6 +290,7 @@ func CurveToProto(curve easyecc.EllipticCurve) pb.EllipticCurve {
 func CurveFromProto(protoCurve pb.EllipticCurve) easyecc.EllipticCurve {
 	switch protoCurve {
 	case pb.EllipticCurve_EC_UNKNOWN:
+		return easyecc.SECP256K1
 	case pb.EllipticCurve_EC_SECP256P1:
 		return easyecc.SECP256K1
 	case pb.EllipticCurve_EC_P_256:
