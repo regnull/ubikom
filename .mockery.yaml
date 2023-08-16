@@ -1,0 +1,9 @@
+with-expecter: true
+quiet: False
+dir: "{{.PackageName}}/mocks"
+outpkg: "mocks"
+packages:
+    github.com/regnull/ubikom/bc:
+      interfaces:
+        NameRegistryCaller:
+

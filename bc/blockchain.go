@@ -25,7 +25,7 @@ var zeroAddress = common.BigToAddress(big.NewInt(0))
 
 type Blockchain struct {
 	client          *ethclient.Client
-	caller          *cnt.NameRegistryCaller
+	caller          NameRegistryCaller
 	contractAddress string
 }
 
@@ -78,9 +78,8 @@ func (b *Blockchain) PublicKeyP256(ctx context.Context, name string) (*easyecc.P
 	if err != nil {
 		return nil, err
 	}
-	if strings.HasPrefix(keyStr, "0x") {
-		keyStr = keyStr[2:]
-	}
+
+	keyStr = strings.TrimPrefix(keyStr, "0x")
 	keyBytes, err := hex.DecodeString(keyStr)
 	if err != nil {
 		return nil, err
