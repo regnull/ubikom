@@ -59,3 +59,25 @@ func Test_Blockchain_PublicKey(t *testing.T) {
 
 	caller.AssertExpectations(t)
 }
+
+func Test_Blockchain_Endpoint(t *testing.T) {
+	assert := assert.New(t)
+
+	caller := new(mocks.MockNameRegistryCaller)
+	bchain := &Blockchain{
+		caller: caller,
+	}
+
+	caller.EXPECT().LookupConfig(mock.Anything, "foo", "dms-endpoint").Return("some-endpoint", nil)
+
+	ctx := context.Background()
+	endpoint, err := bchain.Endpoint(ctx, "foo")
+	assert.NoError(err)
+	assert.Equal("some-endpoint", endpoint)
+
+	caller.EXPECT().LookupConfig(mock.Anything, "bar", "dms-endpoint").Return("", nil)
+	_, err = bchain.Endpoint(ctx, "bar")
+	assert.Equal(ErrNotFound, err)
+
+	caller.AssertExpectations(t)
+}
