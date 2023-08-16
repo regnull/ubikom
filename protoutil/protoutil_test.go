@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/regnull/easyecc/v2"
+	"github.com/regnull/ubikom/pb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,4 +34,38 @@ func Test_VerifyIdentity(t *testing.T) {
 
 	ts1 := ts.Add(time.Minute)
 	assert.Error(VerifyIdentity(signed, ts1, 10.0, easyecc.SECP256K1))
+}
+
+func Test_CurveToProto(t *testing.T) {
+	assert := assert.New(t)
+
+	tests := []struct {
+		args easyecc.EllipticCurve
+		want pb.EllipticCurve
+	}{
+		{
+			args: easyecc.SECP256K1,
+			want: pb.EllipticCurve_EC_SECP256P1,
+		},
+		{
+			args: easyecc.P256,
+			want: pb.EllipticCurve_EC_P_256,
+		},
+		{
+			args: easyecc.P384,
+			want: pb.EllipticCurve_EC_P_384,
+		},
+		{
+			args: easyecc.P521,
+			want: pb.EllipticCurve_EC_P_521,
+		},
+		{
+			args: easyecc.INVALID_CURVE,
+			want: pb.EllipticCurve_EC_UNKNOWN,
+		},
+	}
+
+	for _, tt := range tests {
+		assert.Equal(tt.want, CurveToProto(tt.args))
+	}
 }
