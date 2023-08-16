@@ -43,4 +43,5 @@ func Test_Blockchain_PublicKey(t *testing.T) {
 	publicKey1, err := bchain.PublicKey(ctx, "foo")
 	assert.NoError(err)
 	assert.NotNil(publicKey1)
+	caller.AssertExpectations(t)
 }
