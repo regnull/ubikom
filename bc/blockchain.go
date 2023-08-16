@@ -13,10 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/regnull/easyecc/v2"
 	cnt "github.com/regnull/ubchain/gocontract"
-	"github.com/regnull/ubikom/pb"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var ErrNotFound = fmt.Errorf("name not found")
@@ -24,7 +20,6 @@ var ErrNotFound = fmt.Errorf("name not found")
 var zeroAddress = common.BigToAddress(big.NewInt(0))
 
 type Blockchain struct {
-	client          *ethclient.Client
 	caller          NameRegistryCaller
 	contractAddress string
 }
@@ -39,7 +34,6 @@ func NewBlockchain(url string, contractAddress string) (*Blockchain, error) {
 		return nil, fmt.Errorf("failed to get contract instance")
 	}
 	return &Blockchain{
-		client:          client,
 		caller:          caller,
 		contractAddress: contractAddress}, nil
 }
@@ -91,59 +85,12 @@ func (b *Blockchain) PublicKeyP256(ctx context.Context, name string) (*easyecc.P
 	return key, nil
 }
 
-func (b *Blockchain) PublicKeyByCurve(ctx context.Context, name string, curve easyecc.EllipticCurve) (*easyecc.PublicKey, error) {
+func (b *Blockchain) PublicKeyByCurve(ctx context.Context, name string,
+	curve easyecc.EllipticCurve) (*easyecc.PublicKey, error) {
 	if curve == easyecc.SECP256K1 {
 		return b.PublicKey(ctx, name)
 	} else if curve == easyecc.P256 {
 		return b.PublicKeyP256(ctx, name)
 	}
 	return nil, fmt.Errorf("unsupported curve")
-}
-
-func (b *Blockchain) LookupKey(ctx context.Context, in *pb.LookupKeyRequest,
-	opts ...grpc.CallOption) (*pb.LookupKeyResponse, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (b *Blockchain) LookupName(ctx context.Context, in *pb.LookupNameRequest,
-	opts ...grpc.CallOption) (*pb.LookupNameResponse, error) {
-	instance, err := cnt.NewNameRegistryCaller(common.HexToAddress(b.contractAddress), b.client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get contract instance")
-	}
-
-	res, err := instance.LookupName(nil, in.GetName())
-	if err != nil {
-		return nil, fmt.Errorf("failed to query the key")
-	}
-
-	zeroAddress := common.BigToAddress(big.NewInt(0))
-	if bytes.Equal(res.Owner.Bytes(), zeroAddress.Bytes()) {
-		return nil, status.Error(codes.NotFound, "name was not found")
-	}
-
-	return &pb.LookupNameResponse{
-		Key: res.PublicKey,
-	}, nil
-}
-
-func (b *Blockchain) LookupAddress(ctx context.Context, in *pb.LookupAddressRequest,
-	opts ...grpc.CallOption) (*pb.LookupAddressResponse, error) {
-	instance, err := cnt.NewNameRegistryCaller(common.HexToAddress(b.contractAddress), b.client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get contract instance")
-	}
-
-	location, err := instance.LookupConfig(nil, in.GetName(), "dms-endpoint")
-	if err != nil {
-		return nil, fmt.Errorf("failed to query the key")
-	}
-
-	if location == "" {
-		return nil, status.Error(codes.NotFound, "address was not found")
-	}
-
-	return &pb.LookupAddressResponse{
-		Address: location,
-	}, nil
 }

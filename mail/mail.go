@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/regnull/easyecc/v2"
-	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/ubikom/bc"
 	"github.com/rs/zerolog/log"
 )
 
@@ -275,15 +275,11 @@ Content-Language: en-US
 }
 
 func AddUbikomHeaders(ctx context.Context, body string, sender, receiver string,
-	senderKey *easyecc.PublicKey, lookupService pb.LookupServiceClient) (string, error) {
+	senderKey *easyecc.PublicKey, bchain *bc.Blockchain) (string, error) {
 	// Get receiver's public key.
-	lookupRes, err := lookupService.LookupName(ctx, &pb.LookupNameRequest{Name: receiver})
+	receiverKey, err := bchain.PublicKey(ctx, receiver)
 	if err != nil {
 		return "", fmt.Errorf("failed to get receiver public key: %w", err)
-	}
-	receiverKey, err := easyecc.NewPublicKeyFromCompressedBytes(easyecc.SECP256K1, lookupRes.GetKey())
-	if err != nil {
-		return "", err
 	}
 	senderBitcoinAddress, _ := senderKey.BitcoinAddress()
 	receiverBitcoinAddress, _ := receiverKey.BitcoinAddress()
