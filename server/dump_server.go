@@ -36,25 +36,10 @@ func NewDumpServer(baseDir string, bchain bc.Blockchain,
 		store:   store}, nil
 }
 
-func curveFromProto(protoCurve pb.EllipticCurve) easyecc.EllipticCurve {
-	switch protoCurve {
-	case pb.EllipticCurve_EC_UNKNOWN:
-	case pb.EllipticCurve_EC_SECP256P1:
-		return easyecc.SECP256K1
-	case pb.EllipticCurve_EC_P_256:
-		return easyecc.P256
-	case pb.EllipticCurve_EC_P_384:
-		return easyecc.P384
-	case pb.EllipticCurve_EC_P_521:
-		return easyecc.P521
-	}
-	return easyecc.INVALID_CURVE
-}
-
 func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
 	log.Debug().Msg("got send request")
 	protoCurve := req.GetMessage().GetCryptoContext().GetEllipticCurve()
-	curve := curveFromProto(protoCurve)
+	curve := protoutil.CurveFromProto(protoCurve)
 	if curve == easyecc.INVALID_CURVE {
 		return nil, status.Error(codes.Internal, "invalid curve")
 	}
@@ -89,7 +74,7 @@ func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRes
 func (s *DumpServer) Receive(ctx context.Context, req *pb.ReceiveRequest) (*pb.ReceiveResponse, error) {
 	log.Debug().Msg("got receive request")
 	protoCurve := req.GetCrytoContext().GetEllipticCurve()
-	curve := curveFromProto(protoCurve)
+	curve := protoutil.CurveFromProto(protoCurve)
 	if curve == easyecc.INVALID_CURVE {
 		return nil, status.Error(codes.Internal, "invalid curve")
 	}

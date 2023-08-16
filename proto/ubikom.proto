@@ -32,7 +32,7 @@ message SignedWithPow {
 
 enum EllipticCurve {
     EC_UNKNOWN = 0;
-    EC_SECP256P1 = 1;
+    EC_SECP256K1 = 1;
     EC_P_256 = 2;
     EC_P_384 = 3;
     EC_P_521 = 4;

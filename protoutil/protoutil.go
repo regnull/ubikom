@@ -25,6 +25,7 @@ var (
 	ErrFailedToSignMessage         = errors.New("failed to sign message")
 	ErrSignatureVerificationFailed = errors.New("signature verification failed")
 	ErrTimeDifferenceTooLarge      = errors.New("time difference is too large")
+	ErrUnsupportedCurve            = errors.New("unsupported curve")
 )
 
 // CreateSigned creates a signature for the given content.
@@ -92,6 +93,9 @@ func CreateMessage(privateKey *easyecc.PrivateKey, body []byte, sender, receiver
 
 func CreateLegacyMessage(privateKey *easyecc.PrivateKey, body []byte, sender, receiver string,
 	receiverKey *easyecc.PublicKey) (*pb.DMSMessage, error) {
+	if privateKey.Curve() != easyecc.SECP256K1 || receiverKey.Curve() != easyecc.SECP256K1 {
+		return nil, ErrUnsupportedCurve
+	}
 	// We must use easyecc v1 for the legacy encryption.
 	privateKeyV1 := easyeccv1.CreatePrivateKey(easyeccv1.SECP256K1, privateKey.Secret())
 	receiverKeyV1, err := easyeccv1.NewPublicFromSerializedCompressed(receiverKey.CompressedBytes())
@@ -275,7 +279,7 @@ func VerifyIdentity(signed *pb.Signed, now time.Time, allowedDeltaSeconds float6
 func CurveToProto(curve easyecc.EllipticCurve) pb.EllipticCurve {
 	switch curve {
 	case easyecc.SECP256K1:
-		return pb.EllipticCurve_EC_SECP256P1
+		return pb.EllipticCurve_EC_SECP256K1
 	case easyecc.P256:
 		return pb.EllipticCurve_EC_P_256
 	case easyecc.P384:
@@ -291,7 +295,7 @@ func CurveFromProto(protoCurve pb.EllipticCurve) easyecc.EllipticCurve {
 	switch protoCurve {
 	case pb.EllipticCurve_EC_UNKNOWN:
 		return easyecc.SECP256K1
-	case pb.EllipticCurve_EC_SECP256P1:
+	case pb.EllipticCurve_EC_SECP256K1:
 		return easyecc.SECP256K1
 	case pb.EllipticCurve_EC_P_256:
 		return easyecc.P256

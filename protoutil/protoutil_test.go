@@ -49,7 +49,7 @@ func Test_CurveToProto(t *testing.T) {
 	}{
 		{
 			args: easyecc.SECP256K1,
-			want: pb.EllipticCurve_EC_SECP256P1,
+			want: pb.EllipticCurve_EC_SECP256K1,
 		},
 		{
 			args: easyecc.P256,
@@ -86,7 +86,7 @@ func Test_CurveFromProto(t *testing.T) {
 			want: easyecc.SECP256K1,
 		},
 		{
-			args: pb.EllipticCurve_EC_SECP256P1,
+			args: pb.EllipticCurve_EC_SECP256K1,
 			want: easyecc.SECP256K1,
 		},
 		{
@@ -135,4 +135,35 @@ func Test_CreateMessage(t *testing.T) {
 	assert.Equal(pb.EllipticCurve_EC_P_521, msg.GetCryptoContext().GetEllipticCurve())
 	assert.EqualValues(2, msg.GetCryptoContext().GetEcdhVersion())
 	assert.EqualValues(1, msg.GetCryptoContext().GetEcdsaVersion())
+}
+
+func Test_CreateLegacyMessage(t *testing.T) {
+	assert := assert.New(t)
+
+	privateKey, err := easyecc.NewPrivateKey(easyecc.SECP256K1)
+	assert.NoError(err)
+
+	receiverKey, err := easyecc.NewPrivateKey(easyecc.SECP256K1)
+	assert.NoError(err)
+
+	message := []byte("All experience is preceded by mind")
+	msg, err := CreateLegacyMessage(privateKey, message, "alice", "bob", receiverKey.PublicKey())
+	assert.NoError(err)
+	assert.NotNil(msg)
+
+	assert.Equal("alice", msg.GetSender())
+	assert.Equal("bob", msg.GetReceiver())
+
+	assert.True(len(msg.GetContent()) > 10)
+	assert.True(VerifySignature(msg.GetSignature(), privateKey.PublicKey(), msg.GetContent()))
+
+	assert.Equal(pb.EllipticCurve_EC_SECP256K1, msg.GetCryptoContext().GetEllipticCurve())
+	assert.EqualValues(1, msg.GetCryptoContext().GetEcdhVersion())
+	assert.EqualValues(1, msg.GetCryptoContext().GetEcdsaVersion())
+
+	privateKeyP521, err := easyecc.NewPrivateKey(easyecc.P521)
+	assert.NoError(err)
+
+	_, err = CreateLegacyMessage(privateKeyP521, message, "alice", "bob", receiverKey.PublicKey())
+	assert.Equal(ErrUnsupportedCurve, err)
 }
