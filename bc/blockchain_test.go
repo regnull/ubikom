@@ -18,7 +18,7 @@ func Test_Blockchain_PublicKey(t *testing.T) {
 	assert := assert.New(t)
 
 	caller := new(mocks.MockNameRegistryCaller)
-	bchain := &Blockchain{
+	bchain := &blockchainImpl{
 		caller: caller,
 	}
 
@@ -77,7 +77,7 @@ func Test_Blockchain_Endpoint(t *testing.T) {
 	assert := assert.New(t)
 
 	caller := new(mocks.MockNameRegistryCaller)
-	bchain := &Blockchain{
+	bchain := &blockchainImpl{
 		caller: caller,
 	}
 
@@ -103,7 +103,7 @@ func Test_Blockchain_PublicKeyP256(t *testing.T) {
 	assert := assert.New(t)
 
 	caller := new(mocks.MockNameRegistryCaller)
-	bchain := &Blockchain{
+	bchain := &blockchainImpl{
 		caller: caller,
 	}
 	ctx := context.Background()
@@ -145,7 +145,7 @@ func Test_Blockchain_PublicKeyP256(t *testing.T) {
 func Test_Blockchain_PublicKeyByCurve(t *testing.T) {
 	assert := assert.New(t)
 	caller := new(mocks.MockNameRegistryCaller)
-	bchain := &Blockchain{
+	bchain := &blockchainImpl{
 		caller: caller,
 	}
 	ctx := context.Background()

@@ -275,7 +275,7 @@ Content-Language: en-US
 }
 
 func AddUbikomHeaders(ctx context.Context, body string, sender, receiver string,
-	senderKey *easyecc.PublicKey, bchain *bc.Blockchain) (string, error) {
+	senderKey *easyecc.PublicKey, bchain bc.Blockchain) (string, error) {
 	// Get receiver's public key.
 	receiverKey, err := bchain.PublicKey(ctx, receiver)
 	if err != nil {

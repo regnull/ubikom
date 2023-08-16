@@ -20,11 +20,11 @@ type DumpServer struct {
 	pb.UnimplementedDMSDumpServiceServer
 
 	baseDir string
-	bchain  *bc.Blockchain
+	bchain  bc.Blockchain
 	store   store.Store
 }
 
-func NewDumpServer(baseDir string, bchain *bc.Blockchain,
+func NewDumpServer(baseDir string, bchain bc.Blockchain,
 	maxMessageAgeHours int) (*DumpServer, error) {
 	store, err := store.NewBadger(baseDir, time.Duration(maxMessageAgeHours)*time.Hour)
 	if err != nil {

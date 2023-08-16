@@ -68,7 +68,7 @@ func main() {
 	grpcServer.Serve(lis)
 }
 
-func getLookupService() (*bc.Blockchain, error) {
+func getLookupService() (bc.Blockchain, error) {
 	nodeURL, err := bc.GetNodeURL(viper.GetString("network"), viper.GetString("infura-project-id"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get network URL: %w", err)

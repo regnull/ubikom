@@ -127,7 +127,7 @@ func CreateLegacyMessage(privateKey *easyecc.PrivateKey, body []byte, sender, re
 
 // SendEmail adds Ubikom headers to the email message and sends it.
 func SendEmail(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
-	sender, receiver string, bchain *bc.Blockchain) error {
+	sender, receiver string, bchain bc.Blockchain) error {
 	withHeaders, err := mail.AddUbikomHeaders(ctx, string(body), sender, receiver,
 		privateKey.PublicKey(), bchain)
 	if err != nil {
@@ -138,7 +138,7 @@ func SendEmail(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
 
 // SendMessage creates a new DMSMessage and sends it out to the appropriate address.
 func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
-	sender, receiver string, bchain *bc.Blockchain) error {
+	sender, receiver string, bchain bc.Blockchain) error {
 
 	// TODO: Pass timeout as an argument.
 	opts := []grpc.DialOption{
@@ -192,7 +192,7 @@ func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byt
 	return nil
 }
 
-func DecryptMessage(ctx context.Context, bchain *bc.Blockchain,
+func DecryptMessage(ctx context.Context, bchain bc.Blockchain,
 	privateKey *easyecc.PrivateKey, msg *pb.DMSMessage) (string, error) {
 	curve := CurveFromProto(msg.GetCryptoContext().GetEllipticCurve())
 	if curve == easyecc.INVALID_CURVE {
