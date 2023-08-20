@@ -6,4 +6,10 @@ packages:
     github.com/regnull/ubikom/bc:
       interfaces:
         NameRegistryCaller:
-
+        Blockchain:
+    github.com/regnull/ubikom/protoutil:
+      interfaces:
+        DumpServiceClientFactory:
+    github.com/regnull/ubikom/pb:
+      interfaces:
+        DMSDumpServiceClient:
