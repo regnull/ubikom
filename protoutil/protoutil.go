@@ -142,50 +142,9 @@ func SendEmail(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
 // SendMessage creates a new DMSMessage and sends it out to the appropriate address.
 func SendMessage(ctx context.Context, privateKey *easyecc.PrivateKey, body []byte,
 	sender, receiver string, bchain bc.Blockchain) error {
-
-	// Get receiver's public key.
-	var receiverKey *easyecc.PublicKey
-	var err error
-	if privateKey.Curve() == easyecc.SECP256K1 {
-		receiverKey, err = bchain.PublicKey(ctx, receiver)
-		if err != nil {
-			return fmt.Errorf("failed to get receiver public key: %w", err)
-		}
-	} else if privateKey.Curve() == easyecc.P256 {
-		receiverKey, err = bchain.PublicKeyP256(ctx, receiver)
-		if err != nil {
-			return fmt.Errorf("failed to get receiver public key: %w", err)
-		}
-	} else {
-		return fmt.Errorf("unsupported key type")
-	}
-	log.Debug().Msg("got receiver's public key")
-
-	// Get receiver's address.
-	endpoint, err := bchain.Endpoint(ctx, receiver)
-	if err != nil {
-		return fmt.Errorf("failed to get receiver's address: %w", err)
-	}
-	log.Debug().Str("address", endpoint).Msg("got receiver's address")
-
-	msg, err := CreateMessage(privateKey, body, sender, receiver, receiverKey)
-	if err != nil {
-		return err
-	}
-	clientFactory := NewDumpServiceClientFactory()
-	client, cleanup, err := clientFactory.CreateDumpServiceClient(ctx, endpoint, 0)
-	if err != nil {
-		return err
-	}
-	if cleanup != nil {
-		defer cleanup()
-	}
-	_, err = client.Send(ctx, &pb.SendRequest{Message: msg})
-	if err != nil {
-		return fmt.Errorf("failed to send message: %w", err)
-	}
-	log.Debug().Msg("sent message successfully")
-	return nil
+	dscFactory := NewDumpServiceClientFactory()
+	messageSender := NewMessageSender(dscFactory, bchain)
+	return messageSender.Send(ctx, privateKey, body, sender, receiver)
 }
 
 func DecryptMessage(ctx context.Context, bchain bc.Blockchain,
