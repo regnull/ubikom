@@ -2,7 +2,7 @@
 ![GitHub Workflow Status](https://github.com/regnull/ubikom/actions/workflows/go.yml/badge.svg)
 [![GoDoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/regnull/ubikom)
 [![GoReportCard](https://goreportcard.com/badge/github.com/regnull/ubikom)](https://goreportcard.com/report/github.com/regnull/ubikom)
-[![Coverage Status](https://coveralls.io/repos/github/regnull/ubikom/badge.svg?branch=master)](https://coveralls.io/github/regnull/ubikom?branch=master&foo=bar)
+[![Coverage Status](https://coveralls.io/repos/github/regnull/ubikom/badge.svg?branch=master&foo=bar)](https://coveralls.io/github/regnull/ubikom?branch=master&foo=bar)
 
 *Encrypted email service based on decentralized private identity.*
 
