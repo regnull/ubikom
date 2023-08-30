@@ -3,6 +3,7 @@
 [![GoDoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/regnull/ubikom)
 [![GoReportCard](https://goreportcard.com/badge/github.com/regnull/ubikom)](https://goreportcard.com/report/github.com/regnull/ubikom)
 [![Coverage Status](https://coveralls.io/repos/github/regnull/ubikom/badge.svg?branch=master)](https://coveralls.io/github/regnull/ubikom?branch=master)
+
 *Encrypted email service based on decentralized private identity.*
 
 ## Using Ubikom Email Service
