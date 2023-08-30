@@ -1,10 +1,13 @@
 package protoutil
 
 import (
+	"bytes"
+	"context"
 	"testing"
 	"time"
 
 	"github.com/regnull/easyecc/v2"
+	bcmocks "github.com/regnull/ubikom/bc/mocks"
 	"github.com/regnull/ubikom/pb"
 	"github.com/stretchr/testify/assert"
 )
@@ -166,4 +169,35 @@ func Test_CreateLegacyMessage(t *testing.T) {
 
 	_, err = CreateLegacyMessage(privateKeyP521, message, "alice", "bob", receiverKey.PublicKey())
 	assert.Equal(ErrUnsupportedCurve, err)
+}
+
+func Test_DecryptMessage(t *testing.T) {
+	assert := assert.New(t)
+
+	curves := []easyecc.EllipticCurve{easyecc.SECP256K1, easyecc.P256, easyecc.P384, easyecc.P521}
+
+	ctx := context.Background()
+	bchain := new(bcmocks.MockBlockchain)
+
+	message := []byte("All experience is preceded by mind")
+
+	for _, curve := range curves {
+		privateKey, err := easyecc.NewPrivateKey(curve)
+		assert.NoError(err)
+
+		recipientKey, err := easyecc.NewPrivateKey(curve)
+		assert.NoError(err)
+
+		bchain.EXPECT().PublicKeyByCurve(ctx, "alice",
+			curve).Return(privateKey.PublicKey(), nil)
+
+		msg, err := CreateMessage(privateKey, message, "alice", "bob", recipientKey.PublicKey())
+		assert.NoError(err)
+
+		content, err := DecryptMessage(ctx, bchain, recipientKey, msg)
+		assert.NoError(err)
+		assert.True(bytes.Equal(message, []byte(content)))
+	}
+
+	bchain.AssertExpectations(t)
 }

@@ -154,18 +154,9 @@ func DecryptMessage(ctx context.Context, bchain bc.Blockchain,
 		return "", fmt.Errorf("unsupported curve")
 	}
 
-	var senderKey *easyecc.PublicKey
-	var err error
-	if curve == easyecc.SECP256K1 {
-		senderKey, err = bchain.PublicKey(ctx, msg.GetSender())
-		if err != nil {
-			return "", fmt.Errorf("failed to get sender public key: %w", err)
-		}
-	} else if curve == easyecc.P256 {
-		senderKey, err = bchain.PublicKeyP256(ctx, msg.GetSender())
-		if err != nil {
-			return "", fmt.Errorf("failed to get sender public key: %w", err)
-		}
+	senderKey, err := bchain.PublicKeyByCurve(ctx, msg.GetSender(), curve)
+	if err != nil {
+		return "", fmt.Errorf("failed to get sender public key: %w", err)
 	}
 
 	if !VerifySignature(msg.GetSignature(), senderKey, msg.GetContent()) {
