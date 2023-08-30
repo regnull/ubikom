@@ -1,7 +1,6 @@
 package util
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -14,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/regnull/easyecc"
-	"github.com/regnull/ubikom/pb"
+	"github.com/regnull/easyecc/v2"
+	"github.com/regnull/ubikom/bc"
 	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/term"
 	"google.golang.org/grpc/codes"
@@ -233,13 +232,13 @@ func FixName(name string) string {
 
 // CheckUserNameAndPassword verifies user name and password by generating a public key and comparing it with
 // the key in the identity registry.
-func CheckUserNameAndPassword(ctx context.Context, name, password string, lookupClient pb.LookupServiceClient) error {
+func CheckUserNameAndPassword(ctx context.Context, name, password string, bchain bc.Blockchain) error {
 	privateKey := GetPrivateKeyFromNameAndPassword(name, password)
-	res, err := lookupClient.LookupName(ctx, &pb.LookupNameRequest{Name: FixName(name)})
+	publicKey, err := bchain.PublicKey(ctx, FixName(name))
 	if err != nil {
 		return fmt.Errorf("failed to lookup name: %w", err)
 	}
-	if !bytes.Equal(res.GetKey(), privateKey.PublicKey().SerializeCompressed()) {
+	if !publicKey.Equal(privateKey.PublicKey()) {
 		return fmt.Errorf("keys do not match")
 	}
 	return nil
@@ -249,7 +248,7 @@ func GetPrivateKeyFromNameAndPassword(name, password string) *easyecc.PrivateKey
 	n := strings.TrimSpace(name)
 	n = StripDomainName(n)
 	n = strings.ToLower(n)
-	return easyecc.NewPrivateKeyFromPassword([]byte(password),
+	return easyecc.NewPrivateKeyFromPassword(easyecc.SECP256K1, []byte(password),
 		Hash256([]byte(strings.ToLower(n))))
 }
 
