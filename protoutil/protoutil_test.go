@@ -197,6 +197,12 @@ func Test_DecryptMessage(t *testing.T) {
 		content, err := DecryptMessage(ctx, bchain, recipientKey, msg)
 		assert.NoError(err)
 		assert.True(bytes.Equal(message, []byte(content)))
+
+		// Try to mess with the message.
+		msg.Content[0] = 0x66
+		_, err = DecryptMessage(ctx, bchain, recipientKey, msg)
+		// Signature verification must fail.
+		assert.Error(err)
 	}
 
 	bchain.AssertExpectations(t)

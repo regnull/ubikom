@@ -1,7 +1,9 @@
 package util
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -85,4 +87,28 @@ func Test_GetPrivateKeyFromNameAndPassword(t *testing.T) {
 	pk = GetPrivateKeyFromNameAndPassword(" fOo@zzz.xxx   ", "bar")
 	bitcoinAddress, _ = pk.PublicKey().BitcoinAddress()
 	assert.Equal("1M6DhqJEyo6XVfrVH7qvrAGPyj4tE38UFU", bitcoinAddress)
+}
+
+func Test_TimeMs(t *testing.T) {
+	assert := assert.New(t)
+
+	ms := NowMs()
+	tm := TimeFromMs(ms)
+
+	assert.True(time.Since(tm) < time.Second*5)
+}
+
+func Test_Hash160(t *testing.T) {
+	assert := assert.New(t)
+
+	h := Hash160([]byte("hello there"))
+	assert.Equal("598f9fd736a8b4ae157504f20f8f0c64e11b95fa", fmt.Sprintf("%x", h))
+}
+
+func Test_GetDefaultKeyLocation(t *testing.T) {
+	assert := assert.New(t)
+
+	location, err := GetDefaultKeyLocation()
+	assert.NoError(err)
+	assert.True(len(location) > 0)
 }
