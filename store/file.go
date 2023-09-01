@@ -3,7 +3,6 @@ package store
 import (
 	"crypto/sha256"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"time"
@@ -36,7 +35,7 @@ func (f *File) Save(msg *pb.DMSMessage, receiverKey []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	err = ioutil.WriteFile(filePath, b, 0660)
+	err = os.WriteFile(filePath, b, 0600)
 	if err != nil {
 		return err
 	}
@@ -47,7 +46,7 @@ func (f *File) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
 	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
 
 	fileDir := getReceiverDir(f.baseDir, receiverKeyStr)
-	files, err := ioutil.ReadDir(fileDir)
+	files, err := os.ReadDir(fileDir)
 
 	if err != nil || len(files) == 0 {
 		// Maybe directory doesn't exist, it's fine.
@@ -57,13 +56,17 @@ func (f *File) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
 	now := time.Now()
 	for _, file := range files {
 		filePath := path.Join(fileDir, file.Name())
-		age := now.Sub(file.ModTime())
+		info, err := file.Info()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file info: %w", err)
+		}
+		age := now.Sub(info.ModTime())
 		if age > f.maxAge {
 			// Delete file if it's too old.
 			os.Remove(filePath)
 			continue
 		}
-		b, err := ioutil.ReadFile(filePath)
+		b, err := os.ReadFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file: %w", err)
 		}
@@ -83,7 +86,7 @@ func (f *File) GetAll(receiverKey []byte) ([]*pb.DMSMessage, error) {
 	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
 
 	fileDir := getReceiverDir(f.baseDir, receiverKeyStr)
-	files, err := ioutil.ReadDir(fileDir)
+	files, err := os.ReadDir(fileDir)
 
 	if err != nil || len(files) == 0 {
 		// Maybe directory doesn't exist, it's fine.
@@ -96,14 +99,18 @@ func (f *File) GetAll(receiverKey []byte) ([]*pb.DMSMessage, error) {
 	for _, file := range files {
 		filePath := path.Join(fileDir, file.Name())
 
-		age := now.Sub(file.ModTime())
+		info, err := file.Info()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file info: %w", err)
+		}
+		age := now.Sub(info.ModTime())
 		if age > f.maxAge {
 			// Delete file if it's too old.
 			os.Remove(filePath)
 			continue
 		}
 
-		b, err := ioutil.ReadFile(filePath)
+		b, err := os.ReadFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file: %w", err)
 		}

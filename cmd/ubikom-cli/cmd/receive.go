@@ -84,7 +84,7 @@ var receiveMessageCmd = &cobra.Command{
 		client := pb.NewDMSDumpServiceClient(dumpConn)
 		res, err := client.Receive(ctx, &pb.ReceiveRequest{
 			IdentityProof: signed,
-			CrytoContext: &pb.CryptoContext{
+			CryptoContext: &pb.CryptoContext{
 				EllipticCurve: protoutil.CurveToProto(privateKey.Curve()),
 				EcdhVersion:   2,
 				EcdsaVersion:  1,

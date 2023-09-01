@@ -73,10 +73,13 @@ func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRes
 
 func (s *DumpServer) Receive(ctx context.Context, req *pb.ReceiveRequest) (*pb.ReceiveResponse, error) {
 	log.Debug().Msg("got receive request")
-	protoCurve := req.GetCryptoContext().GetEllipticCurve()
-	curve := protoutil.CurveFromProto(protoCurve)
-	if curve == easyecc.INVALID_CURVE {
-		return nil, status.Error(codes.Internal, "invalid curve")
+	curve := easyecc.SECP256K1
+	if req.GetCryptoContext() != nil {
+		protoCurve := req.GetCryptoContext().GetEllipticCurve()
+		curve = protoutil.CurveFromProto(protoCurve)
+		if curve == easyecc.INVALID_CURVE {
+			return nil, status.Error(codes.Internal, "invalid curve")
+		}
 	}
 
 	key, err := easyecc.NewPublicKeyFromCompressedBytes(curve, req.GetIdentityProof().GetKey())
