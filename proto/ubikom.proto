@@ -103,7 +103,7 @@ message SendResponse {
 
 message ReceiveRequest {
     Signed identity_proof = 1;
-    CryptoContext cryto_context = 2;
+    CryptoContext crypto_context = 2;
 }
 
 message ReceiveResponse {
