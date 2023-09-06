@@ -8,17 +8,17 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type MemStore struct {
+type MemoryStore struct {
 	data map[string]map[string]*pb.DMSMessage
 }
 
-func NewMem() Store {
-	return &MemStore{
+func NewMemory() Store {
+	return &MemoryStore{
 		data: make(map[string]map[string]*pb.DMSMessage),
 	}
 }
 
-func (s *MemStore) Save(msg *pb.DMSMessage, receiverKey []byte) error {
+func (s *MemoryStore) Save(msg *pb.DMSMessage, receiverKey []byte) error {
 	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
 	if s.data[receiverKeyStr] == nil {
 		s.data[receiverKeyStr] = make(map[string]*pb.DMSMessage)
@@ -27,7 +27,7 @@ func (s *MemStore) Save(msg *pb.DMSMessage, receiverKey []byte) error {
 	return nil
 }
 
-func (s *MemStore) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
+func (s *MemoryStore) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
 	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
 	if s.data[receiverKeyStr] == nil {
 		return nil, nil
@@ -41,7 +41,7 @@ func (s *MemStore) GetNext(receiverKey []byte) (*pb.DMSMessage, error) {
 	return nil, nil
 }
 
-func (s *MemStore) GetAll(receiverKey []byte) ([]*pb.DMSMessage, error) {
+func (s *MemoryStore) GetAll(receiverKey []byte) ([]*pb.DMSMessage, error) {
 	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
 	if s.data[receiverKeyStr] == nil {
 		return nil, nil
@@ -56,7 +56,7 @@ func (s *MemStore) GetAll(receiverKey []byte) ([]*pb.DMSMessage, error) {
 	return ret, nil
 }
 
-func (s *MemStore) Remove(msg *pb.DMSMessage, receiverKey []byte) error {
+func (s *MemoryStore) Remove(msg *pb.DMSMessage, receiverKey []byte) error {
 	receiverKeyStr := fmt.Sprintf("%x", receiverKey)
 	if s.data[receiverKeyStr] == nil {
 		return nil
