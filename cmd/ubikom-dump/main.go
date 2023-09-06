@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"github.com/regnull/ubikom/bc"
 	"github.com/regnull/ubikom/cfg"
 	"github.com/regnull/ubikom/pb"
 	"github.com/regnull/ubikom/server"
+	"github.com/regnull/ubikom/store"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -52,11 +54,12 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to initialize lookup client")
 	}
 
-	dumpServer, err := server.NewDumpServer(dataDir, lookupClient, viper.GetInt("max-message-age-hours"))
+	maxMessageAgeHours := viper.GetInt("max-message-age-hours")
+	dumpStore, err := store.NewBadger(dataDir, time.Duration(maxMessageAgeHours)*time.Hour)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create data store")
 	}
-
+	dumpServer := server.NewDumpServer(dumpStore, lookupClient)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt("port")))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to listen")

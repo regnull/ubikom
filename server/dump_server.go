@@ -19,21 +19,15 @@ const maxAllowedIdentitySignatureDifferenceSeconds = 10000000000.0
 type DumpServer struct {
 	pb.UnimplementedDMSDumpServiceServer
 
-	baseDir string
-	bchain  bc.Blockchain
-	store   store.Store
+	bchain bc.Blockchain
+	store  store.Store
 }
 
-func NewDumpServer(baseDir string, bchain bc.Blockchain,
-	maxMessageAgeHours int) (*DumpServer, error) {
-	store, err := store.NewBadger(baseDir, time.Duration(maxMessageAgeHours)*time.Hour)
-	if err != nil {
-		return nil, err
-	}
+func NewDumpServer(str store.Store, bchain bc.Blockchain) *DumpServer {
 	return &DumpServer{
-		baseDir: baseDir,
-		bchain:  bchain,
-		store:   store}, nil
+		store:  str,
+		bchain: bchain,
+	}
 }
 
 func (s *DumpServer) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
