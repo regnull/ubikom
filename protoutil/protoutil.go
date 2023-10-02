@@ -170,6 +170,36 @@ func DecryptMessage(ctx context.Context, bchain bc.Blockchain,
 	return string(content), nil
 }
 
+// DecryptLegacyMessage decrypts the message using ECDH algorithm that was used in EasyECC v1.
+func DecryptLegacyMessage(ctx context.Context, bchain bc.Blockchain,
+	privateKey *easyecc.PrivateKey, msg *pb.DMSMessage) (string, error) {
+	privateKeyV1 := easyeccv1.NewPrivateKey(privateKey.Secret())
+	curve := CurveFromProto(msg.GetCryptoContext().GetEllipticCurve())
+	if curve == easyecc.INVALID_CURVE {
+		return "", fmt.Errorf("unsupported curve")
+	}
+
+	senderKey, err := bchain.PublicKeyByCurve(ctx, msg.GetSender(), curve)
+	if err != nil {
+		return "", fmt.Errorf("failed to get sender public key: %w", err)
+	}
+
+	senderKeyV1, err := easyeccv1.NewPublicFromSerializedCompressed(senderKey.CompressedBytes())
+	if err != nil {
+		return "", err
+	}
+
+	if !VerifySignature(msg.GetSignature(), senderKey, msg.GetContent()) {
+		return "", fmt.Errorf("signature verification failed")
+	}
+
+	content, err := privateKeyV1.Decrypt(msg.Content, senderKeyV1)
+	if err != nil {
+		return "", fmt.Errorf("failed to decrypt message")
+	}
+	return string(content), nil
+}
+
 // IdentityProof generates an identity proof that can be used in receive requests.
 func IdentityProof(key *easyecc.PrivateKey, timestamp time.Time) (*pb.Signed, error) {
 	ts := timestamp.UTC().Unix()
