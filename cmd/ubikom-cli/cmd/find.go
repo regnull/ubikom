@@ -83,7 +83,7 @@ var findTxCmd = &cobra.Command{
 					fmt.Printf("gas: %d\n", tx1.Gas())
 					fmt.Printf("gas price: %d\n", tx1.GasPrice())
 					fmt.Printf("nonce: %d\n", tx1.Nonce())
-					fmt.Printf("to: %s\n", tx1.To().Hash().Hex())
+					fmt.Printf("to: %s\n", tx1.To().Hex())
 					fmt.Printf("value: %d\n", tx1.Value())
 					found = true
 				}
