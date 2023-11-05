@@ -45,6 +45,10 @@ func NewBlockchain(url string, contractAddress string) (Blockchain, error) {
 		contractAddress: contractAddress}, nil
 }
 
+func NewBlockchainWithCaller(caller NameRegistryCaller) Blockchain {
+	return &blockchainImpl{caller: caller}
+}
+
 func (b *blockchainImpl) PublicKey(ctx context.Context, name string) (*easyecc.PublicKey, error) {
 	res, err := b.caller.LookupName(&bind.CallOpts{Context: ctx}, name)
 	if err != nil {

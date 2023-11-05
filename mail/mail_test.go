@@ -1,10 +1,19 @@
 package mail
 
 import (
+	"context"
+	"fmt"
+	"math/big"
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/mr-tron/base58"
+	"github.com/regnull/easyecc/v2"
+	"github.com/regnull/ubikom/bc"
+	bcmocks "github.com/regnull/ubikom/bc/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 var testMessage = `From - Fri May 28 16:10:23 2021
@@ -181,4 +190,57 @@ func Test_ExtractReceiverInternalName(t *testing.T) {
 
 	_, err = ExtractReceiverInternalName(messageWithMultipleInternalRecipients)
 	assert.Error(err)
+}
+
+func Test_NewMessage(t *testing.T) {
+	assert := assert.New(t)
+
+	msg := NewMessage("bob", "alice", "test subject", "Here's the message body")
+
+	subj, err := ExtractSubject(msg)
+	assert.NoError(err)
+	assert.Equal("test subject", subj)
+
+	rec, err := ExtractReceiverInternalName(msg)
+	assert.NoError(err)
+	assert.Equal("bob", rec)
+}
+
+func Test_AddUbibkomHeaders(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx := context.Background()
+	senderKey, err := easyecc.NewPrivateKey(easyecc.SECP256K1)
+	assert.NoError(err)
+	receiverKey, err := easyecc.NewPrivateKey(easyecc.SECP256K1)
+	assert.NoError(err)
+
+	receiverAddress, err := receiverKey.PublicKey().BitcoinAddress()
+	assert.NoError(err)
+	addressBytes, err := base58.Decode(receiverAddress)
+	assert.NoError(err)
+	receiverAddr := common.BytesToAddress(addressBytes)
+
+	senderAddress, err := senderKey.PublicKey().BitcoinAddress()
+	assert.NoError(err)
+
+	caller := new(bcmocks.MockNameRegistryCaller)
+	caller.EXPECT().LookupName(mock.Anything, "alice").Return(struct {
+		Owner     common.Address
+		PublicKey []byte
+		Price     *big.Int
+	}{
+		Owner:     receiverAddr,
+		PublicKey: receiverKey.PublicKey().CompressedBytes(),
+		Price:     big.NewInt(0),
+	}, nil)
+
+	bchain := bc.NewBlockchainWithCaller(caller)
+
+	msg, err := AddUbikomHeaders(ctx, testMessage, "bob", "alice", senderKey.PublicKey(), bchain)
+	assert.NoError(err)
+	assert.True(strings.Contains(msg, "X-Ubikom-Sender: bob"))
+	assert.True(strings.Contains(msg, "X-Ubikom-Receiver: alice"))
+	assert.True(strings.Contains(msg, fmt.Sprintf("X-Ubikom-Sender-Key: %s", senderAddress)))
+	assert.True(strings.Contains(msg, fmt.Sprintf("X-Ubikom-Receiver-Key: %s", receiverAddress)))
 }

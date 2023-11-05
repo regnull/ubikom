@@ -281,8 +281,14 @@ func AddUbikomHeaders(ctx context.Context, body string, sender, receiver string,
 	if err != nil {
 		return "", fmt.Errorf("failed to get receiver public key: %w", err)
 	}
-	senderBitcoinAddress, _ := senderKey.BitcoinAddress()
-	receiverBitcoinAddress, _ := receiverKey.BitcoinAddress()
+	senderBitcoinAddress, err := senderKey.BitcoinAddress()
+	if err != nil {
+		return "", err
+	}
+	receiverBitcoinAddress, err := receiverKey.BitcoinAddress()
+	if err != nil {
+		return "", err
+	}
 	headers := map[string]string{
 		"X-Ubikom-Sender":       sender,
 		"X-Ubikom-Sender-Key":   senderBitcoinAddress,
