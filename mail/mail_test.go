@@ -139,3 +139,14 @@ func Test_ExtractAddresses(t *testing.T) {
 	assert.Contains(addresses, "regnull@gmail.com")
 	assert.Contains(addresses, "nullreg@gmail.com")
 }
+
+func Test_ExtractSubject(t *testing.T) {
+	assert := assert.New(t)
+
+	subj, err := ExtractSubject(testMessage)
+	assert.NoError(err)
+	assert.Equal("testing", subj)
+
+	_, err = ExtractSubject("not a valid message")
+	assert.Error(err)
+}
